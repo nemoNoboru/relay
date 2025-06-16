@@ -70,6 +70,7 @@ type Statement struct {
 
 	StructDef   *StructDef   `@@`
 	ProtocolDef *ProtocolDef `| @@`
+	StateDef    *StateDef    `| @@`
 }
 
 type StructDef struct {
@@ -80,6 +81,43 @@ type StructDef struct {
 type ProtocolDef struct {
 	Name    string             `"protocol" @Ident`
 	Methods []*MethodSignature `"{" @@* "}"`
+}
+
+type StateDef struct {
+	Fields []*StateField `"state" "{" @@* "}"`
+}
+
+type StateField struct {
+	Name         string   `@Ident`
+	Type         *TypeRef `":" @@`
+	DefaultValue *Literal `( "=" @@ )?`
+	Comma        string   `(",")?`
+}
+
+type Literal struct {
+	String   *string       `@String`
+	Number   *float64      `| @Number`
+	Bool     *string       `| @Bool`
+	Array    *ArrayLiteral `| @@`
+	FuncCall *FuncCall     `| @@`
+}
+
+// GetBoolValue returns the boolean value from a Bool string
+func (l *Literal) GetBoolValue() *bool {
+	if l.Bool == nil {
+		return nil
+	}
+	val := *l.Bool == "true"
+	return &val
+}
+
+type ArrayLiteral struct {
+	Elements []*Literal `"[" ( @@ ( "," @@ )* )? "]"`
+}
+
+type FuncCall struct {
+	Name string     `@Ident`
+	Args []*Literal `"(" ( @@ ( "," @@ )* )? ")"`
 }
 
 type MethodSignature struct {
