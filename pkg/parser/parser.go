@@ -19,29 +19,46 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Bool", `\b(true|false)\b`},
 	{"DateTime", `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?`},
 
+	// Keywords (must come before Ident)
+	{"For", `\bfor\b`},
+	{"In", `\bin\b`},
+	{"Try", `\btry\b`},
+	{"Catch", `\bcatch\b`},
+	{"Dispatch", `\bdispatch\b`},
+	{"Send", `\bsend\b`},
+	{"Set", `\bset\b`},
+	{"Return", `\breturn\b`},
+	{"If", `\bif\b`},
+	{"Else", `\belse\b`},
+	{"Throw", `\bthrow\b`},
+	{"Struct", `\bstruct\b`},
+	{"Protocol", `\bprotocol\b`},
+	{"State", `\bstate\b`},
+	{"Receive", `\breceive\b`},
+
 	// Identifiers and Keywords
 	{"Ident", `[a-zA-Z_][a-zA-Z0-9_]*`},
 
-	// Operators and Punctuation
+	// Operators and Punctuation (compound operators first)
 	{"Arrow", `->`},
+	{"PlusAssign", `\+=`},
+	{"MinusAssign", `-=`},
+	{"MultiplyAssign", `\*=`},
+	{"DivideAssign", `/=`},
 	{"Eq", `==`},
-	{"Assign", `=`},
 	{"Ne", `!=`},
 	{"Le", `<=`},
 	{"Ge", `>=`},
+	{"And", `&&`},
+	{"Or", `\|\|`},
+	{"Assign", `=`},
 	{"Lt", `<`},
 	{"Gt", `>`},
 	{"Plus", `\+`},
 	{"Minus", `-`},
 	{"Multiply", `\*`},
 	{"Divide", `/`},
-	{"And", `&&`},
-	{"Or", `\|\|`},
 	{"Not", `!`},
-	{"PlusAssign", `\+=`},
-	{"MinusAssign", `-=`},
-	{"MultiplyAssign", `\*=`},
-	{"DivideAssign", `/=`},
 	{"Dot", `\.`},
 	{"Comma", `,`},
 	{"Semicolon", `;`},
@@ -161,12 +178,15 @@ type Block struct {
 type BlockStatement struct {
 	Pos lexer.Position
 
-	SetStatement    *SetStatement    `@@`
-	ReturnStatement *ReturnStatement `| @@`
-	IfStatement     *IfStatement     `| @@`
-	ThrowStatement  *ThrowStatement  `| @@`
-	Assignment      *Assignment      `| @@`
-	ExprStatement   *ExprStatement   `| @@`
+	ForStatement      *ForStatement      `@@`
+	TryStatement      *TryStatement      `| @@`
+	DispatchStatement *DispatchStatement `| @@`
+	SetStatement      *SetStatement      `| @@`
+	ReturnStatement   *ReturnStatement   `| @@`
+	IfStatement       *IfStatement       `| @@`
+	ThrowStatement    *ThrowStatement    `| @@`
+	Assignment        *Assignment        `| @@`
+	ExprStatement     *ExprStatement     `| @@`
 }
 
 type SetStatement struct {
@@ -192,6 +212,39 @@ type Assignment struct {
 	Target *Expression `@@`
 	Op     string      `@( "=" | "+=" | "-=" | "*=" | "/=" )`
 	Value  *Expression `@@`
+}
+
+type ForStatement struct {
+	Variable   string      `"for" @Ident`
+	Collection *Expression `"in" @@`
+	Body       *Block      `@@`
+}
+
+type TryStatement struct {
+	TryBlock   *Block  `"try" @@`
+	CatchVar   *string `"catch" ( @Ident )?`
+	CatchBlock *Block  `@@`
+}
+
+type DispatchStatement struct {
+	Value *Expression     `"dispatch" @@`
+	Cases []*DispatchCase `"{" @@* "}"`
+}
+
+type DispatchCase struct {
+	Pattern *Literal `@@`
+	Body    *Block   `"->" @@`
+}
+
+type SendExpr struct {
+	Target string     `"send" @String`
+	Method string     `@Ident`
+	Args   *ObjectLit `@@`
+}
+
+type FuncCallExpr struct {
+	Name string        `@Ident`
+	Args []*Expression `"(" ( @@ ( "," @@ )* )? ")"`
 }
 
 type ExprStatement struct {
@@ -263,10 +316,12 @@ type PrimaryExpr struct {
 }
 
 type BaseExpr struct {
-	Literal    *Literal    `@@`
-	Identifier *string     `| @Ident`
-	ObjectLit  *ObjectLit  `| @@`
-	Grouped    *Expression `| "(" @@ ")"`
+	Literal    *Literal      `@@`
+	Identifier *string       `| @Ident`
+	ObjectLit  *ObjectLit    `| @@`
+	SendExpr   *SendExpr     `| @@`
+	FuncCall   *FuncCallExpr `| @@`
+	Grouped    *Expression   `| "(" @@ ")"`
 }
 
 type AccessExpr struct {
