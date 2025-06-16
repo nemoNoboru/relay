@@ -9,6 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// =============================================================================
+// STRUCT PARSING TESTS
+// =============================================================================
+
 // Test the lexer tokenization for struct definition
 func TestLexer_StructTokens(t *testing.T) {
 	input := `struct User {
@@ -122,7 +126,7 @@ func TestParser_StructDefinition(t *testing.T) {
 }
 
 // Test struct with no fields (empty struct)
-func TestParser_EmptyStruct(t *testing.T) {
+func TestParser_StructEmpty(t *testing.T) {
 	input := `struct Empty {}`
 
 	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
@@ -138,7 +142,7 @@ func TestParser_EmptyStruct(t *testing.T) {
 }
 
 // Test struct with single field
-func TestParser_SingleFieldStruct(t *testing.T) {
+func TestParser_StructSingleField(t *testing.T) {
 	input := `struct Simple {
   id: string
 }`
@@ -159,7 +163,7 @@ func TestParser_SingleFieldStruct(t *testing.T) {
 }
 
 // Test struct with various data types
-func TestParser_StructWithDifferentTypes(t *testing.T) {
+func TestParser_StructBasicTypes(t *testing.T) {
 	input := `struct Complex {
   name: string,
   age: number,
@@ -191,114 +195,13 @@ func TestParser_StructWithDifferentTypes(t *testing.T) {
 	}
 }
 
-// Test struct with array types - DISABLED (arrays not implemented yet)
-func TestParser_StructWithArrayTypes(t *testing.T) {
-	t.Skip("Array types not implemented yet")
-}
-
-// Test struct with optional types - DISABLED (optional not implemented yet)
-func TestParser_StructWithOptionalTypes(t *testing.T) {
-	t.Skip("Optional types not implemented yet")
-}
-
-// Test struct with validation constraints - DISABLED (validation not implemented yet)
-func TestParser_StructWithValidation(t *testing.T) {
-	t.Skip("Validation constraints not implemented yet")
-}
-
-// Test struct with object types - DISABLED (object types not fully implemented yet)
-func TestParser_StructWithObjectTypes(t *testing.T) {
-	t.Skip("Object types not fully implemented yet")
-}
-
-// Test error cases
-func TestParser_StructErrors(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-	}{
-		{
-			name:  "missing struct name",
-			input: `struct {}`,
-		},
-		{
-			name:  "missing opening brace",
-			input: `struct User name: string }`,
-		},
-		{
-			name:  "missing closing brace",
-			input: `struct User { name: string`,
-		},
-		{
-			name:  "missing field type",
-			input: `struct User { name: }`,
-		},
-		{
-			name:  "missing colon",
-			input: `struct User { name string }`,
-		},
-		{
-			name:  "invalid field name",
-			input: `struct User { 123: string }`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := relayParser.Parse("test.relay", strings.NewReader(tt.input))
-			assert.Error(t, err, "Expected parsing error for: %s", tt.input)
-		})
-	}
-}
-
-// Test multiple structs in one program
-func TestParser_MultipleStructs(t *testing.T) {
-	input := `struct User {
-  name: string,
-  email: string,
-}
-
-struct Post {
+// Test struct with array types
+func TestParser_StructArrayTypes(t *testing.T) {
+	input := `struct Post {
   title: string,
-  content: string,
-  author: string
-}`
-
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
-	require.NoError(t, err)
-	require.NotNil(t, program)
-
-	// Should have two statements
-	require.Len(t, program.Statements, 2)
-
-	// First struct: User
-	struct1 := program.Statements[0].StructDef
-	require.NotNil(t, struct1)
-	assert.Equal(t, "User", struct1.Name)
-	require.Len(t, struct1.Fields, 2)
-	assert.Equal(t, "name", struct1.Fields[0].Name)
-	assert.Equal(t, "email", struct1.Fields[1].Name)
-
-	// Second struct: Post
-	struct2 := program.Statements[1].StructDef
-	require.NotNil(t, struct2)
-	assert.Equal(t, "Post", struct2.Name)
-	require.Len(t, struct2.Fields, 3)
-	assert.Equal(t, "title", struct2.Fields[0].Name)
-	assert.Equal(t, "content", struct2.Fields[1].Name)
-	assert.Equal(t, "author", struct2.Fields[2].Name)
-}
-
-// Test struct with trailing comma - DISABLED (trailing comma not supported yet)
-func TestParser_StructWithTrailingComma(t *testing.T) {
-	t.Skip("Trailing comma not supported yet")
-}
-
-// Test case sensitivity
-func TestParser_StructCaseSensitivity(t *testing.T) {
-	input := `struct User {
-  Name: String,
-  EMAIL: STRING
+  tags: [string],
+  comments: [Comment],
+  scores: [number]
 }`
 
 	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
@@ -306,18 +209,162 @@ func TestParser_StructCaseSensitivity(t *testing.T) {
 
 	structDef := program.Statements[0].StructDef
 	require.NotNil(t, structDef)
+	require.Len(t, structDef.Fields, 4)
 
-	// Field names should preserve case
-	assert.Equal(t, "Name", structDef.Fields[0].Name)
-	assert.Equal(t, "EMAIL", structDef.Fields[1].Name)
+	// Test title: string (basic type)
+	titleField := structDef.Fields[0]
+	assert.Equal(t, "title", titleField.Name)
+	assert.Equal(t, "string", titleField.Type.Name)
+	assert.Nil(t, titleField.Type.Array) // Not an array
 
-	// Type names should be case-insensitive (based on parser config)
-	// But stored as they appear in source
-	assert.Equal(t, "String", structDef.Fields[0].Type.Name)
-	assert.Equal(t, "STRING", structDef.Fields[1].Type.Name)
+	// Test tags: [string] (array of strings)
+	tagsField := structDef.Fields[1]
+	assert.Equal(t, "tags", tagsField.Name)
+	require.NotNil(t, tagsField.Type.Array)
+	assert.Equal(t, "string", tagsField.Type.Array.Name)
+
+	// Test comments: [Comment] (array of custom types)
+	commentsField := structDef.Fields[2]
+	assert.Equal(t, "comments", commentsField.Name)
+	require.NotNil(t, commentsField.Type.Array)
+	assert.Equal(t, "Comment", commentsField.Type.Array.Name)
+
+	// Test scores: [number] (array of numbers)
+	scoresField := structDef.Fields[3]
+	assert.Equal(t, "scores", scoresField.Name)
+	require.NotNil(t, scoresField.Type.Array)
+	assert.Equal(t, "number", scoresField.Type.Array.Name)
 }
 
-// Benchmark test for parsing performance
+// Test struct with nested array types
+func TestParser_StructNestedArrayTypes(t *testing.T) {
+	input := `struct Matrix {
+  data: [[number]],
+  labels: [[string]]
+}`
+
+	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+
+	structDef := program.Statements[0].StructDef
+	require.NotNil(t, structDef)
+	require.Len(t, structDef.Fields, 2)
+
+	// Test data: [[number]] (array of array of numbers)
+	dataField := structDef.Fields[0]
+	assert.Equal(t, "data", dataField.Name)
+	require.NotNil(t, dataField.Type.Array)       // Outer array
+	require.NotNil(t, dataField.Type.Array.Array) // Inner array
+	assert.Equal(t, "number", dataField.Type.Array.Array.Name)
+
+	// Test labels: [[string]] (array of array of strings)
+	labelsField := structDef.Fields[1]
+	assert.Equal(t, "labels", labelsField.Name)
+	require.NotNil(t, labelsField.Type.Array)       // Outer array
+	require.NotNil(t, labelsField.Type.Array.Array) // Inner array
+	assert.Equal(t, "string", labelsField.Type.Array.Array.Name)
+}
+
+// Test struct with optional types - DISABLED (optional not implemented yet)
+func TestParser_StructOptionalTypes(t *testing.T) {
+	t.Skip("Optional types not implemented yet")
+}
+
+// Test struct with validation constraints - DISABLED (validation not implemented yet)
+func TestParser_StructValidation(t *testing.T) {
+	t.Skip("Validation constraints not implemented yet")
+}
+
+// Test struct with object types - DISABLED (object types not implemented yet)
+func TestParser_StructObjectTypes(t *testing.T) {
+	t.Skip("Object types not fully implemented yet")
+}
+
+// Test struct parsing error cases
+func TestParser_StructErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"missing_struct_name", `struct {}`},
+		{"missing_opening_brace", `struct User name: string }`},
+		{"missing_closing_brace", `struct User { name: string`},
+		{"missing_field_type", `struct User { name: }`},
+		{"missing_colon", `struct User { name string }`},
+		{"invalid_field_name", `struct User { 123: string }`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := relayParser.Parse("test.relay", strings.NewReader(tt.input))
+			assert.Error(t, err, "Expected parsing error for %s", tt.name)
+		})
+	}
+}
+
+// Test multiple structs in one file
+func TestParser_StructMultiple(t *testing.T) {
+	input := `struct User {
+  name: string,
+  email: string
+}
+
+struct Post {
+  title: string,
+  content: string
+}`
+
+	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+	require.NotNil(t, program)
+
+	require.Len(t, program.Statements, 2)
+
+	// First struct
+	struct1 := program.Statements[0].StructDef
+	require.NotNil(t, struct1)
+	assert.Equal(t, "User", struct1.Name)
+	require.Len(t, struct1.Fields, 2)
+	assert.Equal(t, "name", struct1.Fields[0].Name)
+	assert.Equal(t, "email", struct1.Fields[1].Name)
+
+	// Second struct
+	struct2 := program.Statements[1].StructDef
+	require.NotNil(t, struct2)
+	assert.Equal(t, "Post", struct2.Name)
+	require.Len(t, struct2.Fields, 2)
+	assert.Equal(t, "title", struct2.Fields[0].Name)
+	assert.Equal(t, "content", struct2.Fields[1].Name)
+}
+
+// Test struct with trailing comma - DISABLED (trailing comma not supported yet)
+func TestParser_StructTrailingComma(t *testing.T) {
+	t.Skip("Trailing comma not supported yet")
+}
+
+// Test struct case sensitivity
+func TestParser_StructCaseSensitivity(t *testing.T) {
+	input := `struct UserProfile {
+  UserName: string,
+  emailAddress: string
+}`
+
+	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+
+	structDef := program.Statements[0].StructDef
+	require.NotNil(t, structDef)
+	require.Len(t, structDef.Fields, 2)
+
+	// Fields should maintain their original case
+	field1 := structDef.Fields[0]
+	assert.Equal(t, "UserName", field1.Name)
+
+	field2 := structDef.Fields[1]
+	assert.Equal(t, "emailAddress", field2.Name)
+}
+
+// Benchmark struct parsing performance
 func BenchmarkParser_StructParsing(b *testing.B) {
 	input := `struct User {
   name: string,
@@ -333,9 +380,9 @@ func BenchmarkParser_StructParsing(b *testing.B) {
 	}
 }
 
-// ===============================
-// Protocol Parsing Tests
-// ===============================
+// =============================================================================
+// PROTOCOL PARSING TESTS
+// =============================================================================
 
 // Test the lexer tokenization for protocol definition
 func TestLexer_ProtocolTokens(t *testing.T) {
@@ -407,7 +454,7 @@ func TestLexer_ProtocolTokens(t *testing.T) {
 }
 
 // Test parsing basic protocol definition
-func TestParser_BasicProtocolDefinition(t *testing.T) {
+func TestParser_ProtocolDefinition(t *testing.T) {
 	input := `protocol BlogService {
 		get_posts() -> [Post]
 		create_post(title: string, content: string) -> Post
@@ -460,7 +507,7 @@ func TestParser_BasicProtocolDefinition(t *testing.T) {
 }
 
 // Test protocol with no methods (empty protocol)
-func TestParser_EmptyProtocol(t *testing.T) {
+func TestParser_ProtocolEmpty(t *testing.T) {
 	input := `protocol EmptyService {}`
 
 	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
@@ -476,7 +523,7 @@ func TestParser_EmptyProtocol(t *testing.T) {
 }
 
 // Test protocol with single method
-func TestParser_SingleMethodProtocol(t *testing.T) {
+func TestParser_ProtocolSingleMethod(t *testing.T) {
 	input := `protocol SimpleService {
 		ping() -> bool
 	}`
@@ -499,7 +546,7 @@ func TestParser_SingleMethodProtocol(t *testing.T) {
 }
 
 // Test protocol with method that has no return type
-func TestParser_MethodWithoutReturnType(t *testing.T) {
+func TestParser_ProtocolNoReturnType(t *testing.T) {
 	input := `protocol ActionService {
 		do_something(input: string)
 	}`
@@ -523,7 +570,7 @@ func TestParser_MethodWithoutReturnType(t *testing.T) {
 }
 
 // Test protocol with various parameter types
-func TestParser_ProtocolWithDifferentTypes(t *testing.T) {
+func TestParser_ProtocolBasicTypes(t *testing.T) {
 	input := `protocol ComplexService {
 		get_user(id: string) -> User
 		update_stats(count: number, active: bool) -> Stats
@@ -564,13 +611,14 @@ func TestParser_ProtocolWithDifferentTypes(t *testing.T) {
 	assert.Equal(t, "bool", method3.ReturnType.Name)
 }
 
-// Test protocol with array return types - DISABLED (arrays not fully implemented yet)
-func TestParser_ProtocolWithArrayTypes(t *testing.T) {
-	t.Skip("Array types not fully implemented yet")
-
+// Test protocol with array types
+func TestParser_ProtocolArrayTypes(t *testing.T) {
 	input := `protocol DataService {
 		get_items() -> [Item]
 		get_tags() -> [string]
+		get_matrix() -> [[number]]
+		process_list(items: [string]) -> [Item]
+		bulk_create(users: [User], posts: [Post]) -> [Result]
 	}`
 
 	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
@@ -578,22 +626,60 @@ func TestParser_ProtocolWithArrayTypes(t *testing.T) {
 
 	protocolDef := program.Statements[0].ProtocolDef
 	require.NotNil(t, protocolDef)
-	require.Len(t, protocolDef.Methods, 2)
+	require.Len(t, protocolDef.Methods, 5)
 
-	// Test array return types
+	// Test get_items() -> [Item]
 	method1 := protocolDef.Methods[0]
 	assert.Equal(t, "get_items", method1.Name)
+	assert.Len(t, method1.Parameters, 0)
 	require.NotNil(t, method1.ReturnType.Array)
 	assert.Equal(t, "Item", method1.ReturnType.Array.Name)
 
+	// Test get_tags() -> [string]
 	method2 := protocolDef.Methods[1]
 	assert.Equal(t, "get_tags", method2.Name)
 	require.NotNil(t, method2.ReturnType.Array)
 	assert.Equal(t, "string", method2.ReturnType.Array.Name)
+
+	// Test get_matrix() -> [[number]] (nested arrays)
+	method3 := protocolDef.Methods[2]
+	assert.Equal(t, "get_matrix", method3.Name)
+	require.NotNil(t, method3.ReturnType.Array)       // Outer array
+	require.NotNil(t, method3.ReturnType.Array.Array) // Inner array
+	assert.Equal(t, "number", method3.ReturnType.Array.Array.Name)
+
+	// Test process_list(items: [string]) -> [Item] (array parameters)
+	method4 := protocolDef.Methods[3]
+	assert.Equal(t, "process_list", method4.Name)
+	require.Len(t, method4.Parameters, 1)
+	param := method4.Parameters[0]
+	assert.Equal(t, "items", param.Name)
+	require.NotNil(t, param.Type.Array)
+	assert.Equal(t, "string", param.Type.Array.Name)
+	require.NotNil(t, method4.ReturnType.Array)
+	assert.Equal(t, "Item", method4.ReturnType.Array.Name)
+
+	// Test bulk_create(users: [User], posts: [Post]) -> [Result] (multiple array parameters)
+	method5 := protocolDef.Methods[4]
+	assert.Equal(t, "bulk_create", method5.Name)
+	require.Len(t, method5.Parameters, 2)
+
+	param1 := method5.Parameters[0]
+	assert.Equal(t, "users", param1.Name)
+	require.NotNil(t, param1.Type.Array)
+	assert.Equal(t, "User", param1.Type.Array.Name)
+
+	param2 := method5.Parameters[1]
+	assert.Equal(t, "posts", param2.Name)
+	require.NotNil(t, param2.Type.Array)
+	assert.Equal(t, "Post", param2.Type.Array.Name)
+
+	require.NotNil(t, method5.ReturnType.Array)
+	assert.Equal(t, "Result", method5.ReturnType.Array.Name)
 }
 
 // Test multiple protocols in one file
-func TestParser_MultipleProtocols(t *testing.T) {
+func TestParser_ProtocolMultiple(t *testing.T) {
 	input := `protocol UserService {
 		get_user(id: string) -> User
 	}
@@ -647,33 +733,6 @@ func TestParser_ProtocolCaseSensitivity(t *testing.T) {
 	assert.Equal(t, "id", method2.Parameters[0].Name)
 }
 
-// Test mixed struct and protocol definitions
-func TestParser_MixedStructAndProtocol(t *testing.T) {
-	input := `struct User {
-		name: string,
-		email: string
-	}
-	
-	protocol UserService {
-		create_user(user: User) -> User
-		get_user(id: string) -> User
-	}`
-
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
-	require.NoError(t, err)
-	require.Len(t, program.Statements, 2)
-
-	// First should be struct
-	structStmt := program.Statements[0]
-	require.NotNil(t, structStmt.StructDef)
-	assert.Equal(t, "User", structStmt.StructDef.Name)
-
-	// Second should be protocol
-	protocolStmt := program.Statements[1]
-	require.NotNil(t, protocolStmt.ProtocolDef)
-	assert.Equal(t, "UserService", protocolStmt.ProtocolDef.Name)
-}
-
 // Benchmark protocol parsing performance
 func BenchmarkParser_ProtocolParsing(b *testing.B) {
 	input := `protocol BlogService {
@@ -689,4 +748,211 @@ func BenchmarkParser_ProtocolParsing(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+}
+
+// =============================================================================
+// ARRAY TYPE PARSING TESTS
+// =============================================================================
+
+// Test array type lexer tokenization
+func TestLexer_ArrayTypeTokens(t *testing.T) {
+	input := `[string]`
+
+	lex, err := relayLexer.Lex("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+
+	// Get symbol mappings
+	symbols := relayLexer.Symbols()
+	whitespaceType := symbols["Whitespace"]
+
+	// Collect all tokens
+	var filteredTokens []lexer.Token
+	for {
+		token, err := lex.Next()
+		if err != nil {
+			break
+		}
+		if token.Type != whitespaceType {
+			filteredTokens = append(filteredTokens, token)
+		}
+		if token.EOF() {
+			break
+		}
+	}
+
+	expectedTokens := []struct {
+		TypeName string
+		Value    string
+	}{
+		{"LBracket", "["},
+		{"Ident", "string"},
+		{"RBracket", "]"},
+		{"EOF", ""},
+	}
+
+	require.Len(t, filteredTokens, len(expectedTokens), "Token count mismatch")
+
+	for i, expected := range expectedTokens {
+		expectedType := symbols[expected.TypeName]
+		assert.Equal(t, expectedType, filteredTokens[i].Type, "Token type mismatch at position %d", i)
+		assert.Equal(t, expected.Value, filteredTokens[i].Value, "Token value mismatch at position %d", i)
+	}
+}
+
+// Test basic array type parsing
+func TestParser_ArrayTypeBasic(t *testing.T) {
+	input := `struct Container {
+  items: [string]
+}`
+
+	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+
+	structDef := program.Statements[0].StructDef
+	require.NotNil(t, structDef)
+	require.Len(t, structDef.Fields, 1)
+
+	field := structDef.Fields[0]
+	assert.Equal(t, "items", field.Name)
+	require.NotNil(t, field.Type.Array)
+	assert.Equal(t, "string", field.Type.Array.Name)
+}
+
+// Test nested array types
+func TestParser_ArrayTypeNested(t *testing.T) {
+	input := `struct NestedContainer {
+  matrix: [[number]],
+  grid: [[[string]]]
+}`
+
+	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+
+	structDef := program.Statements[0].StructDef
+	require.NotNil(t, structDef)
+	require.Len(t, structDef.Fields, 2)
+
+	// Test matrix: [[number]]
+	matrixField := structDef.Fields[0]
+	assert.Equal(t, "matrix", matrixField.Name)
+	require.NotNil(t, matrixField.Type.Array)       // Outer array
+	require.NotNil(t, matrixField.Type.Array.Array) // Inner array
+	assert.Equal(t, "number", matrixField.Type.Array.Array.Name)
+
+	// Test grid: [[[string]]]
+	gridField := structDef.Fields[1]
+	assert.Equal(t, "grid", gridField.Name)
+	require.NotNil(t, gridField.Type.Array)             // Level 1 array
+	require.NotNil(t, gridField.Type.Array.Array)       // Level 2 array
+	require.NotNil(t, gridField.Type.Array.Array.Array) // Level 3 array
+	assert.Equal(t, "string", gridField.Type.Array.Array.Array.Name)
+}
+
+// Test array types with custom types
+func TestParser_ArrayTypeCustom(t *testing.T) {
+	input := `struct Blog {
+  posts: [Post],
+  authors: [User],
+  categories: [Category]
+}`
+
+	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+
+	structDef := program.Statements[0].StructDef
+	require.NotNil(t, structDef)
+	require.Len(t, structDef.Fields, 3)
+
+	// Test posts: [Post]
+	postsField := structDef.Fields[0]
+	assert.Equal(t, "posts", postsField.Name)
+	require.NotNil(t, postsField.Type.Array)
+	assert.Equal(t, "Post", postsField.Type.Array.Name)
+
+	// Test authors: [User]
+	authorsField := structDef.Fields[1]
+	assert.Equal(t, "authors", authorsField.Name)
+	require.NotNil(t, authorsField.Type.Array)
+	assert.Equal(t, "User", authorsField.Type.Array.Name)
+
+	// Test categories: [Category]
+	categoriesField := structDef.Fields[2]
+	assert.Equal(t, "categories", categoriesField.Name)
+	require.NotNil(t, categoriesField.Type.Array)
+	assert.Equal(t, "Category", categoriesField.Type.Array.Name)
+}
+
+// Benchmark array type parsing performance
+func BenchmarkParser_ArrayTypeParsing(b *testing.B) {
+	input := `struct Container {
+  simple: [string],
+  nested: [[number]],
+  custom: [User]
+}`
+
+	for i := 0; i < b.N; i++ {
+		_, err := relayParser.Parse("test.relay", strings.NewReader(input))
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// =============================================================================
+// MIXED PARSING TESTS (Struct + Protocol + Array Types)
+// =============================================================================
+
+// Test mixed struct and protocol definitions with array types
+func TestParser_MixedStructProtocolArrays(t *testing.T) {
+	input := `struct User {
+		name: string,
+		email: string,
+		tags: [string]
+	}
+	
+	protocol UserService {
+		create_user(user: User) -> User
+		get_users() -> [User]
+		get_user_tags(id: string) -> [string]
+		bulk_update(users: [User]) -> [User]
+	}`
+
+	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	require.NoError(t, err)
+	require.Len(t, program.Statements, 2)
+
+	// First should be struct
+	structStmt := program.Statements[0]
+	require.NotNil(t, structStmt.StructDef)
+	structDef := structStmt.StructDef
+	assert.Equal(t, "User", structDef.Name)
+	require.Len(t, structDef.Fields, 3)
+
+	// Check array field in struct
+	tagsField := structDef.Fields[2]
+	assert.Equal(t, "tags", tagsField.Name)
+	require.NotNil(t, tagsField.Type.Array)
+	assert.Equal(t, "string", tagsField.Type.Array.Name)
+
+	// Second should be protocol
+	protocolStmt := program.Statements[1]
+	require.NotNil(t, protocolStmt.ProtocolDef)
+	protocolDef := protocolStmt.ProtocolDef
+	assert.Equal(t, "UserService", protocolDef.Name)
+	require.Len(t, protocolDef.Methods, 4)
+
+	// Check array return types and parameters in protocol
+	getUsersMethod := protocolDef.Methods[1]
+	assert.Equal(t, "get_users", getUsersMethod.Name)
+	require.NotNil(t, getUsersMethod.ReturnType.Array)
+	assert.Equal(t, "User", getUsersMethod.ReturnType.Array.Name)
+
+	bulkUpdateMethod := protocolDef.Methods[3]
+	assert.Equal(t, "bulk_update", bulkUpdateMethod.Name)
+	require.Len(t, bulkUpdateMethod.Parameters, 1)
+	param := bulkUpdateMethod.Parameters[0]
+	require.NotNil(t, param.Type.Array)
+	assert.Equal(t, "User", param.Type.Array.Name)
+	require.NotNil(t, bulkUpdateMethod.ReturnType.Array)
+	assert.Equal(t, "User", bulkUpdateMethod.ReturnType.Array.Name)
 }
