@@ -12,13 +12,17 @@ import (
 // Test the lexer tokenization for struct definition
 func TestLexer_StructTokens(t *testing.T) {
 	input := `struct User {
-  name: string,
-  email: string,
-  age: number
-}`
+ 		name: string,
+  		email: string,
+  		age: number
+	}`
 
 	lex, err := relayLexer.Lex("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
+
+	if err != nil {
+		println(err.Error())
+	}
 
 	// Get symbol mappings
 	symbols := relayLexer.Symbols()
@@ -251,7 +255,7 @@ func TestParser_StructErrors(t *testing.T) {
 func TestParser_MultipleStructs(t *testing.T) {
 	input := `struct User {
   name: string,
-  email: string
+  email: string,
 }
 
 struct Post {

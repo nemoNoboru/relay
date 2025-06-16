@@ -65,75 +65,27 @@ type Program struct {
 	Statements []*Statement `@@*`
 }
 
-// Statement represents a top-level statement
 type Statement struct {
 	Pos lexer.Position
 
 	StructDef *StructDef `@@`
 }
 
-// Type represents a data type - simplified to avoid recursion
-type Type struct {
-	Pos lexer.Position
-
-	// Basic type: just the name for now
-	Name string `@Ident`
-}
-
-// ObjectType represents an object type like {key: string}
-type ObjectType struct {
-	Pos lexer.Position
-
-	Fields []*ObjectField `"{" ( @@ ( "," @@ )* )? "}"`
-}
-
-// ObjectField represents a field in an object type
-type ObjectField struct {
-	Pos lexer.Position
-
-	Key   string `@Ident`
-	Value *Type  `":" @@`
-}
-
-// Validation represents type validation constraints
-type Validation struct {
-	Pos lexer.Position
-
-	Constraints []*Constraint `( "." @@ )*`
-}
-
-// Constraint represents a single validation constraint
-type Constraint struct {
-	Pos lexer.Position
-
-	Name string     `@Ident`
-	Args []*Literal `( "(" ( @@ ( "," @@ )* )? ")" )?`
-}
-
-// StructDef represents a struct definition
 type StructDef struct {
-	Pos lexer.Position
-
-	Name   string         `"struct" @Ident`
-	Fields []*StructField `"{" ( @@ ( "," @@ )* )? "}"`
+	Name   string   `"struct" @Ident`
+	Fields []*Field `"{" @@* "}"`
 }
 
-// StructField represents a field in a struct
-type StructField struct {
-	Pos lexer.Position
-
+type Field struct {
 	Name string `@Ident`
-	Type *Type  `":" @@`
+	// Arguments  []*Argument `( "(" ( @@ ( "," @@ )* )? ")" )?`
+	Type  *TypeRef `":" @@`
+	Comma string   `(",")?`
 }
 
-// Literal represents a literal value - simple and non-recursive
-type Literal struct {
-	Pos lexer.Position
-
-	String   *string  `  @String`
-	Number   *float64 `| @Number`
-	Bool     *bool    `| @Bool`
-	DateTime *string  `| @DateTime`
+type TypeRef struct {
+	Array *TypeRef `(   "[" @@ "]"`
+	Name  string   `  | @Ident )`
 }
 
 // Parser configuration
