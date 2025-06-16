@@ -71,6 +71,7 @@ type Statement struct {
 	StructDef   *StructDef   `@@`
 	ProtocolDef *ProtocolDef `| @@`
 	StateDef    *StateDef    `| @@`
+	ReceiveDef  *ReceiveDef  `| @@`
 }
 
 type StructDef struct {
@@ -141,6 +142,18 @@ type Field struct {
 type TypeRef struct {
 	Array *TypeRef `(   "[" @@ "]"`
 	Name  string   `  | @Ident )`
+}
+
+type ReceiveDef struct {
+	Name       string       `"receive" @Ident`
+	Parameters []*Parameter `"{" ( @@ ( "," @@ )* )? "}"`
+	ReturnType *TypeRef     `( "->" @@ )?`
+	Body       *Block       `@@`
+}
+
+type Block struct {
+	// For now, just capture empty braces - we'll expand this later
+	Empty string `"{" "}"`
 }
 
 // Parser configuration
