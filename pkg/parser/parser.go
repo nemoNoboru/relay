@@ -24,8 +24,8 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 
 	// Operators and Punctuation
 	{"Arrow", `->`},
-	{"Assign", `=`},
 	{"Eq", `==`},
+	{"Assign", `=`},
 	{"Ne", `!=`},
 	{"Le", `<=`},
 	{"Ge", `>=`},
@@ -38,6 +38,10 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"And", `&&`},
 	{"Or", `\|\|`},
 	{"Not", `!`},
+	{"PlusAssign", `\+=`},
+	{"MinusAssign", `-=`},
+	{"MultiplyAssign", `\*=`},
+	{"DivideAssign", `/=`},
 	{"Dot", `\.`},
 	{"Comma", `,`},
 	{"Semicolon", `;`},
@@ -52,8 +56,7 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Pipe", `\|`},
 
 	// Whitespace
-	{"Newline", `\n`},
-	{"Whitespace", `[ \t\r]+`},
+	{"whitespace", `[ \t\r\n]+`},
 })
 
 // AST Node Definitions - MINIMAL VERSION
@@ -152,8 +155,137 @@ type ReceiveDef struct {
 }
 
 type Block struct {
-	// For now, just capture empty braces - we'll expand this later
-	Empty string `"{" "}"`
+	Statements []*BlockStatement `"{" @@* "}"`
+}
+
+type BlockStatement struct {
+	Pos lexer.Position
+
+	SetStatement    *SetStatement    `@@`
+	ReturnStatement *ReturnStatement `| @@`
+	IfStatement     *IfStatement     `| @@`
+	ThrowStatement  *ThrowStatement  `| @@`
+	Assignment      *Assignment      `| @@`
+	ExprStatement   *ExprStatement   `| @@`
+}
+
+type SetStatement struct {
+	Variable string      `"set" @Ident`
+	Value    *Expression `"=" @@`
+}
+
+type ReturnStatement struct {
+	Value *Expression `"return" @@`
+}
+
+type IfStatement struct {
+	Condition *Expression `"if" @@`
+	ThenBlock *Block      `@@`
+	ElseBlock *Block      `( "else" @@ )?`
+}
+
+type ThrowStatement struct {
+	Value *Expression `"throw" @@`
+}
+
+type Assignment struct {
+	Target *Expression `@@`
+	Op     string      `@( "=" | "+=" | "-=" | "*=" | "/=" )`
+	Value  *Expression `@@`
+}
+
+type ExprStatement struct {
+	Expression *Expression `@@`
+}
+
+type Expression struct {
+	Logical *LogicalExpr `@@`
+}
+
+type LogicalExpr struct {
+	Left  *EqualityExpr `@@`
+	Right []*LogicalOp  `@@*`
+}
+
+type LogicalOp struct {
+	Op    string        `@( "&&" | "||" )`
+	Right *EqualityExpr `@@`
+}
+
+type EqualityExpr struct {
+	Left  *RelationalExpr `@@`
+	Right []*EqualityOp   `@@*`
+}
+
+type EqualityOp struct {
+	Op    string          `@( "==" | "!=" )`
+	Right *RelationalExpr `@@`
+}
+
+type RelationalExpr struct {
+	Left  *AdditiveExpr   `@@`
+	Right []*RelationalOp `@@*`
+}
+
+type RelationalOp struct {
+	Op    string        `@( "<=" | ">=" | "<" | ">" )`
+	Right *AdditiveExpr `@@`
+}
+
+type AdditiveExpr struct {
+	Left  *MultiplicativeExpr `@@`
+	Right []*AdditiveOp       `@@*`
+}
+
+type AdditiveOp struct {
+	Op    string              `@( "+" | "-" )`
+	Right *MultiplicativeExpr `@@`
+}
+
+type MultiplicativeExpr struct {
+	Left  *UnaryExpr          `@@`
+	Right []*MultiplicativeOp `@@*`
+}
+
+type MultiplicativeOp struct {
+	Op    string     `@( "*" | "/" )`
+	Right *UnaryExpr `@@`
+}
+
+type UnaryExpr struct {
+	Op      *string      `@( "!" | "-" )?`
+	Primary *PrimaryExpr `@@`
+}
+
+type PrimaryExpr struct {
+	Base   *BaseExpr     `@@`
+	Access []*AccessExpr `@@*`
+}
+
+type BaseExpr struct {
+	Literal    *Literal    `@@`
+	Identifier *string     `| @Ident`
+	ObjectLit  *ObjectLit  `| @@`
+	Grouped    *Expression `| "(" @@ ")"`
+}
+
+type AccessExpr struct {
+	FieldAccess *string     `"." @Ident`
+	MethodCall  *MethodCall `| @@`
+}
+
+type MethodCall struct {
+	Method string        `"." @Ident`
+	Args   []*Expression `"(" ( @@ ( "," @@ )* )? ")"`
+}
+
+type ObjectLit struct {
+	Fields []*ObjectField `"{" ( @@ ( "," @@ )* )? "}"`
+}
+
+type ObjectField struct {
+	Key   string      `@Ident`
+	Value *Expression `":" @@`
 }
 
 // Parser configuration
@@ -162,7 +294,7 @@ var relayParser = participle.MustBuild[Program](
 	participle.CaseInsensitive("Ident"),
 	participle.Unquote("String"),
 	participle.UseLookahead(2),
-	participle.Elide("Whitespace", "Newline", "Comment", "BlockComment"),
+	participle.Elide("whitespace", "Comment", "BlockComment"),
 )
 
 // Parse function to parse Relay source code
