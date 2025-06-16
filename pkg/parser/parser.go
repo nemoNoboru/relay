@@ -68,12 +68,29 @@ type Program struct {
 type Statement struct {
 	Pos lexer.Position
 
-	StructDef *StructDef `@@`
+	StructDef   *StructDef   `@@`
+	ProtocolDef *ProtocolDef `| @@`
 }
 
 type StructDef struct {
 	Name   string   `"struct" @Ident`
 	Fields []*Field `"{" @@* "}"`
+}
+
+type ProtocolDef struct {
+	Name    string             `"protocol" @Ident`
+	Methods []*MethodSignature `"{" @@* "}"`
+}
+
+type MethodSignature struct {
+	Name       string       `@Ident`
+	Parameters []*Parameter `"(" ( @@ ( "," @@ )* )? ")"`
+	ReturnType *TypeRef     `( "->" @@ )?`
+}
+
+type Parameter struct {
+	Name string   `@Ident`
+	Type *TypeRef `":" @@`
 }
 
 type Field struct {
