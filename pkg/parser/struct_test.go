@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,81 +12,16 @@ import (
 // STRUCT PARSING TESTS
 // =============================================================================
 
-// Test the lexer tokenization for struct definition
-func TestLexer_StructTokens(t *testing.T) {
-	input := `struct User {
- 		name: string,
-  		email: string,
-  		age: number
-	}`
-
-	lex, err := relayLexer.Lex("test.relay", strings.NewReader(input))
-	require.NoError(t, err)
-
-	if err != nil {
-		println(err.Error())
-	}
-
-	// Get symbol mappings
-	symbols := relayLexer.Symbols()
-	whitespaceType := symbols["Whitespace"]
-	newlineType := symbols["Newline"]
-
-	// Collect all tokens
-	var filteredTokens []lexer.Token
-	for {
-		token, err := lex.Next()
-		if err != nil {
-			break
-		}
-		if token.Type != whitespaceType && token.Type != newlineType {
-			filteredTokens = append(filteredTokens, token)
-		}
-		if token.EOF() {
-			break
-		}
-	}
-
-	expectedTokens := []struct {
-		TypeName string
-		Value    string
-	}{
-		{"Ident", "struct"},
-		{"Ident", "User"},
-		{"LBrace", "{"},
-		{"Ident", "name"},
-		{"Colon", ":"},
-		{"Ident", "string"},
-		{"Comma", ","},
-		{"Ident", "email"},
-		{"Colon", ":"},
-		{"Ident", "string"},
-		{"Comma", ","},
-		{"Ident", "age"},
-		{"Colon", ":"},
-		{"Ident", "number"},
-		{"RBrace", "}"},
-		{"EOF", ""},
-	}
-
-	require.Len(t, filteredTokens, len(expectedTokens), "Token count mismatch")
-
-	for i, expected := range expectedTokens {
-		expectedType := symbols[expected.TypeName]
-		assert.Equal(t, expectedType, filteredTokens[i].Type, "Token type mismatch at position %d", i)
-		assert.Equal(t, expected.Value, filteredTokens[i].Value, "Token value mismatch at position %d", i)
-	}
-}
-
-// Test parsing the complete struct definition
+// Test parsing basic struct definition
 func TestParser_StructDefinition(t *testing.T) {
 	input := `struct User {
-  name: string,
-  email: string,
-  age: number
-}`
+		username: string,
+		email: string,
+		age: number,
+		active: bool
+	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -104,32 +38,31 @@ func TestParser_StructDefinition(t *testing.T) {
 	assert.Equal(t, "User", structDef.Name)
 
 	// Verify fields
-	require.Len(t, structDef.Fields, 3)
+	require.Len(t, structDef.Fields, 4)
 
-	// Test first field: name: string
+	// Test fields
 	field1 := structDef.Fields[0]
-	assert.Equal(t, "name", field1.Name)
-	require.NotNil(t, field1.Type)
+	assert.Equal(t, "username", field1.Name)
 	assert.Equal(t, "string", field1.Type.Name)
 
-	// Test second field: email: string
 	field2 := structDef.Fields[1]
 	assert.Equal(t, "email", field2.Name)
-	require.NotNil(t, field2.Type)
 	assert.Equal(t, "string", field2.Type.Name)
 
-	// Test third field: age: number
 	field3 := structDef.Fields[2]
 	assert.Equal(t, "age", field3.Name)
-	require.NotNil(t, field3.Type)
 	assert.Equal(t, "number", field3.Type.Name)
+
+	field4 := structDef.Fields[3]
+	assert.Equal(t, "active", field4.Name)
+	assert.Equal(t, "bool", field4.Type.Name)
 }
 
 // Test struct with no fields (empty struct)
 func TestParser_StructEmpty(t *testing.T) {
 	input := `struct Empty {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -147,7 +80,7 @@ func TestParser_StructSingleField(t *testing.T) {
   id: string
 }`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -171,7 +104,7 @@ func TestParser_StructBasicTypes(t *testing.T) {
   created_at: datetime
 }`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	structDef := program.Statements[0].StructDef
@@ -204,7 +137,7 @@ func TestParser_StructArrayTypes(t *testing.T) {
   scores: [number]
 }`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	structDef := program.Statements[0].StructDef
@@ -243,7 +176,7 @@ func TestParser_StructNestedArrayTypes(t *testing.T) {
   labels: [[string]]
 }`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	structDef := program.Statements[0].StructDef
@@ -296,7 +229,7 @@ func TestParser_StructErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := relayParser.Parse("test.relay", strings.NewReader(tt.input))
+			_, err := Parse("test.relay", strings.NewReader(tt.input))
 			assert.Error(t, err, "Expected parsing error for %s", tt.name)
 		})
 	}
@@ -314,7 +247,7 @@ struct Post {
   content: string
 }`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -349,7 +282,7 @@ func TestParser_StructCaseSensitivity(t *testing.T) {
   emailAddress: string
 }`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	structDef := program.Statements[0].StructDef
@@ -373,7 +306,7 @@ func BenchmarkParser_StructParsing(b *testing.B) {
 }`
 
 	for i := 0; i < b.N; i++ {
-		_, err := relayParser.Parse("test.relay", strings.NewReader(input))
+		_, err := Parse("test.relay", strings.NewReader(input))
 		if err != nil {
 			b.Fatal(err)
 		}

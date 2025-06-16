@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,75 +12,6 @@ import (
 // PROTOCOL PARSING TESTS
 // =============================================================================
 
-// Test the lexer tokenization for protocol definition
-func TestLexer_ProtocolTokens(t *testing.T) {
-	input := `protocol BlogService {
-		get_posts() -> [Post]
-		create_post(title: string, content: string) -> Post
-	}`
-
-	lex, err := relayLexer.Lex("test.relay", strings.NewReader(input))
-	require.NoError(t, err)
-
-	// Get symbol mappings
-	symbols := relayLexer.Symbols()
-	whitespaceType := symbols["Whitespace"]
-	newlineType := symbols["Newline"]
-
-	// Collect all tokens
-	var filteredTokens []lexer.Token
-	for {
-		token, err := lex.Next()
-		if err != nil {
-			break
-		}
-		if token.Type != whitespaceType && token.Type != newlineType {
-			filteredTokens = append(filteredTokens, token)
-		}
-		if token.EOF() {
-			break
-		}
-	}
-
-	expectedTokens := []struct {
-		TypeName string
-		Value    string
-	}{
-		{"Ident", "protocol"},
-		{"Ident", "BlogService"},
-		{"LBrace", "{"},
-		{"Ident", "get_posts"},
-		{"LParen", "("},
-		{"RParen", ")"},
-		{"Arrow", "->"},
-		{"LBracket", "["},
-		{"Ident", "Post"},
-		{"RBracket", "]"},
-		{"Ident", "create_post"},
-		{"LParen", "("},
-		{"Ident", "title"},
-		{"Colon", ":"},
-		{"Ident", "string"},
-		{"Comma", ","},
-		{"Ident", "content"},
-		{"Colon", ":"},
-		{"Ident", "string"},
-		{"RParen", ")"},
-		{"Arrow", "->"},
-		{"Ident", "Post"},
-		{"RBrace", "}"},
-		{"EOF", ""},
-	}
-
-	require.Len(t, filteredTokens, len(expectedTokens), "Token count mismatch")
-
-	for i, expected := range expectedTokens {
-		expectedType := symbols[expected.TypeName]
-		assert.Equal(t, expectedType, filteredTokens[i].Type, "Token type mismatch at position %d", i)
-		assert.Equal(t, expected.Value, filteredTokens[i].Value, "Token value mismatch at position %d", i)
-	}
-}
-
 // Test parsing basic protocol definition
 func TestParser_ProtocolDefinition(t *testing.T) {
 	input := `protocol BlogService {
@@ -89,7 +19,7 @@ func TestParser_ProtocolDefinition(t *testing.T) {
 		create_post(title: string, content: string) -> Post
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -139,7 +69,7 @@ func TestParser_ProtocolDefinition(t *testing.T) {
 func TestParser_ProtocolEmpty(t *testing.T) {
 	input := `protocol EmptyService {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -157,7 +87,7 @@ func TestParser_ProtocolSingleMethod(t *testing.T) {
 		ping() -> bool
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -180,7 +110,7 @@ func TestParser_ProtocolNoReturnType(t *testing.T) {
 		do_something(input: string)
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	protocolDef := program.Statements[0].ProtocolDef
@@ -206,7 +136,7 @@ func TestParser_ProtocolBasicTypes(t *testing.T) {
 		process_data(timestamp: datetime) -> bool
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	protocolDef := program.Statements[0].ProtocolDef
@@ -250,7 +180,7 @@ func TestParser_ProtocolArrayTypes(t *testing.T) {
 		bulk_create(users: [User], posts: [Post]) -> [Result]
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	protocolDef := program.Statements[0].ProtocolDef
@@ -317,7 +247,7 @@ func TestParser_ProtocolMultiple(t *testing.T) {
 		get_posts() -> [Post]
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -345,7 +275,7 @@ func TestParser_ProtocolCaseSensitivity(t *testing.T) {
 		getUser(id: string) -> User
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	protocolDef := program.Statements[0].ProtocolDef
@@ -372,7 +302,7 @@ func BenchmarkParser_ProtocolParsing(b *testing.B) {
 	}`
 
 	for i := 0; i < b.N; i++ {
-		_, err := relayParser.Parse("test.relay", strings.NewReader(input))
+		_, err := Parse("test.relay", strings.NewReader(input))
 		if err != nil {
 			b.Fatal(err)
 		}

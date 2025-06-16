@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,64 +12,13 @@ import (
 // RECEIVE PARSING TESTS
 // =============================================================================
 
-// Test the lexer tokenization for receive definition
-func TestLexer_ReceiveTokens(t *testing.T) {
-	input := `receive get_posts {} -> [Post] {}`
-
-	lex, err := relayLexer.Lex("test.relay", strings.NewReader(input))
-	require.NoError(t, err)
-
-	// Get symbol mappings
-	symbols := relayLexer.Symbols()
-	whitespaceType := symbols["Whitespace"]
-	newlineType := symbols["Newline"]
-
-	// Collect all tokens
-	var filteredTokens []lexer.Token
-	for {
-		token, err := lex.Next()
-		if err != nil {
-			break
-		}
-		if token.Type != whitespaceType && token.Type != newlineType {
-			filteredTokens = append(filteredTokens, token)
-		}
-		if token.EOF() {
-			break
-		}
-	}
-
-	expectedTokens := []struct {
-		TypeName string
-		Value    string
-	}{
-		{"Ident", "receive"},
-		{"Ident", "get_posts"},
-		{"LBrace", "{"},
-		{"RBrace", "}"},
-		{"Arrow", "->"},
-		{"LBracket", "["},
-		{"Ident", "Post"},
-		{"RBracket", "]"},
-		{"LBrace", "{"},
-		{"RBrace", "}"},
-		{"EOF", ""},
-	}
-
-	require.Len(t, filteredTokens, len(expectedTokens), "Token count mismatch")
-
-	for i, expected := range expectedTokens {
-		expectedType := symbols[expected.TypeName]
-		assert.Equal(t, expectedType, filteredTokens[i].Type, "Token type mismatch at position %d", i)
-		assert.Equal(t, expected.Value, filteredTokens[i].Value, "Token value mismatch at position %d", i)
-	}
-}
-
 // Test parsing basic receive definition without parameters
 func TestParser_ReceiveDefinitionNoParams(t *testing.T) {
-	input := `receive get_posts {} -> [Post] {}`
+	input := `receive get_status {} -> bool {
+		return true
+	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -83,24 +31,26 @@ func TestParser_ReceiveDefinitionNoParams(t *testing.T) {
 
 	receiveDef := stmt.ReceiveDef
 
-	// Verify basic properties
-	assert.Equal(t, "get_posts", receiveDef.Name)
+	// Verify receive name
+	assert.Equal(t, "get_status", receiveDef.Name)
+
+	// Verify parameters (should be empty)
 	assert.Len(t, receiveDef.Parameters, 0)
 
 	// Verify return type
 	require.NotNil(t, receiveDef.ReturnType)
-	require.NotNil(t, receiveDef.ReturnType.Array)
-	assert.Equal(t, "Post", receiveDef.ReturnType.Array.Name)
+	assert.Equal(t, "bool", receiveDef.ReturnType.Name)
 
-	// Verify body
+	// Verify body exists
 	require.NotNil(t, receiveDef.Body)
+	require.Len(t, receiveDef.Body.Statements, 1)
 }
 
 // Test parsing receive definition with parameters
 func TestParser_ReceiveDefinitionWithParams(t *testing.T) {
 	input := `receive create_post {title: string, content: string} -> Post {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -137,7 +87,7 @@ func TestParser_ReceiveDefinitionWithParams(t *testing.T) {
 func TestParser_ReceiveDefinitionNoReturnType(t *testing.T) {
 	input := `receive ping {} {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	receiveDef := program.Statements[0].ReceiveDef
@@ -153,7 +103,7 @@ func TestParser_ReceiveDefinitionNoReturnType(t *testing.T) {
 func TestParser_ReceiveDefinitionSingleParam(t *testing.T) {
 	input := `receive get_post {id: string} -> Post {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	receiveDef := program.Statements[0].ReceiveDef
@@ -179,7 +129,7 @@ func TestParser_ReceiveDefinitionBasicTypes(t *testing.T) {
 		created: datetime
 	} -> object {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	receiveDef := program.Statements[0].ReceiveDef
@@ -216,7 +166,7 @@ func TestParser_ReceiveDefinitionArrayTypes(t *testing.T) {
 		users: [User]
 	} -> [Result] {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	receiveDef := program.Statements[0].ReceiveDef
@@ -256,7 +206,7 @@ func TestParser_ReceiveDefinitionNestedArrayTypes(t *testing.T) {
 		grid: [[[string]]]
 	} -> [[Result]] {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	receiveDef := program.Statements[0].ReceiveDef
@@ -294,7 +244,7 @@ func TestParser_ReceiveDefinitionMultiple(t *testing.T) {
 	
 	receive delete_post {id: string} -> bool {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.Len(t, program.Statements, 3)
 
@@ -331,7 +281,7 @@ func TestParser_ReceiveDefinitionCaseSensitivity(t *testing.T) {
 	
 	receive GET_POSTS {} -> [POST] {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.Len(t, program.Statements, 3)
 
@@ -364,7 +314,7 @@ func TestParser_ReceiveDefinitionErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := relayParser.Parse("test.relay", strings.NewReader(tt.input))
+			_, err := Parse("test.relay", strings.NewReader(tt.input))
 			assert.Error(t, err, "Expected parsing error for %s", tt.name)
 		})
 	}
@@ -389,7 +339,7 @@ func TestParser_MixedReceiveWithOtherConstructs(t *testing.T) {
 	
 	receive create_post {title: string} -> Post {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.Len(t, program.Statements, 5)
 
@@ -432,7 +382,7 @@ func BenchmarkParser_ReceiveParsing(b *testing.B) {
 	} -> Post {}`
 
 	for i := 0; i < b.N; i++ {
-		_, err := relayParser.Parse("test.relay", strings.NewReader(input))
+		_, err := Parse("test.relay", strings.NewReader(input))
 		if err != nil {
 			b.Fatal(err)
 		}

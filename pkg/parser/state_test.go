@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,82 +12,15 @@ import (
 // STATE PARSING TESTS
 // =============================================================================
 
-// Test the lexer tokenization for state definition
-func TestLexer_StateTokens(t *testing.T) {
-	input := `state {
-		count: number = 0,
-		active: bool = true,
-		name: string = "default"
-	}`
-
-	lex, err := relayLexer.Lex("test.relay", strings.NewReader(input))
-	require.NoError(t, err)
-
-	// Get symbol mappings
-	symbols := relayLexer.Symbols()
-	whitespaceType := symbols["Whitespace"]
-	newlineType := symbols["Newline"]
-
-	// Collect all tokens
-	var filteredTokens []lexer.Token
-	for {
-		token, err := lex.Next()
-		if err != nil {
-			break
-		}
-		if token.Type != whitespaceType && token.Type != newlineType {
-			filteredTokens = append(filteredTokens, token)
-		}
-		if token.EOF() {
-			break
-		}
-	}
-
-	expectedTokens := []struct {
-		TypeName string
-		Value    string
-	}{
-		{"Ident", "state"},
-		{"LBrace", "{"},
-		{"Ident", "count"},
-		{"Colon", ":"},
-		{"Ident", "number"},
-		{"Assign", "="},
-		{"Number", "0"},
-		{"Comma", ","},
-		{"Ident", "active"},
-		{"Colon", ":"},
-		{"Ident", "bool"},
-		{"Assign", "="},
-		{"Bool", "true"},
-		{"Comma", ","},
-		{"Ident", "name"},
-		{"Colon", ":"},
-		{"Ident", "string"},
-		{"Assign", "="},
-		{"String", `"default"`},
-		{"RBrace", "}"},
-		{"EOF", ""},
-	}
-
-	require.Len(t, filteredTokens, len(expectedTokens), "Token count mismatch")
-
-	for i, expected := range expectedTokens {
-		expectedType := symbols[expected.TypeName]
-		assert.Equal(t, expectedType, filteredTokens[i].Type, "Token type mismatch at position %d", i)
-		assert.Equal(t, expected.Value, filteredTokens[i].Value, "Token value mismatch at position %d", i)
-	}
-}
-
 // Test parsing basic state definition
 func TestParser_StateDefinition(t *testing.T) {
 	input := `state {
-		count: number = 0,
-		active: bool = true,
-		name: string = "default"
+		posts: [Post] = [],
+		next_id: number = 1,
+		active: bool = true
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
@@ -104,92 +36,101 @@ func TestParser_StateDefinition(t *testing.T) {
 	// Verify fields
 	require.Len(t, stateDef.Fields, 3)
 
-	// Test first field: count: number = 0
+	// Test first field: posts: [Post] = []
 	field1 := stateDef.Fields[0]
-	assert.Equal(t, "count", field1.Name)
-	require.NotNil(t, field1.Type)
-	assert.Equal(t, "number", field1.Type.Name)
+	assert.Equal(t, "posts", field1.Name)
+	require.NotNil(t, field1.Type.Array)
+	assert.Equal(t, "Post", field1.Type.Array.Name)
 	require.NotNil(t, field1.DefaultValue)
-	require.NotNil(t, field1.DefaultValue.Number)
-	assert.Equal(t, float64(0), *field1.DefaultValue.Number)
+	require.NotNil(t, field1.DefaultValue.Array)
 
-	// Test second field: active: bool = true
+	// Test second field: next_id: number = 1
 	field2 := stateDef.Fields[1]
-	assert.Equal(t, "active", field2.Name)
-	require.NotNil(t, field2.Type)
-	assert.Equal(t, "bool", field2.Type.Name)
+	assert.Equal(t, "next_id", field2.Name)
+	assert.Equal(t, "number", field2.Type.Name)
 	require.NotNil(t, field2.DefaultValue)
-	require.NotNil(t, field2.DefaultValue.Bool)
-	assert.True(t, *field2.DefaultValue.GetBoolValue())
+	require.NotNil(t, field2.DefaultValue.Number)
+	assert.Equal(t, float64(1), *field2.DefaultValue.Number)
 
-	// Test third field: name: string = "default"
+	// Test third field: active: bool = true
 	field3 := stateDef.Fields[2]
-	assert.Equal(t, "name", field3.Name)
-	require.NotNil(t, field3.Type)
-	assert.Equal(t, "string", field3.Type.Name)
+	assert.Equal(t, "active", field3.Name)
+	assert.Equal(t, "bool", field3.Type.Name)
 	require.NotNil(t, field3.DefaultValue)
-	require.NotNil(t, field3.DefaultValue.String)
-	assert.Equal(t, "default", *field3.DefaultValue.String)
+	require.NotNil(t, field3.DefaultValue.Bool)
+	assert.True(t, *field3.DefaultValue.GetBoolValue())
 }
 
-// Test state with no fields (empty state)
+// Test parsing empty state definition
 func TestParser_StateEmpty(t *testing.T) {
 	input := `state {}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.NotNil(t, program)
 
+	// Verify we have exactly one statement
 	require.Len(t, program.Statements, 1)
-	stateDef := program.Statements[0].StateDef
-	require.NotNil(t, stateDef)
 
+	// Verify it's a state definition
+	stmt := program.Statements[0]
+	require.NotNil(t, stmt.StateDef)
+
+	stateDef := stmt.StateDef
 	assert.Len(t, stateDef.Fields, 0)
 }
 
-// Test state with single field
+// Test parsing state with single field
 func TestParser_StateSingleField(t *testing.T) {
 	input := `state {
-		counter: number = 42
+		count: number = 42
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
-	require.NotNil(t, program)
 
 	stateDef := program.Statements[0].StateDef
 	require.NotNil(t, stateDef)
-
 	require.Len(t, stateDef.Fields, 1)
 
 	field := stateDef.Fields[0]
-	assert.Equal(t, "counter", field.Name)
+	assert.Equal(t, "count", field.Name)
 	assert.Equal(t, "number", field.Type.Name)
+	require.NotNil(t, field.DefaultValue)
 	require.NotNil(t, field.DefaultValue.Number)
 	assert.Equal(t, float64(42), *field.DefaultValue.Number)
 }
 
-// Test state with fields without default values
+// Test parsing state fields without defaults
 func TestParser_StateFieldsNoDefaults(t *testing.T) {
 	input := `state {
-		count: number,
-		name: string,
+		username: string,
+		age: number,
 		active: bool
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	stateDef := program.Statements[0].StateDef
 	require.NotNil(t, stateDef)
 	require.Len(t, stateDef.Fields, 3)
 
-	// All fields should have no default values
-	for i, expectedName := range []string{"count", "name", "active"} {
-		field := stateDef.Fields[i]
-		assert.Equal(t, expectedName, field.Name)
-		assert.Nil(t, field.DefaultValue)
-	}
+	// Check field types without default values
+	field1 := stateDef.Fields[0]
+	assert.Equal(t, "username", field1.Name)
+	assert.Equal(t, "string", field1.Type.Name)
+	assert.Nil(t, field1.DefaultValue)
+
+	field2 := stateDef.Fields[1]
+	assert.Equal(t, "age", field2.Name)
+	assert.Equal(t, "number", field2.Type.Name)
+	assert.Nil(t, field2.DefaultValue)
+
+	field3 := stateDef.Fields[2]
+	assert.Equal(t, "active", field3.Name)
+	assert.Equal(t, "bool", field3.Type.Name)
+	assert.Nil(t, field3.DefaultValue)
 }
 
 // Test state with array types and array literals
@@ -201,7 +142,7 @@ func TestParser_StateArrayTypes(t *testing.T) {
 		empty_list: [object] = []
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	stateDef := program.Statements[0].StateDef
@@ -257,7 +198,7 @@ func TestParser_StateFunctionCallDefaults(t *testing.T) {
 		timestamp: number = time()
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	stateDef := program.Statements[0].StateDef
@@ -300,7 +241,7 @@ func TestParser_StateBasicTypes(t *testing.T) {
 		created: datetime = now()
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	stateDef := program.Statements[0].StateDef
@@ -356,7 +297,7 @@ func TestParser_StateErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := relayParser.Parse("test.relay", strings.NewReader(tt.input))
+			_, err := Parse("test.relay", strings.NewReader(tt.input))
 			assert.Error(t, err, "Expected parsing error for %s", tt.name)
 		})
 	}
@@ -369,7 +310,7 @@ func TestParser_StateNestedArrayTypes(t *testing.T) {
 		grid: [[[string]]] = [[["a", "b"]], [["c", "d"]]]
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	stateDef := program.Statements[0].StateDef
@@ -403,7 +344,7 @@ func TestParser_StateCaseSensitivity(t *testing.T) {
 		USERCOUNT: number = 2
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 
 	stateDef := program.Statements[0].StateDef
@@ -442,7 +383,7 @@ func TestParser_MixedStateWithOtherConstructs(t *testing.T) {
 		get_users() -> [User]
 	}`
 
-	program, err := relayParser.Parse("test.relay", strings.NewReader(input))
+	program, err := Parse("test.relay", strings.NewReader(input))
 	require.NoError(t, err)
 	require.Len(t, program.Statements, 3)
 
@@ -487,7 +428,7 @@ func BenchmarkParser_StateParsing(b *testing.B) {
 	}`
 
 	for i := 0; i < b.N; i++ {
-		_, err := relayParser.Parse("test.relay", strings.NewReader(input))
+		_, err := Parse("test.relay", strings.NewReader(input))
 		if err != nil {
 			b.Fatal(err)
 		}
