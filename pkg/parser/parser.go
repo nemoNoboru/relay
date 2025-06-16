@@ -33,6 +33,9 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Throw", `\bthrow\b`},
 	{"Struct", `\bstruct\b`},
 	{"Protocol", `\bprotocol\b`},
+	{"Server", `\bserver\b`},
+	{"Implements", `\bimplements\b`},
+
 	{"State", `\bstate\b`},
 	{"Receive", `\breceive\b`},
 
@@ -90,6 +93,7 @@ type Statement struct {
 
 	StructDef   *StructDef   `@@`
 	ProtocolDef *ProtocolDef `| @@`
+	ServerDef   *ServerDef   `| @@`
 	StateDef    *StateDef    `| @@`
 	ReceiveDef  *ReceiveDef  `| @@`
 }
@@ -102,6 +106,21 @@ type StructDef struct {
 type ProtocolDef struct {
 	Name    string             `"protocol" @Ident`
 	Methods []*MethodSignature `"{" @@* "}"`
+}
+
+type ServerDef struct {
+	Name     string      `"server" @Ident`
+	Protocol *string     `( "implements" @Ident )?`
+	Body     *ServerBody `@@`
+}
+
+type ServerBody struct {
+	Elements []*ServerElement `"{" @@* "}"`
+}
+
+type ServerElement struct {
+	State   *StateDef   `@@`
+	Receive *ReceiveDef `| @@`
 }
 
 type StateDef struct {
@@ -317,7 +336,7 @@ type PrimaryExpr struct {
 
 type BaseExpr struct {
 	Literal    *Literal      `@@`
-	Identifier *string       `| @Ident`
+	Identifier *string       `| @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
 	ObjectLit  *ObjectLit    `| @@`
 	SendExpr   *SendExpr     `| @@`
 	FuncCall   *FuncCallExpr `| @@`
@@ -325,7 +344,7 @@ type BaseExpr struct {
 }
 
 type AccessExpr struct {
-	FieldAccess *string     `"." @Ident`
+	FieldAccess *string     `"." @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
 	MethodCall  *MethodCall `| @@`
 }
 
