@@ -21,8 +21,10 @@ Relay is designed for federated, self-hostable, and functional applications. Eac
 
 ```
 struct, protocol, server, state, receive, send, template, dispatch,
-config, set, fn, if, else, for, in, try, catch, return, throw
+config, fn, if, else, for, in, try, catch, return, throw, update
 ```
+
+**Note:** All keywords are strictly reserved and cannot be used as identifiers.
 
 ---
 
@@ -43,13 +45,18 @@ datetime       // ISO 8601 timestamps
 optional(type) // Nullable types
 ```
 
-### Validation Modifiers
+### Symbol Literals
+
+Relay supports symbol literals as syntactic sugar for strings:
+
 ```relay
-string.min(n)         // Minimum length
-string.max(n)         // Maximum length  
-string.email()        // Email validation
-string.url()          // URL validation
-string.regex(pattern) // Regex validation
+:hello         // Equivalent to "hello"
+:get_posts     // Equivalent to "get_posts"
+:default       // Equivalent to "default"
+
+// Symbols follow identifier rules: letters, numbers, underscores only
+:valid_symbol_123  // Valid
+:invalid-symbol    // Invalid (contains hyphen)
 ```
 
 ### Immutable Data Operations
@@ -58,14 +65,10 @@ Relay is immutable-by-default. All data operations return new instances rather t
 
 #### Object Methods
 ```relay
-// Single field updates
+// Field access is always a method call
+user.get("name")                    // Get field value
 user.set("name", "John")           // Set single field
-user.set("email", "john@test.com") // Set single field
-user.update("age", 25)             // Alias for set
-
-// Multiple field updates  
-user.merge({name: "John", age: 25})      // Merge multiple fields
-user.defaults({active: true, role: "user"}) // Set defaults for missing fields
+user.merge({name: "John", age: 25}) // Merge multiple fields
 
 // Method chaining
 user.set("name", "John")
@@ -84,32 +87,91 @@ users.insert(2, user)            // Insert at specific index
 // Removal
 users.remove(user)               // Remove by value
 users.remove_at(0)               // Remove by index
-users.filter(u => u.active)     // Remove by condition
+users.filter(fn (u) { u.get("active") }) // Remove by condition
 
 // Transformation
-users.map(u => u.set("active", true))  // Transform each item
-users.sort_by(u => u.name)            // Sort by field
-users.reverse()                       // Reverse order
-users.replace(old_user, new_user)     // Replace specific item
+users.map(fn (u) { u.set("active", true) })  // Transform each item
+users.sort_by(fn (u) { u.get("name") })      // Sort by field
+users.reverse()                              // Reverse order
+users.replace(old_user, new_user)            // Replace specific item
 ```
 
 ---
 
 ## 4. Core Language Constructs
 
-### 4.1 Struct Definitions
+### 4.1 Expression-Based Design
+
+**Everything is an expression** - including blocks, control flow, and statements. Blocks evaluate to their last expression.
+
+```relay
+// Block as expression
+set result = {
+  set x = 10
+  set y = 20
+  x + y  // Block evaluates to 30
+}
+
+// If as expression
+set message = if count > 0 { "items found" } else { "no items" }
+
+// Early return from blocks
+set result = {
+  if error_condition {
+    return "error"  // Returns from this block only
+  }
+  "success"
+}
+```
+
+### 4.2 Function Definitions
+
+All functions use the `fn` keyword with consistent syntax:
+
+```relay
+// Named functions
+fn calculate_total(items: [object]) -> number {
+  set total = 0
+  for item in items {
+    update total = total + item.get("price")
+  }
+  total
+}
+
+fn format_date(date: datetime, format: string) -> string {
+  date.format(format)
+}
+
+// Higher-order functions
+fn apply_discount(calculator: fn(number) -> number, price: number) -> number {
+  calculator(price)
+}
+
+// Lambda expressions (anonymous functions)
+set numbers = [1, 2, 3, 4, 5]
+set doubled = numbers.map(fn (x) { x * 2 })
+set filtered = numbers.filter(fn (x) { x > 3 })
+
+// Multi-line lambdas
+set complex_transform = numbers.map(fn (x) {
+  set doubled = x * 2
+  doubled + 10
+})
+```
+
+### 4.3 Struct Definitions
 
 ```relay
 struct User {
-  username: string.min(3).max(50),
-  email: string.email(),
-  bio: optional(string.max(500)),
+  username: string,
+  email: string,
+  bio: optional(string),
   created_at: datetime
 }
 
 struct Post {
   id: string,
-  title: string.max(200),
+  title: string,
   content: string,
   author: string,
   tags: [string],
@@ -117,7 +179,7 @@ struct Post {
 }
 ```
 
-### 4.2 Protocol Definitions
+### 4.4 Protocol Definitions
 
 ```relay
 protocol BlogService {
@@ -134,69 +196,69 @@ protocol UserService {
 }
 ```
 
-### 4.3 Server Definitions (Multi-Server Support)
+### 4.5 Server Definitions
 
 Every Relay program can contain multiple servers. All defined servers are automatically started and mounted on startup.
 
 ```relay
-server blog_service implements BlogService {
+server blog_service {
   state {
     posts: [Post] = [],
     next_id: number = 1
   }
   
-  receive get_posts {} -> [Post] {
-    return state.posts  // Automatically wrapped as {state, result}
+  receive fn get_posts() -> [Post] {
+    state.get("posts")
   }
   
-  receive create_post {title: string, content: string} -> Post {
+  receive fn create_post(title: string, content: string) -> Post {
     set post = Post{
-      id: state.next_id.toString(),
+      id: state.get("next_id").toString(),
       title: title,
       content: content,
-      author: config.default_author,
+      author: "Anonymous",
       tags: [],
       created_at: now()
     }
     
-    state.posts = state.posts.prepend(post)
-    state.next_id = state.next_id + 1
+    update state.posts = state.get("posts").add(post)
+    update state.next_id = state.get("next_id") + 1
     
-    return post
+    post
   }
   
-  receive get_post {id: string} -> Post {
-    set post = state.posts.find(p => p.id == id)
+  receive fn get_post(id: string) -> Post {
+    set post = state.get("posts").find(fn (p) { p.get("id") == id })
     if post {
-      return post
+      post
     } else {
       throw {error: "Post not found", id: id}
     }
   }
   
-  receive delete_post {id: string} -> bool {
-    set initial_length = state.posts.length
-    state.posts = state.posts.filter(p => p.id != id)
-    return state.posts.length < initial_length
+  receive fn delete_post(id: string) -> bool {
+    set initial_length = state.get("posts").length
+    update state.posts = state.get("posts").filter(fn (p) { p.get("id") != id })
+    state.get("posts").length < initial_length
   }
 }
 
-server user_service implements UserService {
+server user_service {
   state {
     users: [User] = [],
     next_id: number = 1
   }
   
-  receive create_user {user: User} -> User {
+  receive fn create_user(user: User) -> User {
     set new_user = user.set("created_at", now())
-    state.users = state.users.add(new_user)
-    return new_user
+    update state.users = state.get("users").add(new_user)
+    new_user
   }
   
-  receive get_user {username: string} -> User {
-    set user = state.users.find(u => u.username == username)
+  receive fn get_user(username: string) -> User {
+    set user = state.get("users").find(fn (u) { u.get("username") == username })
     if user {
-      return user
+      user
     } else {
       throw {error: "User not found", username: username}
     }
@@ -204,9 +266,11 @@ server user_service implements UserService {
 }
 ```
 
-### 4.4 State Management (Stateless with Persistence)
+### 4.6 State Management
 
 **Key Innovation:** Servers are stateless in syntax but stateful in behavior. State is automatically persisted to embedded NoSQL database and restored on startup.
+
+State is modified using the `update` keyword for clear immutable semantics:
 
 ```relay
 server counter_service {
@@ -216,63 +280,29 @@ server counter_service {
     history: [object] = []
   }
   
-  receive increment {amount: optional(number) = 1} -> number {
-    set increment_amount = amount || 1
-    state.count += increment_amount
-    state.last_updated = now()
-    state.history = state.history.add({
+  receive fn increment(amount: optional(number)) -> number {
+    set increment_amount = amount ?? 1
+    update state.count = state.get("count") + increment_amount
+    update state.last_updated = now()
+    update state.history = state.get("history").add({
       action: "increment",
       amount: increment_amount,
-      timestamp: state.last_updated
+      timestamp: state.get("last_updated")
     })
-    return state.count
+    state.get("count")
   }
   
-  receive get_stats {} -> object {
-    return {
-      count: state.count,
-      last_updated: state.last_updated,
-      total_operations: state.history.length
+  receive fn get_stats() -> object {
+    {
+      count: state.get("count"),
+      last_updated: state.get("last_updated"),
+      total_operations: state.get("history").length
     }
   }
 }
 ```
 
-### 4.5 Functions and Lambdas
-
-```relay
-// Function definitions
-fn calculate_total(items: [object]) -> number {
-  set total = 0
-  for item in items {
-    total += item.price
-  }
-  return total
-}
-
-fn format_date(date: datetime, format: string) -> string {
-  return date.format(format)
-}
-
-// Higher-order functions
-fn apply_discount(calculator: fn(number) -> number, price: number) -> number {
-  return calculator(price)
-}
-
-// Lambda expressions
-set numbers = [1, 2, 3, 4, 5]
-set doubled = numbers.map(x => x * 2)
-set filtered = numbers.filter(x => x > 3)
-
-// Multi-line lambdas
-set complex_transform = numbers.map(x => {
-  set doubled = x * 2
-  set result = doubled + 10
-  return result
-})
-```
-
-### 4.6 Send/Receive Communication
+### 4.7 Send/Receive Communication
 
 ```relay
 // Local server call
@@ -296,25 +326,19 @@ set new_post = send "blog_service" create_post {
 }
 ```
 
-### 4.7 Template System (PHP-style Web Hosting)
+### 4.8 Template System (PHP-style Web Hosting)
 
 **Revolutionary Feature:** The `template` keyword performs automatic send + render in one step.
 
 ```relay
-// Template declaration
-template "homepage.html" from get_posts {}
-
-// Equivalent to:
-// set data = send get_posts {}
-// return render("homepage.html", data)
-
-// More complex example
-template "post.html" from get_post {id: string}
-template "user-profile.html" from get_user {username: string}
+// Template declarations - simplified function call syntax
+template "homepage.html" from get_posts()
+template "post.html" from get_post(id: string)
+template "user-profile.html" from get_user(username: string)
 
 // JSON API endpoints
-template "api/posts.json" from get_posts {}
-template "api/user.json" from get_user {username: string}
+template "api/posts.json" from get_posts()
+template "api/user.json" from get_user(username: string)
 ```
 
 **Template Files:**
@@ -333,9 +357,9 @@ template "api/user.json" from get_user {username: string}
     @if(posts.length > 0) {
         @for(post in posts) {
             <article>
-                <h2>@{post.title}</h2>
-                <p>@{post.content}</p>
-                <small>By @{post.author} on @{format_date(post.created_at, "YYYY-MM-DD")}</small>
+                <h2>@{post.get("title")}</h2>
+                <p>@{post.get("content")}</p>
+                <small>By @{post.get("author")} on @{format_date(post.get("created_at"), "YYYY-MM-DD")}</small>
             </article>
         }
     } else {
@@ -356,35 +380,41 @@ template "api/user.json" from get_user {username: string}
 }
 ```
 
-### 4.8 Dispatch Pattern Matching
+### 4.9 Dispatch Pattern Matching
+
+Dispatch uses lambda functions for cleaner, more consistent syntax:
 
 ```relay
-receive handle_activity {activity: Activity} -> object {
-  dispatch activity.type {
-    "Create" -> {
-      return send "blog_service" create_post {
-        title: activity.object.title,
-        content: activity.object.content
+receive fn handle_activity(activity: Activity) -> object {
+  dispatch activity.get("type") {
+    :create: fn (data) {
+      send "blog_service" create_post {
+        title: activity.get("object").get("title"),
+        content: activity.get("object").get("content")
       }
-    }
+    },
     
-    "Delete" -> {
-      return send "blog_service" delete_post {
-        id: activity.object.id
+    :delete: fn (data) {
+      send "blog_service" delete_post {
+        id: activity.get("object").get("id")
       }
-    }
+    },
     
-    "Follow" -> {
-      return send "user_service" add_follower {
-        username: activity.object.username,
-        follower: activity.actor
+    :follow: fn (data) {
+      send "user_service" add_follower {
+        username: activity.get("object").get("username"),
+        follower: activity.get("actor")
       }
+    },
+    
+    :default: fn (_) {
+      throw {error: "Unknown activity type", type: activity.get("type")}
     }
   }
 }
 ```
 
-### 4.9 Configuration
+### 4.10 Configuration
 
 ```relay
 config {
@@ -415,17 +445,150 @@ config {
   },
   
   external_services: {
-    "analytics": "https://analytics.company.com",
-    "email": "https://email-service.com"
+    analytics: "https://analytics.company.com",
+    email: "https://email-service.com"
   }
 }
 ```
 
 ---
 
-## 5. Runtime Specification
+## 5. Simplified Grammar Rules
 
-### 5.1 JSON-RPC 2.0 HTTP Server
+### 5.1 Consistent Syntax Patterns
+
+- **All parameters:** Use `{}` for arguments in calls
+- **All field access:** Use `.get("field")` method calls
+- **All functions:** Use `fn name(params) { block }` format
+- **All lambdas:** Use `fn (params) { block }` format
+- **All symbols:** Use `:identifier` as shorthand for `"identifier"`
+- **All blocks:** Are expressions that evaluate to their last expression
+- **All state updates:** Use `update state.field = expression`
+
+### 5.2 Expression Precedence (Simplified)
+
+```
+primary: literal | identifier | (expression) | {object} | [array] | fn(params){block}
+postfix: primary (.method{args} | [index])*
+unary: (!|-) postfix
+multiplicative: unary ((*|/) unary)*
+additive: multiplicative ((+|-) multiplicative)*
+relational: additive ((<|>|<=|>=) additive)*
+equality: relational ((==|!=) relational)*
+logical_and: equality (&& equality)*
+logical_or: logical_and (|| logical_and)*
+```
+
+### 5.3 Object Creation Rules
+
+```relay
+// Struct constructors (type-checked)
+set user = User{
+  username: "john",
+  email: "john@example.com",
+  created_at: now()
+}
+
+// Object literals (any values)
+set config = {
+  debug: true,
+  timeout: 30,
+  endpoints: ["api1", "api2"]
+}
+```
+
+---
+
+## 6. Complete Example Application
+
+**main.relay:**
+```relay
+struct Post {
+  id: string,
+  title: string,
+  content: string,
+  author: string,
+  created_at: datetime
+}
+
+protocol BlogService {
+  get_posts() -> [Post]
+  create_post(title: string, content: string) -> Post
+}
+
+server blog_service {
+  state {
+    posts: [Post] = [],
+    next_id: number = 1
+  }
+  
+  receive fn get_posts() -> [Post] {
+    state.get("posts")
+  }
+  
+  receive fn create_post(title: string, content: string) -> Post {
+    set post = Post{
+      id: state.get("next_id").toString(),
+      title: title,
+      content: content,
+      author: "Anonymous",
+      created_at: now()
+    }
+    
+    update state.posts = state.get("posts").add(post)
+    update state.next_id = state.get("next_id") + 1
+    
+    post
+  }
+}
+
+// Web routes
+template "index.html" from get_posts()
+template "api/posts.json" from get_posts()
+
+config {
+  app_name: "simple_blog",
+  port: 8080,
+  load_balancing: {
+    strategy: "round_robin"
+  }
+}
+```
+
+**index.html:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Blog</title>
+</head>
+<body>
+    <h1>My Blog</h1>
+    
+    <form action="/api/create_post" method="post">
+        <input type="text" name="title" placeholder="Post title" required>
+        <textarea name="content" placeholder="Post content" required></textarea>
+        <button type="submit">Create Post</button>
+    </form>
+    
+    <div id="posts">
+        @for(post in posts) {
+            <article>
+                <h2>@{post.get("title")}</h2>
+                <p>@{post.get("content")}</p>
+                <small>@{format_date(post.get("created_at"), "YYYY-MM-DD HH:mm")}</small>
+            </article>
+        }
+    </div>
+</body>
+</html>
+```
+
+---
+
+## 7. Runtime Specification
+
+### 7.1 JSON-RPC 2.0 HTTP Server
 
 Every Relay program automatically exposes a JSON-RPC 2.0 HTTP endpoint:
 
@@ -461,7 +624,7 @@ Every Relay program automatically exposes a JSON-RPC 2.0 HTTP endpoint:
 }
 ```
 
-### 5.2 State Management Runtime
+### 7.2 State Management Runtime
 
 - **Persistence**: Automatic persistence using embedded NoSQL database (similar to SQLite)
 - **Concurrency**: State is automatically synchronized across concurrent requests
@@ -469,9 +632,9 @@ Every Relay program automatically exposes a JSON-RPC 2.0 HTTP endpoint:
 - **Recovery**: State is restored from database on server restart
 - **Isolation**: Each server instance maintains separate state namespace
 - **Threading**: State mutations are atomic and thread-safe
-- **Tuple Handling**: All receive handlers internally return `{state, result}` tuples
+- **Immutability**: All state updates create new instances via `update` keyword
 
-### 5.3 Template Rendering Engine
+### 7.3 Template Rendering Engine
 
 - **Server-side rendering**: Templates are rendered on the server
 - **State access**: Templates have access to data returned from send calls
@@ -479,8 +642,9 @@ Every Relay program automatically exposes a JSON-RPC 2.0 HTTP endpoint:
 - **Content-type detection**: Automatic content-type based on file extension
 - **Template syntax**: `@{expression}`, `@if(condition) {...}`, `@for(item in items) {...}`
 - **Error handling**: Failed sends result in configurable error pages
+- **URL Parameters**: Template function parameters are extracted from URL paths
 
-### 5.4 Load Balancing System
+### 7.4 Load Balancing System
 
 **Strategies:**
 - `round_robin` (default): Distribute requests evenly
@@ -493,30 +657,7 @@ Every Relay program automatically exposes a JSON-RPC 2.0 HTTP endpoint:
 - Failed servers temporarily removed from pool
 - Automatic recovery detection
 
-### 5.5 PHP-style File Hosting
-
-**File Structure:**
-```
-/
-├── index.relay          # Main application
-├── blog/
-│   ├── index.relay     # Blog service
-│   └── post.html       # Template file
-├── static/
-│   ├── style.css       # Static assets
-│   └── script.js
-└── templates/
-    ├── layout.html     # Shared templates
-    └── partials/
-```
-
-**Request Handling:**
-- `.relay` files are executed as Relay programs
-- `.html` files with template declarations are rendered
-- Static files served directly
-- Automatic routing based on file structure
-
-### 5.6 Federation Protocol
+### 7.5 Federation Protocol
 
 **App Discovery:**
 ```json
@@ -540,98 +681,11 @@ Every Relay program automatically exposes a JSON-RPC 2.0 HTTP endpoint:
 
 ---
 
-## 6. Complete Example Application
-
-**main.relay:**
-```relay
-struct Post {
-  id: string,
-  title: string.max(200),
-  content: string,
-  author: string,
-  created_at: datetime
-}
-
-protocol BlogService {
-  get_posts() -> [Post]
-  create_post(title: string, content: string) -> Post
-}
-
-server blog_service implements BlogService {
-  state {
-    posts: [Post] = [],
-    next_id: number = 1
-  }
-  
-  receive get_posts {} -> [Post] {
-    return state.posts
-  }
-  
-  receive create_post {title: string, content: string} -> Post {
-    set post = Post{
-      id: state.next_id.toString(),
-      title: title,
-      content: content,
-      author: "Anonymous",
-      created_at: now()
-    }
-    
-    state.posts = state.posts.prepend(post)
-    state.next_id = state.next_id + 1
-    
-    return post
-  }
-}
-
-// Web routes
-template "index.html" from get_posts {}
-template "api/posts.json" from get_posts {}
-
-config {
-  app_name: "simple_blog",
-  port: 8080,
-  load_balancing: {
-    strategy: "round_robin"
-  }
-}
-```
-
-**index.html:**
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Simple Blog</title>
-</head>
-<body>
-    <h1>My Blog</h1>
-    
-    <form action="/api/create_post" method="post">
-        <input type="text" name="title" placeholder="Post title" required>
-        <textarea name="content" placeholder="Post content" required></textarea>
-        <button type="submit">Create Post</button>
-    </form>
-    
-    <div id="posts">
-        @for(post in posts) {
-            <article>
-                <h2>@{post.title}</h2>
-                <p>@{post.content}</p>
-                <small>@{format_date(post.created_at, "YYYY-MM-DD HH:mm")}</small>
-            </article>
-        }
-    </div>
-</body>
-</html>
-```
-
----
-
 ## 8. Technical Architecture
 
 **Compiler Stack:**
 - Lexer: Tokenize Relay source code
-- Parser: Generate AST from tokens
+- Parser: Generate AST from tokens (simplified grammar)
 - Type Checker: Validate types and structures
 - Code Generator: Generate runtime bytecode/IR
 
@@ -648,4 +702,4 @@ config {
 - Automatic persistence and recovery
 - Transaction support for state mutations
 
-This specification provides everything needed to start building the Relay language from scratch. The focus is on simplicity, federation, and making distributed web development as easy as early PHP while being far more powerful and robust.
+This specification provides a clean, consistent grammar that is much easier to parse while maintaining all the power and expressiveness of the Relay language. The focus is on simplicity, federation, and making distributed web development as easy as early PHP while being far more powerful and robust.

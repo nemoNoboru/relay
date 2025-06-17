@@ -18,6 +18,7 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Number", `[-+]?(\d*\.)?\d+`},
 	{"Bool", `\b(true|false)\b`},
 	{"DateTime", `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?`},
+	{"Symbol", `:[a-zA-Z_][a-zA-Z0-9_]*`},
 
 	// Keywords (must come before Ident)
 	{"For", `\bfor\b`},
@@ -35,6 +36,11 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Protocol", `\bprotocol\b`},
 	{"Server", `\bserver\b`},
 	{"Implements", `\bimplements\b`},
+	{"Fn", `\bfn\b`},
+	{"Update", `\bupdate\b`},
+	{"Template", `\btemplate\b`},
+	{"Config", `\bconfig\b`},
+	{"From", `\bfrom\b`},
 
 	{"State", `\bstate\b`},
 	{"Receive", `\breceive\b`},
@@ -44,6 +50,7 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 
 	// Operators and Punctuation (compound operators first)
 	{"Arrow", `->`},
+	{"NullCoalesce", `\?\?`},
 	{"PlusAssign", `\+=`},
 	{"MinusAssign", `-=`},
 	{"MultiplyAssign", `\*=`},
@@ -85,30 +92,20 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 type Program struct {
 	Pos lexer.Position
 
-	Statements []*Statement `@@*`
+	Expressions []*Expression `@@*`
 }
 
-type Statement struct {
-	Pos lexer.Position
-
-	StructDef   *StructDef   `@@`
-	ProtocolDef *ProtocolDef `| @@`
-	ServerDef   *ServerDef   `| @@`
-	StateDef    *StateDef    `| @@`
-	ReceiveDef  *ReceiveDef  `| @@`
-}
-
-type StructDef struct {
+type StructExpr struct {
 	Name   string   `"struct" @Ident`
 	Fields []*Field `"{" @@* "}"`
 }
 
-type ProtocolDef struct {
+type ProtocolExpr struct {
 	Name    string             `"protocol" @Ident`
 	Methods []*MethodSignature `"{" @@* "}"`
 }
 
-type ServerDef struct {
+type ServerExpr struct {
 	Name     string      `"server" @Ident`
 	Protocol *string     `( "implements" @Ident )?`
 	Body     *ServerBody `@@`
@@ -119,11 +116,11 @@ type ServerBody struct {
 }
 
 type ServerElement struct {
-	State   *StateDef   `@@`
-	Receive *ReceiveDef `| @@`
+	State   *StateExpr   `@@`
+	Receive *ReceiveExpr `| @@`
 }
 
-type StateDef struct {
+type StateExpr struct {
 	Fields []*StateField `"state" "{" @@* "}"`
 }
 
@@ -138,6 +135,7 @@ type Literal struct {
 	String   *string       `@String`
 	Number   *float64      `| @Number`
 	Bool     *string       `| @Bool`
+	Symbol   *string       `| @Symbol`
 	Array    *ArrayLiteral `| @@`
 	FuncCall *FuncCall     `| @@`
 }
@@ -168,7 +166,7 @@ type MethodSignature struct {
 
 type Parameter struct {
 	Name string   `@Ident`
-	Type *TypeRef `":" @@`
+	Type *TypeRef `( ":" @@ )?`
 }
 
 type Field struct {
@@ -179,80 +177,104 @@ type Field struct {
 }
 
 type TypeRef struct {
-	Array *TypeRef `(   "[" @@ "]"`
-	Name  string   `  | @Ident )`
+	Array         *TypeRef           `(   "[" @@ "]"`
+	Function      *FunctionType      `| @@`
+	Parameterized *ParameterizedType `| @@`
+	Name          string             `| @Ident )`
 }
 
-type ReceiveDef struct {
-	Name       string       `"receive" @Ident`
-	Parameters []*Parameter `"{" ( @@ ( "," @@ )* )? "}"`
+type ParameterizedType struct {
+	Name string     `@Ident`
+	Args []*TypeRef `"(" ( @@ ( "," @@ )* )? ")"`
+}
+
+type FunctionType struct {
+	Parameters []*Parameter `"fn" "(" ( @@ ( "," @@ )* )? ")"`
+	ReturnType *TypeRef     `( "->" @@ )?`
+}
+
+type ReceiveExpr struct {
+	Name       string       `"receive" "fn" @Ident`
+	Parameters []*Parameter `"(" ( @@ ( "," @@ )* )? ")"`
+	ReturnType *TypeRef     `( "->" @@ )?`
+	Body       *Block       `@@`
+}
+
+type FunctionExpr struct {
+	Name       *string      `"fn" ( @Ident )?`
+	Parameters []*Parameter `"(" ( @@ ( "," @@ )* )? ")"`
+	ReturnType *TypeRef     `( "->" @@ )?`
+	Body       *Block       `@@`
+}
+
+type TemplateExpr struct {
+	Path     string       `"template" @String`
+	FromFunc *FuncRefExpr `"from" @@`
+}
+
+type FuncRefExpr struct {
+	Name       string       `@Ident`
+	Parameters []*Parameter `"(" ( @@ ( "," @@ )* )? ")"`
+}
+
+type ConfigExpr struct {
+	Fields []*ObjectField `"config" "{" ( @@ ( "," @@ )* )? "}"`
+}
+
+type LambdaExpr struct {
+	Parameters []*Parameter `"fn" "(" ( @@ ( "," @@ )* )? ")"`
 	ReturnType *TypeRef     `( "->" @@ )?`
 	Body       *Block       `@@`
 }
 
 type Block struct {
-	Statements []*BlockStatement `"{" @@* "}"`
+	Expressions []*Expression `"{" @@* "}"`
 }
 
-type BlockStatement struct {
-	Pos lexer.Position
-
-	ForStatement      *ForStatement      `@@`
-	TryStatement      *TryStatement      `| @@`
-	DispatchStatement *DispatchStatement `| @@`
-	SetStatement      *SetStatement      `| @@`
-	ReturnStatement   *ReturnStatement   `| @@`
-	IfStatement       *IfStatement       `| @@`
-	ThrowStatement    *ThrowStatement    `| @@`
-	Assignment        *Assignment        `| @@`
-	ExprStatement     *ExprStatement     `| @@`
-}
-
-type SetStatement struct {
+type SetExpr struct {
 	Variable string      `"set" @Ident`
 	Value    *Expression `"=" @@`
 }
 
-type ReturnStatement struct {
+type UpdateExpr struct {
+	Target *Expression `"update" @@`
+	Value  *Expression `"=" @@`
+}
+
+type ReturnExpr struct {
 	Value *Expression `"return" @@`
 }
 
-type IfStatement struct {
+type IfExpr struct {
 	Condition *Expression `"if" @@`
 	ThenBlock *Block      `@@`
 	ElseBlock *Block      `( "else" @@ )?`
 }
 
-type ThrowStatement struct {
+type ThrowExpr struct {
 	Value *Expression `"throw" @@`
 }
 
-type Assignment struct {
-	Target *Expression `@@`
-	Op     string      `@( "=" | "+=" | "-=" | "*=" | "/=" )`
-	Value  *Expression `@@`
-}
-
-type ForStatement struct {
+type ForExpr struct {
 	Variable   string      `"for" @Ident`
 	Collection *Expression `"in" @@`
 	Body       *Block      `@@`
 }
 
-type TryStatement struct {
+type TryExpr struct {
 	TryBlock   *Block  `"try" @@`
 	CatchVar   *string `"catch" ( @Ident )?`
 	CatchBlock *Block  `@@`
 }
 
-type DispatchStatement struct {
+type DispatchExpr struct {
 	Value *Expression     `"dispatch" @@`
-	Cases []*DispatchCase `"{" @@* "}"`
+	Cases []*DispatchCase `"{" ( @@ ( "," @@ )* )? "}"`
 }
 
 type DispatchCase struct {
-	Pattern *Literal `@@`
-	Body    *Block   `"->" @@`
+	Pattern *Literal    `@@`
+	Body    *Expression `":" @@`
 }
 
 type SendExpr struct {
@@ -266,21 +288,41 @@ type FuncCallExpr struct {
 	Args []*Expression `"(" ( @@ ( "," @@ )* )? ")"`
 }
 
-type ExprStatement struct {
-	Expression *Expression `@@`
-}
-
 type Expression struct {
-	Logical *LogicalExpr `@@`
+	StructExpr   *StructExpr   `@@`
+	ProtocolExpr *ProtocolExpr `| @@`
+	ServerExpr   *ServerExpr   `| @@`
+	FunctionExpr *FunctionExpr `| @@`
+	TemplateExpr *TemplateExpr `| @@`
+	ConfigExpr   *ConfigExpr   `| @@`
+	ForExpr      *ForExpr      `| @@`
+	TryExpr      *TryExpr      `| @@`
+	DispatchExpr *DispatchExpr `| @@`
+	SetExpr      *SetExpr      `| @@`
+	UpdateExpr   *UpdateExpr   `| @@`
+	ReturnExpr   *ReturnExpr   `| @@`
+	IfExpr       *IfExpr       `| @@`
+	ThrowExpr    *ThrowExpr    `| @@`
+	Logical      *LogicalExpr  `| @@`
 }
 
 type LogicalExpr struct {
-	Left  *EqualityExpr `@@`
-	Right []*LogicalOp  `@@*`
+	Left  *NullCoalesceExpr `@@`
+	Right []*LogicalOp      `@@*`
 }
 
 type LogicalOp struct {
-	Op    string        `@( "&&" | "||" )`
+	Op    string            `@( "&&" | "||" )`
+	Right *NullCoalesceExpr `@@`
+}
+
+type NullCoalesceExpr struct {
+	Left  *EqualityExpr     `@@`
+	Right []*NullCoalesceOp `@@*`
+}
+
+type NullCoalesceOp struct {
+	Op    string        `@"??"`
 	Right *EqualityExpr `@@`
 }
 
@@ -335,12 +377,20 @@ type PrimaryExpr struct {
 }
 
 type BaseExpr struct {
-	Literal    *Literal      `@@`
-	Identifier *string       `| @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
-	ObjectLit  *ObjectLit    `| @@`
-	SendExpr   *SendExpr     `| @@`
-	FuncCall   *FuncCallExpr `| @@`
-	Grouped    *Expression   `| "(" @@ ")"`
+	Literal           *Literal           `@@`
+	Identifier        *string            `| @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
+	StructConstructor *StructConstructor `| @@`
+	ObjectLit         *ObjectLit         `| @@`
+	SendExpr          *SendExpr          `| @@`
+	Lambda            *LambdaExpr        `| @@`
+	FuncCall          *FuncCallExpr      `| @@`
+	Block             *Block             `| @@`
+	Grouped           *Expression        `| "(" @@ ")"`
+}
+
+type StructConstructor struct {
+	Name   string         `@Ident`
+	Fields []*ObjectField `"{" ( @@ ( "," @@ )* )? "}"`
 }
 
 type AccessExpr struct {
@@ -358,7 +408,7 @@ type ObjectLit struct {
 }
 
 type ObjectField struct {
-	Key   string      `@Ident`
+	Key   string      `@( Ident | Symbol )`
 	Value *Expression `":" @@`
 }
 
