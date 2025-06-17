@@ -13,10 +13,10 @@ This document specifies the complete technical implementation of the simplified 
 
 **Key Simplifications Implemented:**
 - Consistent `fn` syntax for all functions and lambdas
-- Unified field access via `.get("field")` method calls
+- Unified field access via `.get("field")` method calls only
 - Symbol literals `:identifier` as string shorthand
 - Expression-based design with blocks as expressions
-- `update` keyword for clear state management
+- Method-based state updates via `.set("field", value)`
 - `receive fn` pattern for server methods
 - Strict keyword reservation eliminates ambiguity
 
@@ -51,7 +51,6 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
     {"Config", `\bconfig\b`},
     {"Fn", `\bfn\b`},
     {"Set", `\bset\b`},
-    {"Update", `\bupdate\b`},
     {"If", `\bif\b`},
     {"Else", `\belse\b`},
     {"For", `\bfor\b`},
@@ -518,7 +517,6 @@ type Statement struct {
     Pos lexer.Position
     
     SetStatement    *SetStatement    `  @@`
-    UpdateStatement *UpdateStatement `| @@`
     IfStatement     *IfStatement     `| @@`
     ForStatement    *ForStatement    `| @@`
     TryStatement    *TryStatement    `| @@`
@@ -533,13 +531,6 @@ type SetStatement struct {
     Name  string      `"set" @Ident`
     Type  *Type       `( ":" @@ )?`
     Value *Expression `"=" @@`
-}
-
-type UpdateStatement struct {
-    Pos lexer.Position
-    
-    Target *PrimaryExpr `"update" @@`
-    Value  *Expression  `"=" @@`
 }
 
 type IfStatement struct {
@@ -773,8 +764,8 @@ func TestSimplifiedGrammar(t *testing.T) {
         
         // State updates
         {
-            name:  "update statement",
-            input: `update state.count = state.get("count") + 1`,
+            name:  "state update via method",
+            input: `state.set("count", state.get("count") + 1)`,
             valid: true,
         },
         
@@ -792,7 +783,7 @@ func TestSimplifiedGrammar(t *testing.T) {
                 server test_service {
                     state { count: number = 0 }
                     receive fn increment() -> number {
-                        update state.count = state.get("count") + 1
+                        state.set("count", state.get("count") + 1)
                         state.get("count")
                     }
                 }`,

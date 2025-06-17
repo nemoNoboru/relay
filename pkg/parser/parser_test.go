@@ -38,7 +38,7 @@ func TestServerDefinition(t *testing.T) {
 		}
 		
 		receive fn create_user(user: User) -> User {
-			update state.users = state.get("users").add(user)
+			state.set("users", state.get("users").add(user))
 			user
 		}
 	}`
@@ -48,11 +48,7 @@ func TestServerDefinition(t *testing.T) {
 
 func TestFunctionDefinition(t *testing.T) {
 	src := `fn calculate_total(items: [object]) -> number {
-		set total = 0
-		for item in items {
-			update total = total + item.get("price")
-		}
-		total
+		items.map(fn (item) { item.get("price") }).reduce(fn (acc, price) { acc + price }, 0)
 	}`
 	_, err := Parse("test.relay", strings.NewReader(src))
 	require.NoError(t, err)
@@ -89,7 +85,7 @@ func TestSymbolLiterals(t *testing.T) {
 }
 
 func TestUpdateStatement(t *testing.T) {
-	src := `update state.count = state.get("count") + 1`
+	src := `state.set("count", state.get("count") + 1)`
 	_, err := Parse("test.relay", strings.NewReader(src))
 	require.NoError(t, err)
 }
@@ -191,6 +187,29 @@ func TestNullCoalesceOperator(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStructConstructorFunctionCall(t *testing.T) {
+	src := `
+	server blog_service {
+		state {
+			posts: [Post] = [],
+			next_id: number = 1
+		}
+		
+		receive fn create_post(title: string, content: string) -> Post {
+			set post = Post{
+				id: state.get(:next_id),
+				title: title,
+				content: content
+			}
+			post
+		}
+	}
+	
+	`
+	_, err := Parse("test.relay", strings.NewReader(src))
+	require.NoError(t, err)
+}
+
 func TestCompleteProgram(t *testing.T) {
 	src := `struct Post {
 		id: string,
@@ -215,15 +234,15 @@ func TestCompleteProgram(t *testing.T) {
 		
 		receive fn create_post(title: string, content: string) -> Post {
 			set post = Post{
-				id: state.get("next_id").toString(),
+				id: state.get(:next_id),
 				title: title,
 				content: content
 			}
 			
-			update state.posts = state.get("posts").add(post)
-			update state.next_id = state.get("next_id") + 1
+			state.set("posts", state.get("posts").add(post))
+			state.set("next_id", state.get("next_id") + 1)
 			
-			post
+			return post
 		}
 	}
 	

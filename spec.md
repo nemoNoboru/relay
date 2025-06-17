@@ -21,7 +21,7 @@ Relay is designed for federated, self-hostable, and functional applications. Eac
 
 ```
 struct, protocol, server, state, receive, send, template, dispatch,
-config, fn, if, else, for, in, try, catch, return, throw, update
+config, fn, if, else, for, in, try, catch, return, throw
 ```
 
 **Note:** All keywords are strictly reserved and cannot be used as identifiers.
@@ -131,11 +131,8 @@ All functions use the `fn` keyword with consistent syntax:
 ```relay
 // Named functions
 fn calculate_total(items: [object]) -> number {
-  set total = 0
-  for item in items {
-    update total = total + item.get("price")
-  }
-  total
+  items.map(fn (item) { item.get("price") })
+       .reduce(fn (acc, price) { acc + price }, 0)
 }
 
 fn format_date(date: datetime, format: string) -> string {
@@ -221,8 +218,8 @@ server blog_service {
       created_at: now()
     }
     
-    update state.posts = state.get("posts").add(post)
-    update state.next_id = state.get("next_id") + 1
+    state.set("posts", state.get("posts").add(post))
+    state.set("next_id", state.get("next_id") + 1)
     
     post
   }
@@ -238,7 +235,7 @@ server blog_service {
   
   receive fn delete_post(id: string) -> bool {
     set initial_length = state.get("posts").length
-    update state.posts = state.get("posts").filter(fn (p) { p.get("id") != id })
+    state.set("posts", state.get("posts").filter(fn (p) { p.get("id") != id }))
     state.get("posts").length < initial_length
   }
 }
@@ -251,7 +248,7 @@ server user_service {
   
   receive fn create_user(user: User) -> User {
     set new_user = user.set("created_at", now())
-    update state.users = state.get("users").add(new_user)
+    state.set("users", state.get("users").add(new_user))
     new_user
   }
   
@@ -270,7 +267,7 @@ server user_service {
 
 **Key Innovation:** Servers are stateless in syntax but stateful in behavior. State is automatically persisted to embedded NoSQL database and restored on startup.
 
-State is modified using the `update` keyword for clear immutable semantics:
+State is modified using method calls for consistent immutable semantics:
 
 ```relay
 server counter_service {
@@ -282,13 +279,13 @@ server counter_service {
   
   receive fn increment(amount: optional(number)) -> number {
     set increment_amount = amount ?? 1
-    update state.count = state.get("count") + increment_amount
-    update state.last_updated = now()
-    update state.history = state.get("history").add({
+    state.set("count", state.get("count") + increment_amount)
+    state.set("last_updated", now())
+    state.set("history", state.get("history").add({
       action: "increment",
       amount: increment_amount,
       timestamp: state.get("last_updated")
-    })
+    }))
     state.get("count")
   }
   
@@ -463,7 +460,7 @@ config {
 - **All lambdas:** Use `fn (params) { block }` format
 - **All symbols:** Use `:identifier` as shorthand for `"identifier"`
 - **All blocks:** Are expressions that evaluate to their last expression
-- **All state updates:** Use `update state.field = expression`
+- **All state updates:** Use `state.set("field", expression)` method calls
 
 ### 5.2 Expression Precedence (Simplified)
 
@@ -535,8 +532,8 @@ server blog_service {
       created_at: now()
     }
     
-    update state.posts = state.get("posts").add(post)
-    update state.next_id = state.get("next_id") + 1
+    state.set("posts", state.get("posts").add(post))
+    state.set("next_id", state.get("next_id") + 1)
     
     post
   }
@@ -632,7 +629,7 @@ Every Relay program automatically exposes a JSON-RPC 2.0 HTTP endpoint:
 - **Recovery**: State is restored from database on server restart
 - **Isolation**: Each server instance maintains separate state namespace
 - **Threading**: State mutations are atomic and thread-safe
-- **Immutability**: All state updates create new instances via `update` keyword
+- **Immutability**: All state updates create new instances via method calls
 
 ### 7.3 Template Rendering Engine
 

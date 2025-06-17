@@ -37,7 +37,6 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Server", `\bserver\b`},
 	{"Implements", `\bimplements\b`},
 	{"Fn", `\bfn\b`},
-	{"Update", `\bupdate\b`},
 	{"Template", `\btemplate\b`},
 	{"Config", `\bconfig\b`},
 	{"From", `\bfrom\b`},
@@ -236,11 +235,6 @@ type SetExpr struct {
 	Value    *Expression `"=" @@`
 }
 
-type UpdateExpr struct {
-	Target *Expression `"update" @@`
-	Value  *Expression `"=" @@`
-}
-
 type ReturnExpr struct {
 	Value *Expression `"return" @@`
 }
@@ -299,7 +293,6 @@ type Expression struct {
 	TryExpr      *TryExpr      `| @@`
 	DispatchExpr *DispatchExpr `| @@`
 	SetExpr      *SetExpr      `| @@`
-	UpdateExpr   *UpdateExpr   `| @@`
 	ReturnExpr   *ReturnExpr   `| @@`
 	IfExpr       *IfExpr       `| @@`
 	ThrowExpr    *ThrowExpr    `| @@`
@@ -394,12 +387,11 @@ type StructConstructor struct {
 }
 
 type AccessExpr struct {
-	FieldAccess *string     `"." @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
-	MethodCall  *MethodCall `| @@`
+	MethodCall *MethodCall `@@`
 }
 
 type MethodCall struct {
-	Method string        `"." @Ident`
+	Method string        `"." @( Ident | "set" | "get" | "add" | "remove" | "filter" | "map" | "find" | "sort_by" | "reduce" )`
 	Args   []*Expression `"(" ( @@ ( "," @@ )* )? ")"`
 }
 
@@ -417,7 +409,7 @@ var relayParser = participle.MustBuild[Program](
 	participle.Lexer(relayLexer),
 	participle.CaseInsensitive("Ident"),
 	participle.Unquote("String"),
-	participle.UseLookahead(2),
+	participle.UseLookahead(4),
 	participle.Elide("whitespace", "Comment", "BlockComment"),
 )
 
