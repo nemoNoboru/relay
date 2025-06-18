@@ -138,9 +138,9 @@ func TestNullCoalescing(t *testing.T) {
 		code     string
 		expected string
 	}{
-		{"Nil ?? String", `set x = nil\nx ?? "default"`, "default"},
-		{"String ?? String", `set x = "value"\nx ?? "default"`, "value"},
-		{"Empty string ?? String", `set x = ""\nx ?? "default"`, ""}, // Empty string is not nil
+		{"Nil ?? String", "set x = nil\nx ?? \"default\"", "default"},
+		{"String ?? String", "set x = \"value\"\nx ?? \"default\"", "value"},
+		{"Empty string ?? String", "set x = \"\"\nx ?? \"default\"", ""}, // Empty string is not nil
 	}
 
 	for _, test := range tests {

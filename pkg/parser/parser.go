@@ -17,6 +17,7 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"String", `"(\\"|[^"])*"`},
 	{"Number", `(\d*\.)?\d+`},
 	{"Bool", `\b(true|false)\b`},
+	{"Nil", `\bnil\b`},
 	{"DateTime", `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?`},
 	{"Symbol", `:[a-zA-Z_][a-zA-Z0-9_]*`},
 
@@ -134,6 +135,7 @@ type Literal struct {
 	String   *string       `@String`
 	Number   *float64      `| @Number`
 	Bool     *string       `| @Bool`
+	Nil      *string       `| @Nil`
 	Symbol   *string       `| @Symbol`
 	Array    *ArrayLiteral `| @@`
 	FuncCall *FuncCall     `| @@`

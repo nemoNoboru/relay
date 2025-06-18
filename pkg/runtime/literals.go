@@ -19,6 +19,10 @@ func (e *Evaluator) evaluateLiteral(literal *parser.Literal, env *Environment) (
 		return NewBool(*literal.Bool == "true"), nil
 	}
 
+	if literal.Nil != nil {
+		return NewNil(), nil
+	}
+
 	if literal.Array != nil {
 		elements := make([]*Value, 0, len(literal.Array.Elements))
 		for _, elem := range literal.Array.Elements {
