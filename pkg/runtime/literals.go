@@ -15,6 +15,15 @@ func (e *Evaluator) evaluateLiteral(literal *parser.Literal, env *Environment) (
 		return NewString(*literal.String), nil
 	}
 
+	if literal.Symbol != nil {
+		// Convert symbol :hello to string "hello" (remove the leading :)
+		symbolValue := *literal.Symbol
+		if len(symbolValue) > 0 && symbolValue[0] == ':' {
+			symbolValue = symbolValue[1:]
+		}
+		return NewString(symbolValue), nil
+	}
+
 	if literal.Bool != nil {
 		return NewBool(*literal.Bool == "true"), nil
 	}

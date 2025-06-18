@@ -137,7 +137,14 @@ func (e *Evaluator) evaluateObjectLiteral(expr *parser.ObjectLit, env *Environme
 		if err != nil {
 			return nil, err
 		}
-		obj[field.Key] = value
+
+		// Convert symbol keys to strings (remove leading :)
+		key := field.Key
+		if len(key) > 0 && key[0] == ':' {
+			key = key[1:]
+		}
+
+		obj[key] = value
 	}
 
 	return NewObject(obj), nil

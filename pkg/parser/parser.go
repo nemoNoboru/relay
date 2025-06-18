@@ -324,10 +324,10 @@ type PrimaryExpr struct {
 type BaseExpr struct {
 	Literal           *Literal           `@@`
 	StructConstructor *StructConstructor `| @@`
-	ObjectLit         *ObjectLit         `| @@`
 	SendExpr          *SendExpr          `| @@`
 	Lambda            *LambdaExpr        `| @@`
 	FuncCall          *FuncCallExpr      `| @@`
+	ObjectLit         *ObjectLit         `| @@`
 	Block             *Block             `| @@`
 	Grouped           *Expression        `| "(" @@ ")"`
 	Identifier        *string            `| @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
@@ -352,7 +352,7 @@ type ObjectLit struct {
 }
 
 type ObjectField struct {
-	Key   string      `@( Ident | Symbol )`
+	Key   string      `@( String | Ident | Symbol )`
 	Value *Expression `":" @@`
 }
 
@@ -361,7 +361,7 @@ var relayParser = participle.MustBuild[Program](
 	participle.Lexer(relayLexer),
 	participle.CaseInsensitive("Ident"),
 	participle.Unquote("String"),
-	participle.UseLookahead(4),
+	participle.UseLookahead(8),
 	participle.Elide("whitespace", "Comment", "BlockComment"),
 )
 
