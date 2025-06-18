@@ -76,6 +76,10 @@ func (e *Evaluator) EvaluateWithEnv(expr *parser.Expression, env *Environment) (
 		return e.evaluateReturnExpr(expr.ReturnExpr, env)
 	}
 
+	if expr.IfExpr != nil {
+		return e.evaluateIfExpr(expr.IfExpr, env)
+	}
+
 	return NewNil(), fmt.Errorf("unsupported expression type")
 }
 
@@ -118,4 +122,25 @@ func (e *Evaluator) evaluateSetExpr(expr *parser.SetExpr, env *Environment) (*Va
 
 	env.Define(expr.Variable, value)
 	return value, nil
+}
+
+// evaluateIfExpr evaluates if expressions
+func (e *Evaluator) evaluateIfExpr(expr *parser.IfExpr, env *Environment) (*Value, error) {
+	// Evaluate the condition
+	condition, err := e.EvaluateWithEnv(expr.Condition, env)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if condition is truthy
+	if condition.IsTruthy() {
+		// Execute the then block
+		return e.evaluateBlock(expr.ThenBlock, env)
+	} else if expr.ElseBlock != nil {
+		// Execute the else block if it exists
+		return e.evaluateBlock(expr.ElseBlock, env)
+	}
+
+	// If no else block and condition is false, return nil
+	return NewNil(), nil
 }
