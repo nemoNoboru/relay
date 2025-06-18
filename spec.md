@@ -1,5 +1,7 @@
 # Relay Language - Complete Technical Specification
 
+🎉 **MAJOR MILESTONE**: Full closure support and first-class functions implemented!
+
 **Version:** 0.3 "Cloudpunks Edition"  
 **By:** Cloudpunks  
 **Mission:** A federated, minimal language to build modern distributed web services with the simplicity of early PHP.
@@ -14,6 +16,7 @@ Relay is designed for federated, self-hostable, and functional applications. Eac
 - Able to send, receive, and template-render data
 - Built for high interoperability and zero config deployment
 - PHP-simple for hobbyists, enterprise-ready for production
+- ✨ **NEW**: Fully functional with closures and first-class functions for advanced programming patterns
 
 ---
 
@@ -126,6 +129,8 @@ set result = {
 
 ### 4.2 Function Definitions
 
+🎉 **MAJOR MILESTONE**: Functions in Relay are **closures** and **first-class citizens** with full lexical scoping!
+
 All functions use the `fn` keyword with consistent syntax:
 
 ```relay
@@ -154,6 +159,98 @@ set complex_transform = numbers.map(fn (x) {
   set doubled = x * 2
   doubled + 10
 })
+```
+
+#### Closure Support (NEW!)
+
+**Functions are true closures** that capture their lexical environment:
+
+```relay
+set captured_value = 42
+
+fn get_captured() {
+  captured_value  // ✅ Accesses outer scope variable
+}
+
+get_captured()  // Returns 42
+
+// Closure with state preservation
+fn make_counter(start) {
+  set count = start
+  fn() { 
+    set count = count + 1
+    count 
+  }
+}
+
+set counter = make_counter(10)
+counter()  // Returns 11
+counter()  // Returns 12 - state preserved between calls!
+```
+
+#### First-Class Functions (NEW!)
+
+**Functions can be stored, passed, and returned like any other value:**
+
+```relay
+// Functions as variables
+fn double(x) { x * 2 }
+set my_operation = double
+my_operation(5)  // Returns 10
+
+// Functions as arguments
+fn apply_twice(operation, value) {
+  operation(operation(value))
+}
+
+apply_twice(double, 3)  // Returns 12
+
+// Functions as return values
+fn make_multiplier(factor) {
+  fn(x) { x * factor }  // Returns a new function
+}
+
+set times_5 = make_multiplier(5)
+times_5(3)  // Returns 15
+
+// Complex function composition
+fn compose(f, g) {
+  fn(x) { f(g(x)) }
+}
+
+fn square(x) { x * x }
+fn increment(x) { x + 1 }
+set square_then_increment = compose(increment, square)
+square_then_increment(3)  // Returns 10 (3² + 1)
+```
+
+#### Functional Programming Patterns
+
+With first-class functions and closures, Relay supports advanced functional programming:
+
+```relay
+// Map/filter/reduce with custom functions
+fn is_active(user) { user.get("active") }
+fn get_name(user) { user.get("name") }
+
+set active_names = users
+  .filter(is_active)
+  .map(get_name)
+
+// Partial application through closures
+fn make_filter(predicate) {
+  fn(collection) { collection.filter(predicate) }
+}
+
+set filter_active = make_filter(is_active)
+set active_users = filter_active(users)
+
+// Strategy pattern with functions
+fn process_with_strategy(data, strategy) {
+  strategy(data)
+}
+
+process_with_strategy(users, filter_active)
 ```
 
 ### 4.3 Struct Definitions

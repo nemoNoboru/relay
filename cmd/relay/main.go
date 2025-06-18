@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+
+	"relay/pkg/repl"
 )
 
 const version = "0.3.0-dev"
@@ -14,6 +17,7 @@ func main() {
 		helpFlag    = flag.Bool("help", false, "Show help")
 		runFlag     = flag.String("run", "", "Run a .relay file")
 		buildFlag   = flag.String("build", "", "Build a .relay file to binary")
+		replFlag    = flag.Bool("repl", false, "Start interactive REPL")
 		portFlag    = flag.Int("port", 8080, "Port to run server on")
 	)
 	flag.Parse()
@@ -23,12 +27,16 @@ func main() {
 		return
 	}
 
-	if *helpFlag || (flag.NArg() == 0 && *runFlag == "" && *buildFlag == "") {
+	if *helpFlag || (flag.NArg() == 0 && *runFlag == "" && *buildFlag == "" && !*replFlag) {
 		showHelp()
 		return
 	}
 
 	switch {
+	case *replFlag:
+		if err := startREPL(); err != nil {
+			log.Fatalf("Error starting REPL: %v", err)
+		}
 	case *runFlag != "":
 		if err := runRelayFile(*runFlag, *portFlag); err != nil {
 			log.Fatalf("Error running %s: %v", *runFlag, err)
@@ -55,18 +63,27 @@ func showHelp() {
 	fmt.Println("  relay [options] <file.relay>")
 	fmt.Println("  relay -run <file.relay>")
 	fmt.Println("  relay -build <file.relay>")
+	fmt.Println("  relay -repl")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -version     Show version")
 	fmt.Println("  -help        Show this help")
 	fmt.Println("  -run         Run a .relay file")
 	fmt.Println("  -build       Build a .relay file to binary")
+	fmt.Println("  -repl        Start interactive REPL")
 	fmt.Println("  -port        Port to run server on (default: 8080)")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  relay blog.relay")
 	fmt.Println("  relay -run blog.relay -port 3000")
 	fmt.Println("  relay -build blog.relay")
+	fmt.Println("  relay -repl")
+}
+
+func startREPL() error {
+	r := repl.New(os.Stdin, os.Stdout)
+	r.Start()
+	return nil
 }
 
 func runRelayFile(filename string, port int) error {
@@ -79,4 +96,4 @@ func buildRelayFile(filename string) error {
 	fmt.Printf("Building %s...\n", filename)
 	// TODO: Implement relay file compilation
 	return fmt.Errorf("not implemented yet")
-} 
+}

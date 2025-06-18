@@ -15,7 +15,7 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 
 	// Literals
 	{"String", `"(\\"|[^"])*"`},
-	{"Number", `[-+]?(\d*\.)?\d+`},
+	{"Number", `(\d*\.)?\d+`},
 	{"Bool", `\b(true|false)\b`},
 	{"DateTime", `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?`},
 	{"Symbol", `:[a-zA-Z_][a-zA-Z0-9_]*`},
@@ -296,66 +296,16 @@ type Expression struct {
 	ReturnExpr   *ReturnExpr   `| @@`
 	IfExpr       *IfExpr       `| @@`
 	ThrowExpr    *ThrowExpr    `| @@`
-	Logical      *LogicalExpr  `| @@`
+	Binary       *BinaryExpr   `| @@`
 }
 
-type LogicalExpr struct {
-	Left  *NullCoalesceExpr `@@`
-	Right []*LogicalOp      `@@*`
+type BinaryExpr struct {
+	Left  *UnaryExpr  `@@`
+	Right []*BinaryOp `@@*`
 }
 
-type LogicalOp struct {
-	Op    string            `@( "&&" | "||" )`
-	Right *NullCoalesceExpr `@@`
-}
-
-type NullCoalesceExpr struct {
-	Left  *EqualityExpr     `@@`
-	Right []*NullCoalesceOp `@@*`
-}
-
-type NullCoalesceOp struct {
-	Op    string        `@"??"`
-	Right *EqualityExpr `@@`
-}
-
-type EqualityExpr struct {
-	Left  *RelationalExpr `@@`
-	Right []*EqualityOp   `@@*`
-}
-
-type EqualityOp struct {
-	Op    string          `@( "==" | "!=" )`
-	Right *RelationalExpr `@@`
-}
-
-type RelationalExpr struct {
-	Left  *AdditiveExpr   `@@`
-	Right []*RelationalOp `@@*`
-}
-
-type RelationalOp struct {
-	Op    string        `@( "<=" | ">=" | "<" | ">" )`
-	Right *AdditiveExpr `@@`
-}
-
-type AdditiveExpr struct {
-	Left  *MultiplicativeExpr `@@`
-	Right []*AdditiveOp       `@@*`
-}
-
-type AdditiveOp struct {
-	Op    string              `@( "+" | "-" )`
-	Right *MultiplicativeExpr `@@`
-}
-
-type MultiplicativeExpr struct {
-	Left  *UnaryExpr          `@@`
-	Right []*MultiplicativeOp `@@*`
-}
-
-type MultiplicativeOp struct {
-	Op    string     `@( "*" | "/" )`
+type BinaryOp struct {
+	Op    string     `@( "&&" | "||" | "??" | "==" | "!=" | "<=" | ">=" | "<" | ">" | "+" | "-" | "*" | "/" )`
 	Right *UnaryExpr `@@`
 }
 
@@ -371,7 +321,6 @@ type PrimaryExpr struct {
 
 type BaseExpr struct {
 	Literal           *Literal           `@@`
-	Identifier        *string            `| @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
 	StructConstructor *StructConstructor `| @@`
 	ObjectLit         *ObjectLit         `| @@`
 	SendExpr          *SendExpr          `| @@`
@@ -379,6 +328,7 @@ type BaseExpr struct {
 	FuncCall          *FuncCallExpr      `| @@`
 	Block             *Block             `| @@`
 	Grouped           *Expression        `| "(" @@ ")"`
+	Identifier        *string            `| @( Ident | "state" | "send" | "receive" | "protocol" | "struct" | "for" | "in" | "try" | "catch" | "dispatch" | "set" | "return" | "if" | "else" | "throw" | "server" | "implements" )`
 }
 
 type StructConstructor struct {
