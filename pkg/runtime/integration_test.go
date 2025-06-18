@@ -131,7 +131,7 @@ func TestREPLScenarios(t *testing.T) {
 				state {
 					count: number = 0
 				}
-				receive increment() -> number {
+				receive fn increment() -> number {
 					state.set("count", state.get("count") + 1)
 					state.get("count")
 				}

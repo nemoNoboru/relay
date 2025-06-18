@@ -56,6 +56,7 @@ const (
 	ValueTypeFunction
 	ValueTypeStruct
 	ValueTypeServer
+	ValueTypeServerState
 )
 
 // String returns a string representation of the ValueType
@@ -79,6 +80,8 @@ func (vt ValueType) String() string {
 		return "struct"
 	case ValueTypeServer:
 		return "server"
+	case ValueTypeServerState:
+		return "serverstate"
 	default:
 		return "unknown"
 	}
@@ -86,15 +89,16 @@ func (vt ValueType) String() string {
 
 // Value represents a runtime value in the Relay language
 type Value struct {
-	Type     ValueType
-	Number   float64
-	Str      string
-	Bool     bool
-	Array    []*Value
-	Object   map[string]*Value
-	Function *Function // For functions and lambdas
-	Struct   *Struct   // For struct instances
-	Server   *Server   // For server instances
+	Type        ValueType
+	Number      float64
+	Str         string
+	Bool        bool
+	Array       []*Value
+	Object      map[string]*Value
+	Function    *Function    // For functions and lambdas
+	Struct      *Struct      // For struct instances
+	Server      *Server      // For server instances
+	ServerState *ServerState // For mutable server state
 }
 
 // Function represents a callable function
@@ -135,6 +139,12 @@ type Server struct {
 	StateMutex  sync.RWMutex         // Protects state access
 	Running     bool                 // Whether server is running
 	Environment *Environment         // Server's environment
+}
+
+// ServerState represents mutable server state that behaves like an object but allows in-place updates
+type ServerState struct {
+	State *map[string]*Value // Pointer to the actual server state map
+	Mutex *sync.RWMutex      // Pointer to the server's state mutex
 }
 
 // NewNumber creates a new number value
@@ -212,6 +222,17 @@ func NewServer(name string, state map[string]*Value, receivers map[string]*Funct
 	}
 }
 
+// NewServerState creates a new server state value that allows mutable operations
+func NewServerState(state *map[string]*Value, mutex *sync.RWMutex) *Value {
+	return &Value{
+		Type: ValueTypeServerState,
+		ServerState: &ServerState{
+			State: state,
+			Mutex: mutex,
+		},
+	}
+}
+
 // String returns a string representation of the value
 func (v *Value) String() string {
 	switch v.Type {
@@ -275,6 +296,20 @@ func (v *Value) String() string {
 			status = "running"
 		}
 		return fmt.Sprintf("<server %s: %s>", v.Server.Name, status)
+	case ValueTypeServerState:
+		v.ServerState.Mutex.RLock()
+		defer v.ServerState.Mutex.RUnlock()
+		result := "{"
+		first := true
+		for key, value := range *v.ServerState.State {
+			if !first {
+				result += ", "
+			}
+			result += fmt.Sprintf(`%s: %s`, key, value.String())
+			first = false
+		}
+		result += "}"
+		return result
 	default:
 		return "<unknown>"
 	}
@@ -301,6 +336,10 @@ func (v *Value) IsTruthy() bool {
 		return true // Structs are always truthy
 	case ValueTypeServer:
 		return true // Servers are always truthy
+	case ValueTypeServerState:
+		v.ServerState.Mutex.RLock()
+		defer v.ServerState.Mutex.RUnlock()
+		return len(*v.ServerState.State) > 0
 	default:
 		return false
 	}
@@ -363,6 +402,9 @@ func (v *Value) IsEqual(other *Value) bool {
 	case ValueTypeServer:
 		// Servers are equal if they're the same instance
 		return v.Server == other.Server
+	case ValueTypeServerState:
+		// ServerStates are equal if they point to the same state
+		return v.ServerState.State == other.ServerState.State
 	default:
 		return false
 	}
@@ -436,10 +478,7 @@ func (s *Server) runServerLoop(evaluator interface{}) {
 
 // handleMessage processes an incoming message
 func (s *Server) handleMessage(message *Message, evaluator interface{}) {
-	s.StateMutex.Lock()
-	defer s.StateMutex.Unlock()
-
-	// Find the receive function
+	// Find the receive function (no lock needed for read-only access to receivers)
 	receiver, exists := s.Receivers[message.Method]
 	if !exists {
 		if message.Reply != nil {
@@ -451,8 +490,8 @@ func (s *Server) handleMessage(message *Message, evaluator interface{}) {
 	// Create server environment with state access
 	serverEnv := NewEnvironment(s.Environment)
 
-	// Add state variable to environment (as object for .get/.set access)
-	stateValue := NewObject(s.State)
+	// Add state variable to environment (as mutable server state for .get/.set access)
+	stateValue := NewServerState(&s.State, &s.StateMutex)
 	serverEnv.Define("state", stateValue)
 
 	// Type assert evaluator and call receive function
@@ -470,10 +509,7 @@ func (s *Server) handleMessage(message *Message, evaluator interface{}) {
 
 		result, err := eval.CallUserFunction(modifiedReceiver, message.Args, serverEnv)
 
-		// Update server state from the modified state object
-		for key, value := range stateValue.Object {
-			s.State[key] = value
-		}
+		// No need to update server state manually - ServerState updates it directly
 
 		if err != nil {
 			if message.Reply != nil {

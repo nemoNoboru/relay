@@ -13,6 +13,8 @@ func (e *Evaluator) evaluateMethodCall(object *Value, call *parser.MethodCall, e
 		return e.evaluateArrayMethod(object, call, env)
 	case ValueTypeObject:
 		return e.evaluateObjectMethod(object, call, env)
+	case ValueTypeServerState:
+		return e.evaluateServerStateMethod(object, call, env)
 	case ValueTypeString:
 		return e.evaluateStringMethod(object, call, env)
 	case ValueTypeStruct:
@@ -246,6 +248,63 @@ func (e *Evaluator) evaluateArrayMethod(array *Value, call *parser.MethodCall, e
 
 	default:
 		return nil, fmt.Errorf("unknown array method: %s", call.Method)
+	}
+}
+
+// evaluateServerStateMethod evaluates server state methods (mutable object-like behavior)
+func (e *Evaluator) evaluateServerStateMethod(object *Value, call *parser.MethodCall, env *Environment) (*Value, error) {
+	switch call.Method {
+	case "get":
+		if len(call.Args) != 1 {
+			return nil, fmt.Errorf("get method expects 1 argument")
+		}
+
+		key, err := e.EvaluateWithEnv(call.Args[0], env)
+		if err != nil {
+			return nil, err
+		}
+
+		if key.Type != ValueTypeString {
+			return nil, fmt.Errorf("state key must be a string")
+		}
+
+		object.ServerState.Mutex.RLock()
+		defer object.ServerState.Mutex.RUnlock()
+
+		if value, exists := (*object.ServerState.State)[key.Str]; exists {
+			return value, nil
+		}
+		return NewNil(), nil
+
+	case "set":
+		if len(call.Args) != 2 {
+			return nil, fmt.Errorf("set method expects 2 arguments")
+		}
+
+		key, err := e.EvaluateWithEnv(call.Args[0], env)
+		if err != nil {
+			return nil, err
+		}
+
+		if key.Type != ValueTypeString {
+			return nil, fmt.Errorf("state key must be a string")
+		}
+
+		value, err := e.EvaluateWithEnv(call.Args[1], env)
+		if err != nil {
+			return nil, err
+		}
+
+		// Mutable update - modify the original state map
+		object.ServerState.Mutex.Lock()
+		(*object.ServerState.State)[key.Str] = value
+		object.ServerState.Mutex.Unlock()
+
+		// Return the value for chaining
+		return value, nil
+
+	default:
+		return nil, fmt.Errorf("unknown server state method: %s", call.Method)
 	}
 }
 
