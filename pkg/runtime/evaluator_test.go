@@ -703,3 +703,228 @@ func TestEvaluateFirstClassFunctions(t *testing.T) {
 	require.Equal(t, ValueTypeNumber, result.Type)
 	require.Equal(t, 18.0, result.Number, "Anonymous function as argument should work: 2*3=6, then 6*3=18")
 }
+
+func TestEvaluateStructDefinitions(t *testing.T) {
+	evaluator := NewEvaluator()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Simple struct definition",
+			input:    `struct User { name: string, age: number }`,
+			expected: "nil", // Struct definitions return nil but register the type
+		},
+		{
+			name:     "Struct with multiple field types",
+			input:    `struct Post { id: number, title: string, published: bool }`,
+			expected: "nil",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+			require.Equal(t, test.expected, result.String())
+		})
+	}
+}
+
+func TestEvaluateStructConstructors(t *testing.T) {
+	evaluator := NewEvaluator()
+
+	// First define the struct
+	structDef := `struct User { name: string, age: number }`
+	program, err := parser.Parse("test", strings.NewReader(structDef))
+	require.NoError(t, err)
+	_, err = evaluator.Evaluate(program.Expressions[0])
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Simple struct instantiation",
+			input:    `User{ name: "John", age: 30 }`,
+			expected: `User{name: "John", age: 30}`,
+		},
+		{
+			name:     "Struct with different field order",
+			input:    `User{ age: 25, name: "Alice" }`,
+			expected: `User{age: 25, name: "Alice"}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+
+			// Check that it's a struct with the right name and fields
+			require.Equal(t, ValueTypeStruct, result.Type)
+			require.Equal(t, "User", result.Struct.Name)
+			require.Contains(t, result.String(), "User{")
+			require.Contains(t, result.String(), "name:")
+			require.Contains(t, result.String(), "age:")
+		})
+	}
+}
+
+func TestEvaluateStructFieldAccess(t *testing.T) {
+	evaluator := NewEvaluator()
+
+	// Define struct and create instance
+	setup := `
+		struct User { name: string, age: number }
+		set user = User{ name: "John", age: 30 }
+	`
+	program, err := parser.Parse("test", strings.NewReader(setup))
+	require.NoError(t, err)
+
+	for _, expr := range program.Expressions {
+		_, err = evaluator.Evaluate(expr)
+		require.NoError(t, err)
+	}
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Access string field",
+			input:    `user.get("name")`,
+			expected: `"John"`,
+		},
+		{
+			name:     "Access number field",
+			input:    `user.get("age")`,
+			expected: "30",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+			require.Equal(t, test.expected, result.String())
+		})
+	}
+}
+
+func TestEvaluateStructErrors(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		setup       string
+		input       string
+		expectError string
+	}{
+		{
+			name:        "Undefined struct type",
+			setup:       "",
+			input:       `UnknownStruct{ name: "test" }`,
+			expectError: "undefined struct type: UnknownStruct",
+		},
+		{
+			name:        "Missing required field",
+			setup:       `struct User { name: string, age: number }`,
+			input:       `User{ name: "John" }`,
+			expectError: "missing required field 'age' for struct User",
+		},
+		{
+			name:        "Access nonexistent field",
+			setup:       `struct User { name: string } set user = User{ name: "John" }`,
+			input:       `user.get("age")`,
+			expectError: "struct User has no field 'age'",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// Fresh evaluator for each test
+			eval := NewEvaluator()
+
+			// Run setup if provided
+			if test.setup != "" {
+				setupProgram, err := parser.Parse("test", strings.NewReader(test.setup))
+				require.NoError(t, err)
+				for _, expr := range setupProgram.Expressions {
+					_, err = eval.Evaluate(expr)
+					require.NoError(t, err)
+				}
+			}
+
+			// Run the test input
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			_, err = eval.Evaluate(program.Expressions[0])
+			require.Error(t, err)
+			require.Contains(t, err.Error(), test.expectError)
+		})
+	}
+}
+
+func TestEvaluateStructEquality(t *testing.T) {
+	evaluator := NewEvaluator()
+
+	// Define struct
+	structDef := `struct User { name: string, age: number }`
+	program, err := parser.Parse("test", strings.NewReader(structDef))
+	require.NoError(t, err)
+	_, err = evaluator.Evaluate(program.Expressions[0])
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Equal structs",
+			input:    `User{ name: "John", age: 30 } == User{ name: "John", age: 30 }`,
+			expected: "true",
+		},
+		{
+			name:     "Different field values",
+			input:    `User{ name: "John", age: 30 } == User{ name: "Jane", age: 30 }`,
+			expected: "false",
+		},
+		{
+			name:     "Different field order but same values",
+			input:    `User{ name: "John", age: 30 } == User{ age: 30, name: "John" }`,
+			expected: "true",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+			require.Equal(t, test.expected, result.String())
+		})
+	}
+}

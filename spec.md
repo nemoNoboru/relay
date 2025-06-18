@@ -1,6 +1,6 @@
 # Relay Language - Complete Technical Specification
 
-🎉 **MAJOR MILESTONE**: Full closure support and first-class functions implemented!
+🎉 **MAJOR MILESTONES**: Full closure support, first-class functions, and struct system implemented!
 
 **Version:** 0.3 "Cloudpunks Edition"  
 **By:** Cloudpunks  
@@ -15,8 +15,9 @@ Relay is designed for federated, self-hostable, and functional applications. Eac
 - Stateless by design, but supports automatic persistence
 - Able to send, receive, and template-render data
 - Built for high interoperability and zero config deployment
-- PHP-simple for hobbyists, enterprise-ready for production
+- BASIC-simple for hobbyists, enterprise-ready for production
 - ✨ **NEW**: Fully functional with closures and first-class functions for advanced programming patterns
+- ✨ **NEW**: Complete struct system with definitions, instantiation, and field access
 
 ---
 
@@ -255,6 +256,8 @@ process_with_strategy(users, filter_active)
 
 ### 4.3 Struct Definitions
 
+✨ **IMPLEMENTED**: Struct definitions and instantiation now fully supported in the runtime!
+
 ```relay
 struct User {
   username: string,
@@ -271,6 +274,68 @@ struct Post {
   tags: [string],
   created_at: datetime
 }
+```
+
+#### Struct Instantiation and Usage
+
+**Creating struct instances:**
+```relay
+// Create a User instance
+set user = User{
+  username: "john_doe",
+  email: "john@example.com",
+  bio: "Software developer",
+  created_at: now()
+}
+
+// Field order doesn't matter
+set user2 = User{
+  email: "jane@example.com",
+  username: "jane_smith",
+  created_at: now(),
+  bio: "Designer"
+}
+```
+
+**Accessing struct fields:**
+```relay
+// Access fields using .get() method
+set name = user.get("username")     // Returns "john_doe"
+set email = user.get("email")       // Returns "john@example.com"
+
+// Use in expressions
+set greeting = "Hello, " + user.get("username")
+set isRecent = user.get("created_at") > yesterday()
+```
+
+**Struct equality and comparison:**
+```relay
+set user1 = User{ username: "john", email: "john@test.com" }
+set user2 = User{ username: "john", email: "john@test.com" }
+set user3 = User{ email: "john@test.com", username: "john" }
+
+user1 == user2  // Returns true (same values)
+user1 == user3  // Returns true (field order doesn't matter)
+```
+
+**Complex struct operations:**
+```relay
+// Create a post with user information
+set post = Post{
+  id: generateId(),
+  title: "My First Post",
+  content: "Hello, world!",
+  author: user.get("username"),
+  tags: ["intro", "hello"],
+  created_at: now()
+}
+
+// Use struct fields in functions
+fn getUserSummary(u: User) -> string {
+  u.get("username") + " (" + u.get("email") + ")"
+}
+
+set summary = getUserSummary(user)
 ```
 
 ### 4.4 Protocol Definitions

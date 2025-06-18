@@ -52,6 +52,7 @@ const (
 	ValueTypeArray
 	ValueTypeObject
 	ValueTypeFunction
+	ValueTypeStruct
 )
 
 // Value represents a runtime value in the Relay language
@@ -63,6 +64,7 @@ type Value struct {
 	Array    []*Value
 	Object   map[string]*Value
 	Function *Function // For functions and lambdas
+	Struct   *Struct   // For struct instances
 }
 
 // Function represents a callable function
@@ -73,6 +75,18 @@ type Function struct {
 	IsBuiltin  bool
 	Builtin    func(args []*Value) (*Value, error)
 	ClosureEnv *Environment // Captured environment for closures
+}
+
+// Struct represents a struct instance
+type Struct struct {
+	Name   string            // Struct type name (e.g., "User")
+	Fields map[string]*Value // Field values
+}
+
+// StructDefinition represents a struct type definition
+type StructDefinition struct {
+	Name   string            // Struct name
+	Fields map[string]string // Field name -> type name mapping
 }
 
 // NewNumber creates a new number value
@@ -122,6 +136,17 @@ func NewObject(fields map[string]*Value) *Value {
 	}
 }
 
+// NewStruct creates a new struct instance
+func NewStruct(name string, fields map[string]*Value) *Value {
+	return &Value{
+		Type: ValueTypeStruct,
+		Struct: &Struct{
+			Name:   name,
+			Fields: fields,
+		},
+	}
+}
+
 // String returns a string representation of the value
 func (v *Value) String() string {
 	switch v.Type {
@@ -167,6 +192,18 @@ func (v *Value) String() string {
 			return fmt.Sprintf("<builtin function: %s>", v.Function.Name)
 		}
 		return fmt.Sprintf("<function: %s>", v.Function.Name)
+	case ValueTypeStruct:
+		result := fmt.Sprintf("%s{", v.Struct.Name)
+		first := true
+		for key, value := range v.Struct.Fields {
+			if !first {
+				result += ", "
+			}
+			result += fmt.Sprintf(`%s: %s`, key, value.String())
+			first = false
+		}
+		result += "}"
+		return result
 	default:
 		return "<unknown>"
 	}
@@ -189,6 +226,8 @@ func (v *Value) IsTruthy() bool {
 		return len(v.Object) > 0
 	case ValueTypeFunction:
 		return true
+	case ValueTypeStruct:
+		return true // Structs are always truthy
 	default:
 		return false
 	}
@@ -233,6 +272,21 @@ func (v *Value) IsEqual(other *Value) bool {
 	case ValueTypeFunction:
 		// Functions are equal if they're the same instance
 		return v.Function == other.Function
+	case ValueTypeStruct:
+		// Structs are equal if they have the same name and equal fields
+		if v.Struct.Name != other.Struct.Name {
+			return false
+		}
+		if len(v.Struct.Fields) != len(other.Struct.Fields) {
+			return false
+		}
+		for key, value := range v.Struct.Fields {
+			otherValue, exists := other.Struct.Fields[key]
+			if !exists || !value.IsEqual(otherValue) {
+				return false
+			}
+		}
+		return true
 	default:
 		return false
 	}

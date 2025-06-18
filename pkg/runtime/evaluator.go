@@ -21,7 +21,8 @@ func NewReturn(value *Value) *ReturnValue {
 
 // Evaluator executes parsed AST nodes
 type Evaluator struct {
-	globalEnv *Environment
+	globalEnv  *Environment
+	structDefs map[string]*StructDefinition // Store struct definitions
 }
 
 // NewEvaluator creates a new evaluator
@@ -29,7 +30,10 @@ func NewEvaluator() *Evaluator {
 	global := NewEnvironment(nil)
 
 	// Add some built-in functions
-	eval := &Evaluator{globalEnv: global}
+	eval := &Evaluator{
+		globalEnv:  global,
+		structDefs: make(map[string]*StructDefinition),
+	}
 	eval.defineBuiltins()
 
 	return eval
@@ -70,6 +74,10 @@ func (e *Evaluator) EvaluateWithEnv(expr *parser.Expression, env *Environment) (
 	}
 
 	// Handle different expression types
+	if expr.StructExpr != nil {
+		return e.evaluateStructExpr(expr.StructExpr, env)
+	}
+
 	if expr.Binary != nil {
 		return e.evaluateBinaryExpr(expr.Binary, env)
 	}
@@ -188,6 +196,10 @@ func (e *Evaluator) evaluateBaseExpr(expr *parser.BaseExpr, env *Environment) (*
 
 	if expr.FuncCall != nil {
 		return e.evaluateFuncCall(expr.FuncCall, env)
+	}
+
+	if expr.StructConstructor != nil {
+		return e.evaluateStructConstructor(expr.StructConstructor, env)
 	}
 
 	return NewNil(), fmt.Errorf("unsupported base expression")
@@ -345,6 +357,8 @@ func (e *Evaluator) evaluateMethodCall(object *Value, call *parser.MethodCall, e
 		return e.evaluateObjectMethod(object, call, env)
 	case ValueTypeString:
 		return e.evaluateStringMethod(object, call, env)
+	case ValueTypeStruct:
+		return e.evaluateStructMethod(object, call, env)
 	default:
 		return nil, fmt.Errorf("method '%s' not supported for %v", call.Method, object.Type)
 	}
@@ -394,6 +408,33 @@ func (e *Evaluator) evaluateStringMethod(str *Value, call *parser.MethodCall, en
 		return NewNumber(float64(len(str.Str))), nil
 	default:
 		return nil, fmt.Errorf("unknown string method: %s", call.Method)
+	}
+}
+
+// evaluateStructMethod evaluates struct methods
+func (e *Evaluator) evaluateStructMethod(structVal *Value, call *parser.MethodCall, env *Environment) (*Value, error) {
+	switch call.Method {
+	case "get":
+		if len(call.Args) != 1 {
+			return nil, fmt.Errorf("get method expects 1 argument")
+		}
+
+		key, err := e.EvaluateWithEnv(call.Args[0], env)
+		if err != nil {
+			return nil, err
+		}
+
+		if key.Type != ValueTypeString {
+			return nil, fmt.Errorf("struct field name must be a string")
+		}
+
+		if value, exists := structVal.Struct.Fields[key.Str]; exists {
+			return value, nil
+		}
+		return nil, fmt.Errorf("struct %s has no field '%s'", structVal.Struct.Name, key.Str)
+
+	default:
+		return nil, fmt.Errorf("unknown struct method: %s", call.Method)
 	}
 }
 
@@ -561,4 +602,80 @@ func (e *Evaluator) evaluateBlock(block *parser.Block, env *Environment) (*Value
 	}
 
 	return result, nil
+}
+
+// evaluateStructExpr handles struct definitions
+func (e *Evaluator) evaluateStructExpr(expr *parser.StructExpr, env *Environment) (*Value, error) {
+	// Create struct definition
+	fieldTypes := make(map[string]string)
+	for _, field := range expr.Fields {
+		// For now, we'll store the type name as a string
+		// In a more complete implementation, we'd have a proper type system
+		fieldTypes[field.Name] = e.getTypeName(field.Type)
+	}
+
+	structDef := &StructDefinition{
+		Name:   expr.Name,
+		Fields: fieldTypes,
+	}
+
+	// Store the struct definition
+	e.structDefs[expr.Name] = structDef
+
+	// Struct definitions don't return a value, they register a type
+	return NewNil(), nil
+}
+
+// evaluateStructConstructor handles struct instantiation (User{name: "John"})
+func (e *Evaluator) evaluateStructConstructor(expr *parser.StructConstructor, env *Environment) (*Value, error) {
+	// Check if the struct type is defined
+	structDef, exists := e.structDefs[expr.Name]
+	if !exists {
+		return nil, fmt.Errorf("undefined struct type: %s", expr.Name)
+	}
+
+	// Evaluate field values
+	fields := make(map[string]*Value)
+	for _, field := range expr.Fields {
+		value, err := e.EvaluateWithEnv(field.Value, env)
+		if err != nil {
+			return nil, err
+		}
+		fields[field.Key] = value
+	}
+
+	// Validate that all required fields are provided
+	for fieldName := range structDef.Fields {
+		if _, provided := fields[fieldName]; !provided {
+			return nil, fmt.Errorf("missing required field '%s' for struct %s", fieldName, expr.Name)
+		}
+	}
+
+	// Create struct instance
+	return NewStruct(expr.Name, fields), nil
+}
+
+// getTypeName extracts a type name from a TypeRef (simplified)
+func (e *Evaluator) getTypeName(typeRef *parser.TypeRef) string {
+	if typeRef == nil {
+		return "unknown"
+	}
+
+	if typeRef.Name != "" {
+		return typeRef.Name
+	}
+
+	if typeRef.Array != nil {
+		return "[]" + e.getTypeName(typeRef.Array)
+	}
+
+	if typeRef.Function != nil {
+		return "function"
+	}
+
+	if typeRef.Parameterized != nil {
+		return typeRef.Parameterized.Name
+	}
+
+	return "unknown"
 }

@@ -31,10 +31,11 @@ The Relay runtime takes parsed AST nodes from the parser and executes them, main
 
 ### Key Components
 
-- **Value System**: Represents all runtime values (numbers, strings, functions, etc.)
+- **Value System**: Represents all runtime values (numbers, strings, functions, structs, etc.)
 - **Environment System**: Manages variable scoping and lookup with closure support
 - **Evaluator**: Core engine that executes AST nodes
 - **Function System**: ✨ **ENHANCED**: Full closure and first-class function support with lexical scoping
+- **Struct System**: ✨ **NEW**: Complete struct definition, instantiation, and field access support
 
 ## Architecture
 
@@ -78,6 +79,7 @@ const (
     ValueTypeArray
     ValueTypeObject
     ValueTypeFunction
+    ValueTypeStruct
 )
 ```
 
@@ -92,6 +94,7 @@ type Value struct {
     Array    []*Value
     Object   map[string]*Value
     Function *Function
+    Struct   *Struct
 }
 ```
 
@@ -467,6 +470,165 @@ Runtime error: division by zero
 relay> add(5)  // Function expects 2 parameters
 Runtime error: function 'add' expects 2 arguments, got 1
 ```
+
+## Struct System
+
+✨ **NEW FEATURE**: The runtime now supports complete struct definitions, instantiation, and field access!
+
+### Struct Definition
+
+Structs are user-defined types that group related data fields together:
+
+```relay
+struct User {
+    name: string,
+    age: number,
+    active: bool
+}
+
+struct Post {
+    title: string,
+    author: string,
+    views: number,
+    tags: [string]
+}
+```
+
+### Struct Storage
+
+Struct definitions are stored in the evaluator and registered as types:
+
+```go
+type StructDefinition struct {
+    Name   string            // Struct name
+    Fields map[string]string // Field name -> type name mapping
+}
+
+type Struct struct {
+    Name   string            // Struct type name (e.g., "User")
+    Fields map[string]*Value // Field values
+}
+```
+
+### Struct Instantiation
+
+Create struct instances using constructor syntax:
+
+```relay
+// Create a User instance
+set user = User{
+    name: "John Doe",
+    age: 30,
+    active: true
+}
+
+// Field order doesn't matter
+set user2 = User{
+    active: false,
+    name: "Jane Smith",
+    age: 25
+}
+
+// Use expressions in field values
+set post = Post{
+    title: "Hello World",
+    author: user.get("name"),
+    views: 100,
+    tags: ["programming", "tutorial"]
+}
+```
+
+### Field Access
+
+Access struct fields using the `.get()` method:
+
+```relay
+set name = user.get("name")        // Returns "John Doe"
+set age = user.get("age")          // Returns 30
+set isActive = user.get("active")  // Returns true
+```
+
+### Struct Operations
+
+#### Equality Comparison
+```relay
+set user1 = User{ name: "John", age: 30, active: true }
+set user2 = User{ name: "John", age: 30, active: true }
+set user3 = User{ age: 30, name: "John", active: true }
+
+user1 == user2  // Returns true (same values)
+user1 == user3  // Returns true (field order doesn't matter)
+```
+
+#### Using Struct Fields in Expressions
+```relay
+// String concatenation
+set greeting = "Hello, " + user.get("name")
+
+// Arithmetic operations
+set nextYear = user.get("age") + 1
+
+// Conditional logic
+if user.get("active") {
+    print("User is active")
+}
+```
+
+#### Complex Struct Usage
+```relay
+// Define multiple related structs
+struct Address {
+    street: string,
+    city: string,
+    zipcode: string
+}
+
+struct Employee {
+    name: string,
+    department: string,
+    salary: number
+}
+
+// Create instances
+set address = Address{
+    street: "123 Main St",
+    city: "Anytown",
+    zipcode: "12345"
+}
+
+set employee = Employee{
+    name: "Alice Johnson",
+    department: "Engineering",
+    salary: 75000
+}
+
+// Use in expressions
+set summary = employee.get("name") + " works in " + employee.get("department")
+```
+
+### Error Handling
+
+The struct system provides comprehensive error checking:
+
+```relay
+// Error: Undefined struct type
+UnknownStruct{ field: "value" }  // Runtime error: undefined struct type: UnknownStruct
+
+// Error: Missing required field
+User{ name: "John" }  // Runtime error: missing required field 'age' for struct User
+
+// Error: Accessing nonexistent field
+user.get("email")  // Runtime error: struct User has no field 'email'
+```
+
+### Struct System Implementation
+
+The struct system is implemented with:
+
+1. **Type Registration**: Struct definitions stored in evaluator's `structDefs` map
+2. **Constructor Validation**: All required fields must be provided during instantiation
+3. **Field Access**: Safe field access with proper error handling
+4. **Value Integration**: Structs are first-class values supporting equality, truthiness, and string representation
 
 ## Built-in Functions
 
