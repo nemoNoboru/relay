@@ -339,12 +339,22 @@ type StructConstructor struct {
 }
 
 type AccessExpr struct {
-	MethodCall *MethodCall `@@`
+	MethodCall  *MethodCall     `@@`
+	FieldAccess *FieldAccess    `| @@`
+	FuncCall    *FuncCallAccess `| @@`
 }
 
 type MethodCall struct {
 	Method string        `"." @( Ident | "set" | "get" | "add" | "remove" | "filter" | "map" | "find" | "sort_by" | "reduce" )`
 	Args   []*Expression `"(" ( @@ ( "," @@ )* )? ")"`
+}
+
+type FieldAccess struct {
+	Field string `"." @Ident`
+}
+
+type FuncCallAccess struct {
+	Args []*Expression `"(" ( @@ ( "," @@ )* )? ")"`
 }
 
 type ObjectLit struct {

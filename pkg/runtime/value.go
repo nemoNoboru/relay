@@ -58,6 +58,32 @@ const (
 	ValueTypeServer
 )
 
+// String returns a string representation of the ValueType
+func (vt ValueType) String() string {
+	switch vt {
+	case ValueTypeNil:
+		return "nil"
+	case ValueTypeNumber:
+		return "number"
+	case ValueTypeString:
+		return "string"
+	case ValueTypeBool:
+		return "bool"
+	case ValueTypeArray:
+		return "array"
+	case ValueTypeObject:
+		return "object"
+	case ValueTypeFunction:
+		return "function"
+	case ValueTypeStruct:
+		return "struct"
+	case ValueTypeServer:
+		return "server"
+	default:
+		return "unknown"
+	}
+}
+
 // Value represents a runtime value in the Relay language
 type Value struct {
 	Type     ValueType

@@ -69,7 +69,7 @@ func (e *Evaluator) evaluatePrimaryExpr(expr *parser.PrimaryExpr, env *Environme
 		return nil, err
 	}
 
-	// Apply any method calls
+	// Apply any method calls, field access, or function calls
 	result := base
 	for _, access := range expr.Access {
 		if access.MethodCall != nil {
@@ -77,10 +77,67 @@ func (e *Evaluator) evaluatePrimaryExpr(expr *parser.PrimaryExpr, env *Environme
 			if err != nil {
 				return nil, err
 			}
+		} else if access.FieldAccess != nil {
+			result, err = e.evaluateFieldAccess(result, access.FieldAccess, env)
+			if err != nil {
+				return nil, err
+			}
+		} else if access.FuncCall != nil {
+			result, err = e.evaluateFuncCallAccess(result, access.FuncCall, env)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return result, nil
+}
+
+// evaluateFieldAccess evaluates direct field access (obj.field)
+func (e *Evaluator) evaluateFieldAccess(object *Value, access *parser.FieldAccess, env *Environment) (*Value, error) {
+	switch object.Type {
+	case ValueTypeObject:
+		// Direct field access on objects
+		if value, exists := object.Object[access.Field]; exists {
+			return value, nil
+		}
+		return NewNil(), nil // Return nil for non-existent fields
+
+	case ValueTypeStruct:
+		// Direct field access on structs
+		if value, exists := object.Struct.Fields[access.Field]; exists {
+			return value, nil
+		}
+		return nil, fmt.Errorf("field '%s' not found in struct '%s'", access.Field, object.Struct.Name)
+
+	default:
+		return nil, fmt.Errorf("cannot access field '%s' on %s", access.Field, object.Type)
+	}
+}
+
+// evaluateFuncCallAccess evaluates function calls on values (value(args))
+func (e *Evaluator) evaluateFuncCallAccess(value *Value, access *parser.FuncCallAccess, env *Environment) (*Value, error) {
+	if value.Type != ValueTypeFunction {
+		return nil, fmt.Errorf("cannot call non-function value of type %s", value.Type)
+	}
+
+	// Evaluate arguments
+	args := make([]*Value, len(access.Args))
+	for i, arg := range access.Args {
+		val, err := e.EvaluateWithEnv(arg, env)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = val
+	}
+
+	// Call the function
+	if value.Function.IsBuiltin {
+		return value.Function.Builtin(args)
+	}
+
+	// Handle user-defined functions
+	return e.CallUserFunction(value.Function, args, env)
 }
 
 // evaluateBaseExpr evaluates base expressions

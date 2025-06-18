@@ -294,6 +294,26 @@ func (e *Evaluator) evaluateObjectMethod(object *Value, call *parser.MethodCall,
 		return value, nil
 
 	default:
+		// Fallback: check if there's a field with this name that contains a function
+		if fieldValue, exists := object.Object[call.Method]; exists {
+			if fieldValue.Type == ValueTypeFunction {
+				// Evaluate arguments
+				args := make([]*Value, len(call.Args))
+				for i, arg := range call.Args {
+					val, err := e.EvaluateWithEnv(arg, env)
+					if err != nil {
+						return nil, err
+					}
+					args[i] = val
+				}
+
+				// Call the function
+				if fieldValue.Function.IsBuiltin {
+					return fieldValue.Function.Builtin(args)
+				}
+				return e.CallUserFunction(fieldValue.Function, args, env)
+			}
+		}
 		return nil, fmt.Errorf("unknown object method: %s", call.Method)
 	}
 }
