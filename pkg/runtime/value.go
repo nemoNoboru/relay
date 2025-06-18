@@ -1,3 +1,12 @@
+// Package runtime/value defines the core value system for Relay.
+// This includes all runtime types (numbers, strings, functions, structs, servers),
+// the environment system for variable scoping, and server infrastructure.
+//
+// Key concepts:
+// - All values are immutable by default (except server state)
+// - Functions are first-class with closure support
+// - Servers provide stateful, concurrent message handling
+// - Environments support lexical scoping with parent chains
 package runtime
 
 import (
@@ -8,13 +17,15 @@ import (
 	"time"
 )
 
-// Environment represents a variable scope with optional parent chain
+// Environment represents a variable scope with optional parent chain.
+// Supports lexical scoping where inner scopes can access outer scope variables.
 type Environment struct {
-	variables map[string]*Value
-	parent    *Environment
+	variables map[string]*Value // Variables defined in this scope
+	parent    *Environment      // Parent scope (nil for global scope)
 }
 
-// NewEnvironment creates a new environment with an optional parent
+// NewEnvironment creates a new environment with an optional parent.
+// Used for creating function scopes, block scopes, and the global environment.
 func NewEnvironment(parent *Environment) *Environment {
 	return &Environment{
 		variables: make(map[string]*Value),
@@ -22,7 +33,8 @@ func NewEnvironment(parent *Environment) *Environment {
 	}
 }
 
-// Get looks up a variable in the environment chain
+// Get looks up a variable in the environment chain.
+// Searches current scope first, then parent scopes recursively.
 func (e *Environment) Get(name string) (*Value, bool) {
 	if value, exists := e.variables[name]; exists {
 		return value, true
@@ -33,17 +45,20 @@ func (e *Environment) Get(name string) (*Value, bool) {
 	return nil, false
 }
 
-// Set updates an existing variable in the environment chain
+// Set updates an existing variable in the current environment.
+// Note: This doesn't search parent environments.
 func (e *Environment) Set(name string, value *Value) {
 	e.variables[name] = value
 }
 
-// Define creates a new variable in the current environment
+// Define creates a new variable in the current environment.
+// Used for variable declarations and parameter binding.
 func (e *Environment) Define(name string, value *Value) {
 	e.variables[name] = value
 }
 
-// ValueType represents the type of a runtime value
+// ValueType represents the type of a runtime value.
+// Used for type checking and method dispatch throughout the runtime.
 type ValueType int
 
 const (
@@ -87,28 +102,31 @@ func (vt ValueType) String() string {
 	}
 }
 
-// Value represents a runtime value in the Relay language
+// Value represents a runtime value in the Relay language.
+// Uses a tagged union approach where Type determines which field is valid.
+// All values are immutable except ServerState which allows controlled mutation.
 type Value struct {
-	Type        ValueType
-	Number      float64
-	Str         string
-	Bool        bool
-	Array       []*Value
-	Object      map[string]*Value
-	Function    *Function    // For functions and lambdas
-	Struct      *Struct      // For struct instances
-	Server      *Server      // For server instances
-	ServerState *ServerState // For mutable server state
+	Type        ValueType         // Determines which field below is valid
+	Number      float64           // For ValueTypeNumber
+	Str         string            // For ValueTypeString
+	Bool        bool              // For ValueTypeBool
+	Array       []*Value          // For ValueTypeArray
+	Object      map[string]*Value // For ValueTypeObject
+	Function    *Function         // For ValueTypeFunction (includes closures)
+	Struct      *Struct           // For ValueTypeStruct instances
+	Server      *Server           // For ValueTypeServer instances
+	ServerState *ServerState      // For ValueTypeServerState (mutable)
 }
 
-// Function represents a callable function
+// Function represents a callable function (built-in or user-defined).
+// Supports closures by capturing the environment where the function was defined.
 type Function struct {
-	Name       string
-	Parameters []string
-	Body       *parser.Block // AST block for user-defined functions
-	IsBuiltin  bool
-	Builtin    func(args []*Value) (*Value, error)
-	ClosureEnv *Environment // Captured environment for closures
+	Name       string                              // Function name (empty for anonymous)
+	Parameters []string                            // Parameter names
+	Body       *parser.Block                       // AST block for user-defined functions
+	IsBuiltin  bool                                // True for built-in functions
+	Builtin    func(args []*Value) (*Value, error) // Built-in implementation
+	ClosureEnv *Environment                        // Captured environment for closures
 }
 
 // Struct represents a struct instance

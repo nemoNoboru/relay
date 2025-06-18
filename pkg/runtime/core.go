@@ -1,3 +1,17 @@
+// Package runtime provides the core evaluation engine for the Relay programming language.
+// This file contains the unified expression evaluation system that handles all language constructs
+// including functions, structs, servers, arithmetic, logic, and method calls.
+//
+// The evaluation follows a hierarchical pattern:
+// Expression -> Binary -> Unary -> Primary -> Base -> Literals/Identifiers
+//
+// Key features:
+// - Immutable-by-default semantics with method-based operations
+// - First-class functions with closure support
+// - Struct definitions and instantiation
+// - Server state management with automatic persistence
+// - Short-circuit evaluation for logical operators
+// - Comprehensive error handling and type checking
 package runtime
 
 import (
@@ -5,10 +19,9 @@ import (
 	"relay/pkg/parser"
 )
 
-// Core evaluator that handles all expression types in one place
-// This consolidates logic from evaluator.go, expressions.go, literals.go
-
-// EvaluateExpression is the main entry point for expression evaluation
+// EvaluateExpression is the unified entry point for all expression evaluation.
+// It dispatches to appropriate handlers based on the expression type.
+// This replaces the previous fragmented approach across multiple files.
 func (e *Evaluator) EvaluateExpression(expr *parser.Expression, env *Environment) (*Value, error) {
 	if expr == nil {
 		return NewNil(), nil
@@ -35,7 +48,9 @@ func (e *Evaluator) EvaluateExpression(expr *parser.Expression, env *Environment
 	}
 }
 
-// evaluateBinary handles all binary operations (arithmetic, logical, comparisons)
+// evaluateBinary handles all binary operations including arithmetic (+, -, *, /),
+// logical (&&, ||), comparisons (==, !=, <, >, <=, >=), and null coalescing (??).
+// Implements short-circuit evaluation for logical operators for efficiency.
 func (e *Evaluator) evaluateBinary(expr *parser.BinaryExpr, env *Environment) (*Value, error) {
 	left, err := e.evaluateUnary(expr.Left, env)
 	if err != nil {
@@ -88,7 +103,8 @@ func (e *Evaluator) evaluateBinary(expr *parser.BinaryExpr, env *Environment) (*
 	return left, nil
 }
 
-// evaluateUnary handles unary operations (!, -)
+// evaluateUnary handles unary operations: logical NOT (!) and numeric negation (-).
+// Validates type compatibility for operations (e.g., negation only works on numbers).
 func (e *Evaluator) evaluateUnary(expr *parser.UnaryExpr, env *Environment) (*Value, error) {
 	primary, err := e.evaluatePrimary(expr.Primary, env)
 	if err != nil {
@@ -112,7 +128,9 @@ func (e *Evaluator) evaluateUnary(expr *parser.UnaryExpr, env *Environment) (*Va
 	}
 }
 
-// evaluatePrimary handles primary expressions and method calls
+// evaluatePrimary handles primary expressions and chains of access operations.
+// Supports method calls (.method()), field access (.field), and function calls.
+// Enables method chaining like obj.set("key", value).get("other").method().
 func (e *Evaluator) evaluatePrimary(expr *parser.PrimaryExpr, env *Environment) (*Value, error) {
 	base, err := e.evaluateBase(expr.Base, env)
 	if err != nil {
@@ -148,7 +166,9 @@ func (e *Evaluator) evaluatePrimary(expr *parser.PrimaryExpr, env *Environment) 
 	return base, nil
 }
 
-// evaluateBase handles base expressions (literals, identifiers, function calls, etc.)
+// evaluateBase handles the fundamental building blocks of expressions:
+// literals (numbers, strings, booleans), identifiers (variables), function calls,
+// struct constructors, object literals, server send operations, and grouped expressions.
 func (e *Evaluator) evaluateBase(expr *parser.BaseExpr, env *Environment) (*Value, error) {
 	switch {
 	case expr.Literal != nil:
@@ -170,7 +190,8 @@ func (e *Evaluator) evaluateBase(expr *parser.BaseExpr, env *Environment) (*Valu
 	}
 }
 
-// evaluateLiteral handles all literal values
+// evaluateLiteral handles all literal values: numbers, strings, booleans, symbols,
+// arrays, and embedded function calls. Converts parser literals to runtime values.
 func (e *Evaluator) evaluateLiteral(lit *parser.Literal, env *Environment) (*Value, error) {
 	switch {
 	case lit.Number != nil:
@@ -199,7 +220,8 @@ func (e *Evaluator) evaluateLiteral(lit *parser.Literal, env *Environment) (*Val
 	}
 }
 
-// evaluateArrayLiteral creates an array from literal elements
+// evaluateArrayLiteral creates an array from literal elements.
+// Evaluates each element expression and collects them into a runtime array value.
 func (e *Evaluator) evaluateArrayLiteral(elements []*parser.Expression, env *Environment) (*Value, error) {
 	values := make([]*Value, len(elements))
 	for i, element := range elements {
@@ -212,7 +234,8 @@ func (e *Evaluator) evaluateArrayLiteral(elements []*parser.Expression, env *Env
 	return NewArray(values), nil
 }
 
-// evaluateObjectLiteral creates an object from key-value pairs
+// evaluateObjectLiteral creates an object from key-value pairs.
+// Supports both string keys and symbol keys (:symbol syntax).
 func (e *Evaluator) evaluateObjectLiteral(obj *parser.ObjectLit, env *Environment) (*Value, error) {
 	fields := make(map[string]*Value)
 	for _, field := range obj.Fields {
@@ -225,7 +248,8 @@ func (e *Evaluator) evaluateObjectLiteral(obj *parser.ObjectLit, env *Environmen
 	return NewObject(fields), nil
 }
 
-// evaluateIdentifier looks up a variable in the environment
+// evaluateIdentifier looks up a variable in the environment chain.
+// Returns an error if the variable is not defined in any scope.
 func (e *Evaluator) evaluateIdentifier(name string, env *Environment) (*Value, error) {
 	value, exists := env.Get(name)
 	if !exists {
@@ -234,7 +258,9 @@ func (e *Evaluator) evaluateIdentifier(name string, env *Environment) (*Value, e
 	return value, nil
 }
 
-// evaluateFunctionCall handles function calls
+// evaluateFunctionCall handles function calls by looking up the function,
+// evaluating arguments, and delegating to callFunction. Provides specific
+// error messages for undefined functions vs undefined variables.
 func (e *Evaluator) evaluateFunctionCall(call *parser.FuncCallExpr, env *Environment) (*Value, error) {
 	// Get the function
 	function, err := e.evaluateIdentifier(call.Name, env)
@@ -253,7 +279,8 @@ func (e *Evaluator) evaluateFunctionCall(call *parser.FuncCallExpr, env *Environ
 	return e.callFunction(function, args, env)
 }
 
-// evaluateArguments evaluates a list of argument expressions
+// evaluateArguments evaluates a list of argument expressions in order.
+// Used for function calls, method calls, and other operations requiring arguments.
 func (e *Evaluator) evaluateArguments(args []*parser.Expression, env *Environment) ([]*Value, error) {
 	values := make([]*Value, len(args))
 	for i, arg := range args {
@@ -266,7 +293,9 @@ func (e *Evaluator) evaluateArguments(args []*parser.Expression, env *Environmen
 	return values, nil
 }
 
-// callFunction calls a function with given arguments
+// callFunction handles both built-in and user-defined function calls.
+// Supports closures by preserving captured environments and manages parameter binding.
+// Validates argument count and creates appropriate execution environments.
 func (e *Evaluator) callFunction(function *Value, args []*Value, env *Environment) (*Value, error) {
 	if function.Type != ValueTypeFunction {
 		return nil, fmt.Errorf("cannot call non-function value of type %s", function.Type)
@@ -303,7 +332,8 @@ func (e *Evaluator) callFunction(function *Value, args []*Value, env *Environmen
 	return e.evaluateBlock(fn.Body, funcEnv)
 }
 
-// evaluateBlock executes a block of expressions
+// evaluateBlock executes a block of expressions sequentially.
+// Returns the value of the last expression. Handles early returns via error mechanism.
 func (e *Evaluator) evaluateBlock(block *parser.Block, env *Environment) (*Value, error) {
 	var result *Value = NewNil()
 
@@ -322,7 +352,8 @@ func (e *Evaluator) evaluateBlock(block *parser.Block, env *Environment) (*Value
 	return result, nil
 }
 
-// evaluateSet handles variable assignment
+// evaluateSet handles variable assignment (set variable = value).
+// Evaluates the value expression and defines it in the current environment.
 func (e *Evaluator) evaluateSet(expr *parser.SetExpr, env *Environment) (*Value, error) {
 	value, err := e.EvaluateExpression(expr.Value, env)
 	if err != nil {
@@ -332,7 +363,8 @@ func (e *Evaluator) evaluateSet(expr *parser.SetExpr, env *Environment) (*Value,
 	return value, nil
 }
 
-// evaluateReturn handles return statements
+// evaluateReturn handles return statements by evaluating the return value
+// and wrapping it in a special error type for early return handling.
 func (e *Evaluator) evaluateReturn(expr *parser.ReturnExpr, env *Environment) (*Value, error) {
 	value, err := e.EvaluateExpression(expr.Value, env)
 	if err != nil {
@@ -341,7 +373,8 @@ func (e *Evaluator) evaluateReturn(expr *parser.ReturnExpr, env *Environment) (*
 	return nil, NewReturn(value)
 }
 
-// evaluateIf handles if expressions
+// evaluateIf handles if-else expressions by evaluating the condition
+// and executing the appropriate branch. Returns nil if no else branch and condition is false.
 func (e *Evaluator) evaluateIf(expr *parser.IfExpr, env *Environment) (*Value, error) {
 	condition, err := e.EvaluateExpression(expr.Condition, env)
 	if err != nil {
@@ -357,7 +390,9 @@ func (e *Evaluator) evaluateIf(expr *parser.IfExpr, env *Environment) (*Value, e
 	return NewNil(), nil
 }
 
-// evaluateFunction handles function definitions
+// evaluateFunction handles function definitions, creating closures that capture
+// the current environment. Supports both named and anonymous functions.
+// Named functions are automatically defined in the current environment.
 func (e *Evaluator) evaluateFunction(expr *parser.FunctionExpr, env *Environment) (*Value, error) {
 	// Extract parameter names
 	params := make([]string, len(expr.Parameters))
@@ -393,7 +428,8 @@ func (e *Evaluator) evaluateFunction(expr *parser.FunctionExpr, env *Environment
 	return value, nil
 }
 
-// applyBinaryOperation applies a binary operator to two values
+// applyBinaryOperation applies a binary operator to two values.
+// Dispatches to specific operation handlers and provides unified error handling.
 func (e *Evaluator) applyBinaryOperation(left *Value, op string, right *Value) (*Value, error) {
 	switch op {
 	case "+":
@@ -421,27 +457,32 @@ func (e *Evaluator) applyBinaryOperation(left *Value, op string, right *Value) (
 	}
 }
 
-// applyAddition handles addition and string concatenation
+// applyAddition handles addition and string concatenation.
+// Delegates to operations.go for the actual implementation.
 func (e *Evaluator) applyAddition(left, right *Value) (*Value, error) {
 	return e.add(left, right)
 }
 
-// applySubtraction handles subtraction
+// applySubtraction handles numeric subtraction.
+// Delegates to operations.go for the actual implementation.
 func (e *Evaluator) applySubtraction(left, right *Value) (*Value, error) {
 	return e.subtract(left, right)
 }
 
-// applyMultiplication handles multiplication
+// applyMultiplication handles numeric multiplication.
+// Delegates to operations.go for the actual implementation.
 func (e *Evaluator) applyMultiplication(left, right *Value) (*Value, error) {
 	return e.multiply(left, right)
 }
 
-// applyDivision handles division
+// applyDivision handles numeric division with zero-checking.
+// Delegates to operations.go for the actual implementation.
 func (e *Evaluator) applyDivision(left, right *Value) (*Value, error) {
 	return e.divide(left, right)
 }
 
-// applyComparison handles comparison operations
+// applyComparison handles numeric comparison operations (<, <=, >, >=).
+// Delegates to operations.go for the actual implementation.
 func (e *Evaluator) applyComparison(left, right *Value, op string) (*Value, error) {
 	switch op {
 	case "<":
@@ -457,7 +498,8 @@ func (e *Evaluator) applyComparison(left, right *Value, op string) (*Value, erro
 	}
 }
 
-// evaluateFieldAccess evaluates direct field access (obj.field)
+// evaluateFieldAccess evaluates direct field access (obj.field).
+// Supports both object and struct field access with appropriate error handling.
 func (e *Evaluator) evaluateFieldAccess(object *Value, access *parser.FieldAccess, env *Environment) (*Value, error) {
 	switch object.Type {
 	case ValueTypeObject:

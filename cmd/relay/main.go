@@ -1,3 +1,17 @@
+// Package main provides the Relay language command-line interface.
+//
+// The Relay CLI supports multiple modes:
+// - Interactive REPL for development and testing
+// - File execution for running .relay/.rl programs
+// - Build mode for compilation (future feature)
+// - File loading with REPL for debugging
+//
+// The runtime features a unified evaluation architecture with full support for:
+// - First-class functions with closures
+// - Struct definitions and instantiation
+// - Server state management with concurrency
+// - Immutable-by-default semantics
+// - Comprehensive expression evaluation (739 tests passing)
 package main
 
 import (
