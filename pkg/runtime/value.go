@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"relay/pkg/parser"
 	"strconv"
+	"sync"
+	"time"
 )
 
 // Environment represents a variable scope with optional parent chain
@@ -53,6 +55,7 @@ const (
 	ValueTypeObject
 	ValueTypeFunction
 	ValueTypeStruct
+	ValueTypeServer
 )
 
 // Value represents a runtime value in the Relay language
@@ -65,6 +68,7 @@ type Value struct {
 	Object   map[string]*Value
 	Function *Function // For functions and lambdas
 	Struct   *Struct   // For struct instances
+	Server   *Server   // For server instances
 }
 
 // Function represents a callable function
@@ -87,6 +91,24 @@ type Struct struct {
 type StructDefinition struct {
 	Name   string            // Struct name
 	Fields map[string]string // Field name -> type name mapping
+}
+
+// Message represents a message sent to a server
+type Message struct {
+	Method string      // The receive function to call
+	Args   []*Value    // Arguments for the function
+	Reply  chan *Value // Channel to send reply back (optional)
+}
+
+// Server represents a running server instance
+type Server struct {
+	Name        string               // Server name
+	State       map[string]*Value    // Server state variables
+	Receivers   map[string]*Function // Receive function handlers
+	MessageChan chan *Message        // Channel for incoming messages
+	StateMutex  sync.RWMutex         // Protects state access
+	Running     bool                 // Whether server is running
+	Environment *Environment         // Server's environment
 }
 
 // NewNumber creates a new number value
@@ -147,6 +169,23 @@ func NewStruct(name string, fields map[string]*Value) *Value {
 	}
 }
 
+// NewServer creates a new server instance
+func NewServer(name string, state map[string]*Value, receivers map[string]*Function, env *Environment) *Value {
+	server := &Server{
+		Name:        name,
+		State:       state,
+		Receivers:   receivers,
+		MessageChan: make(chan *Message, 100), // Buffered channel
+		Running:     false,
+		Environment: env,
+	}
+
+	return &Value{
+		Type:   ValueTypeServer,
+		Server: server,
+	}
+}
+
 // String returns a string representation of the value
 func (v *Value) String() string {
 	switch v.Type {
@@ -204,6 +243,12 @@ func (v *Value) String() string {
 		}
 		result += "}"
 		return result
+	case ValueTypeServer:
+		status := "stopped"
+		if v.Server.Running {
+			status = "running"
+		}
+		return fmt.Sprintf("<server %s: %s>", v.Server.Name, status)
 	default:
 		return "<unknown>"
 	}
@@ -228,6 +273,8 @@ func (v *Value) IsTruthy() bool {
 		return true
 	case ValueTypeStruct:
 		return true // Structs are always truthy
+	case ValueTypeServer:
+		return true // Servers are always truthy
 	default:
 		return false
 	}
@@ -287,7 +334,161 @@ func (v *Value) IsEqual(other *Value) bool {
 			}
 		}
 		return true
+	case ValueTypeServer:
+		// Servers are equal if they're the same instance
+		return v.Server == other.Server
 	default:
 		return false
 	}
+}
+
+// Start starts the server goroutine
+func (s *Server) Start(evaluator interface{}) {
+	if s.Running {
+		return
+	}
+
+	s.Running = true
+	go s.runServerLoop(evaluator)
+}
+
+// Stop stops the server goroutine
+func (s *Server) Stop() {
+	if !s.Running {
+		return
+	}
+
+	s.Running = false
+	close(s.MessageChan)
+}
+
+// SendMessage sends a message to the server and optionally waits for a reply
+func (s *Server) SendMessage(method string, args []*Value, waitForReply bool) (*Value, error) {
+	if !s.Running {
+		return nil, fmt.Errorf("server %s is not running", s.Name)
+	}
+
+	var replyChan chan *Value
+	if waitForReply {
+		replyChan = make(chan *Value, 1)
+	}
+
+	message := &Message{
+		Method: method,
+		Args:   args,
+		Reply:  replyChan,
+	}
+
+	select {
+	case s.MessageChan <- message:
+		if waitForReply {
+			select {
+			case reply := <-replyChan:
+				return reply, nil
+			case <-time.After(5 * time.Second): // Timeout
+				return nil, fmt.Errorf("timeout waiting for reply from server %s", s.Name)
+			}
+		}
+		return NewNil(), nil
+	case <-time.After(1 * time.Second):
+		return nil, fmt.Errorf("failed to send message to server %s: channel full", s.Name)
+	}
+}
+
+// runServerLoop runs the main server message handling loop
+func (s *Server) runServerLoop(evaluator interface{}) {
+	for s.Running {
+		select {
+		case message, ok := <-s.MessageChan:
+			if !ok {
+				return // Channel closed
+			}
+			s.handleMessage(message, evaluator)
+		}
+	}
+}
+
+// handleMessage processes an incoming message
+func (s *Server) handleMessage(message *Message, evaluator interface{}) {
+	s.StateMutex.Lock()
+	defer s.StateMutex.Unlock()
+
+	// Find the receive function
+	receiver, exists := s.Receivers[message.Method]
+	if !exists {
+		if message.Reply != nil {
+			message.Reply <- NewNil() // Send nil as error
+		}
+		return
+	}
+
+	// Create server environment with state access
+	serverEnv := NewEnvironment(s.Environment)
+
+	// Add state variable to environment (as object for .get/.set access)
+	stateValue := NewObject(s.State)
+	serverEnv.Define("state", stateValue)
+
+	// Type assert evaluator and call receive function
+	if eval, ok := evaluator.(interface {
+		CallUserFunction(*Function, []*Value, *Environment) (*Value, error)
+	}); ok {
+		// Create a modified function with the correct environment for state access
+		modifiedReceiver := &Function{
+			Name:       receiver.Name,
+			Parameters: receiver.Parameters,
+			Body:       receiver.Body,
+			IsBuiltin:  false,
+			ClosureEnv: serverEnv, // Use server environment with state defined
+		}
+
+		result, err := eval.CallUserFunction(modifiedReceiver, message.Args, serverEnv)
+
+		// Update server state from the modified state object
+		for key, value := range stateValue.Object {
+			s.State[key] = value
+		}
+
+		if err != nil {
+			if message.Reply != nil {
+				message.Reply <- NewNil() // Send nil on error
+			}
+			return
+		}
+
+		if message.Reply != nil {
+			message.Reply <- result
+		}
+	} else {
+		// Fallback if evaluator doesn't have the right interface
+		if message.Reply != nil {
+			message.Reply <- NewNil()
+		}
+	}
+}
+
+// GetState safely gets a state variable
+func (s *Server) GetState(key string) (*Value, bool) {
+	s.StateMutex.RLock()
+	defer s.StateMutex.RUnlock()
+
+	value, exists := s.State[key]
+	return value, exists
+}
+
+// SetState safely sets a state variable
+func (s *Server) SetState(key string, value *Value) {
+	s.StateMutex.Lock()
+	defer s.StateMutex.Unlock()
+
+	s.State[key] = value
+}
+
+// getReceiverNames returns a list of receiver method names for debugging
+func (s *Server) getReceiverNames() []string {
+	names := make([]string, 0, len(s.Receivers))
+	for name := range s.Receivers {
+		names = append(names, name)
+	}
+	return names
 }

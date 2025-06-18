@@ -4,6 +4,7 @@ import (
 	"relay/pkg/parser"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -913,6 +914,338 @@ func TestEvaluateStructEquality(t *testing.T) {
 			name:     "Different field order but same values",
 			input:    `User{ name: "John", age: 30 } == User{ age: 30, name: "John" }`,
 			expected: "true",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+			require.Equal(t, test.expected, result.String())
+		})
+	}
+}
+
+func TestEvaluateServerDefinitions(t *testing.T) {
+	evaluator := NewEvaluator()
+	defer evaluator.StopAllServers() // Clean up after tests
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "Simple server definition",
+			input: `server simple_server {
+				state {
+					count: number = 0
+				}
+				
+				receive fn increment() -> number {
+					state.set("count", state.get("count") + 1)
+					state.get("count")
+				}
+			}`,
+			expected: "<server simple_server: running>",
+		},
+		{
+			name: "Server with multiple receive functions",
+			input: `server math_server {
+				state {
+					total: number = 0
+				}
+				
+				receive fn add(x: number) -> number {
+					state.set("total", state.get("total") + x)
+					state.get("total")
+				}
+				
+				receive fn get_total() -> number {
+					state.get("total")
+				}
+			}`,
+			expected: "<server math_server: running>",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+			require.Equal(t, ValueTypeServer, result.Type)
+			require.Contains(t, result.String(), "running")
+		})
+	}
+}
+
+func TestEvaluateServerMessagePassing(t *testing.T) {
+	evaluator := NewEvaluator()
+	defer evaluator.StopAllServers()
+
+	// Define a counter server
+	serverDef := `server counter_server {
+		state {
+			count: number = 0
+		}
+		
+		receive fn increment() -> number {
+			state.set("count", state.get("count") + 1)
+			state.get("count")
+		}
+		
+		receive fn get_count() -> number {
+			state.get("count")
+		}
+		
+		receive fn add(x: number) -> number {
+			state.set("count", state.get("count") + x)
+			state.get("count")
+		}
+	}`
+
+	program, err := parser.Parse("test", strings.NewReader(serverDef))
+	require.NoError(t, err)
+	_, err = evaluator.Evaluate(program.Expressions[0])
+	require.NoError(t, err)
+
+	// Give server time to start
+	time.Sleep(10 * time.Millisecond)
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Call increment function",
+			input:    `send "counter_server" increment {}`,
+			expected: "1",
+		},
+		{
+			name:     "Call increment again",
+			input:    `send "counter_server" increment {}`,
+			expected: "2",
+		},
+		{
+			name:     "Get current count",
+			input:    `send "counter_server" get_count {}`,
+			expected: "2",
+		},
+		{
+			name:     "Add to count",
+			input:    `send "counter_server" add { x: 5 }`,
+			expected: "7",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+			require.Equal(t, test.expected, result.String())
+		})
+	}
+}
+
+func TestEvaluateServerState(t *testing.T) {
+	evaluator := NewEvaluator()
+	defer evaluator.StopAllServers()
+
+	// Define a server with complex state
+	serverDef := `server user_server {
+		state {
+			users: [string] = [],
+			count: number = 0
+		}
+		
+		receive fn add_user(name: string) -> number {
+			state.set("count", state.get("count") + 1)
+			state.get("count")
+		}
+		
+		receive fn get_user_count() -> number {
+			state.get("count")
+		}
+	}`
+
+	program, err := parser.Parse("test", strings.NewReader(serverDef))
+	require.NoError(t, err)
+	_, err = evaluator.Evaluate(program.Expressions[0])
+	require.NoError(t, err)
+
+	// Give server time to start
+	time.Sleep(10 * time.Millisecond)
+
+	// Test state operations
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Initial count is 0",
+			input:    `send "user_server" get_user_count {}`,
+			expected: "0",
+		},
+		{
+			name:     "Add first user",
+			input:    `send "user_server" add_user { name: "Alice" }`,
+			expected: "1",
+		},
+		{
+			name:     "Add second user",
+			input:    `send "user_server" add_user { name: "Bob" }`,
+			expected: "2",
+		},
+		{
+			name:     "Check final count",
+			input:    `send "user_server" get_user_count {}`,
+			expected: "2",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			require.NoError(t, err)
+			require.Equal(t, test.expected, result.String())
+		})
+	}
+}
+
+func TestEvaluateServerErrors(t *testing.T) {
+	evaluator := NewEvaluator()
+	defer evaluator.StopAllServers()
+
+	// Define a simple server
+	serverDef := `server test_server {
+		receive fn echo(msg: string) -> string {
+			msg
+		}
+	}`
+
+	program, err := parser.Parse("test", strings.NewReader(serverDef))
+	require.NoError(t, err)
+	_, err = evaluator.Evaluate(program.Expressions[0])
+	require.NoError(t, err)
+
+	// Give server time to start
+	time.Sleep(10 * time.Millisecond)
+
+	tests := []struct {
+		name        string
+		input       string
+		expectError string
+	}{
+		{
+			name:        "Send to nonexistent server",
+			input:       `send "nonexistent_server" test {}`,
+			expectError: "server 'nonexistent_server' not found",
+		},
+		{
+			name:        "Call nonexistent method",
+			input:       `send "test_server" nonexistent_method {}`,
+			expectError: "", // Server returns nil for unknown methods
+		},
+		{
+			name:        "Invalid message arguments",
+			input:       `message(123, "method")`,
+			expectError: "first argument to message must be server name (string)",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			program, err := parser.Parse("test", strings.NewReader(test.input))
+			require.NoError(t, err)
+			require.Len(t, program.Expressions, 1)
+
+			result, err := evaluator.Evaluate(program.Expressions[0])
+			if test.expectError != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), test.expectError)
+			} else {
+				require.NoError(t, err)
+				// For unknown methods, server returns nil
+				if test.name == "Call nonexistent method" {
+					require.Equal(t, ValueTypeNil, result.Type)
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluateMultipleServers(t *testing.T) {
+	evaluator := NewEvaluator()
+	defer evaluator.StopAllServers()
+
+	// Define two servers that can communicate
+	server1Def := `server ping_server {
+		receive fn ping() -> string {
+			"pong"
+		}
+		
+		receive fn ping_other() -> string {
+			send "pong_server" pong {}
+		}
+	}`
+
+	server2Def := `server pong_server {
+		receive fn pong() -> string {
+			"ping"
+		}
+	}`
+
+	// Create both servers
+	program1, err := parser.Parse("test", strings.NewReader(server1Def))
+	require.NoError(t, err)
+	_, err = evaluator.Evaluate(program1.Expressions[0])
+	require.NoError(t, err)
+
+	program2, err := parser.Parse("test", strings.NewReader(server2Def))
+	require.NoError(t, err)
+	_, err = evaluator.Evaluate(program2.Expressions[0])
+	require.NoError(t, err)
+
+	// Give servers time to start
+	time.Sleep(10 * time.Millisecond)
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Direct ping",
+			input:    `send "ping_server" ping {}`,
+			expected: `"pong"`,
+		},
+		{
+			name:     "Direct pong",
+			input:    `send "pong_server" pong {}`,
+			expected: `"ping"`,
+		},
+		{
+			name:     "Server-to-server communication",
+			input:    `send "ping_server" ping_other {}`,
+			expected: `"ping"`,
 		},
 	}
 

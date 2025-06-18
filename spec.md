@@ -25,7 +25,7 @@ Relay is designed for federated, self-hostable, and functional applications. Eac
 
 ```
 struct, protocol, server, state, receive, send, template, dispatch,
-config, fn, if, else, for, in, try, catch, return, throw
+config, fn, if, else, for, in, return, throw
 ```
 
 **Note:** All keywords are strictly reserved and cannot be used as identifiers.

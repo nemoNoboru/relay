@@ -55,8 +55,7 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
     {"Else", `\belse\b`},
     {"For", `\bfor\b`},
     {"In", `\bin\b`},
-    {"Try", `\btry\b`},
-    {"Catch", `\bcatch\b`},
+
     {"Return", `\breturn\b`},
     {"Throw", `\bthrow\b`},
     {"From", `\bfrom\b`},
@@ -549,13 +548,7 @@ type ForStatement struct {
     Body       *BlockExpr  `@@`
 }
 
-type TryStatement struct {
-    Pos lexer.Position
-    
-    TryBlock   *BlockExpr `"try" @@`
-    CatchVar   *string    `"catch" ( @Ident )?`
-    CatchBlock *BlockExpr `@@`
-}
+
 
 type ReturnStatement struct {
     Pos lexer.Position
