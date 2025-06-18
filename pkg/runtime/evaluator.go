@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"relay/pkg/parser"
 )
 
@@ -47,100 +46,7 @@ func (e *Evaluator) Evaluate(expr *parser.Expression) (*Value, error) {
 
 // EvaluateWithEnv evaluates an expression with a specific environment
 func (e *Evaluator) EvaluateWithEnv(expr *parser.Expression, env *Environment) (*Value, error) {
-	if expr == nil {
-		return NewNil(), nil
-	}
-
-	// Handle different expression types
-	if expr.StructExpr != nil {
-		return e.evaluateStructExpr(expr.StructExpr, env)
-	}
-
-	if expr.ServerExpr != nil {
-		return e.evaluateServerExpr(expr.ServerExpr, env)
-	}
-
-	if expr.Binary != nil {
-		return e.evaluateBinaryExpr(expr.Binary, env)
-	}
-
-	if expr.SetExpr != nil {
-		return e.evaluateSetExpr(expr.SetExpr, env)
-	}
-
-	if expr.FunctionExpr != nil {
-		return e.evaluateFunctionExpr(expr.FunctionExpr, env)
-	}
-
-	if expr.ReturnExpr != nil {
-		return e.evaluateReturnExpr(expr.ReturnExpr, env)
-	}
-
-	if expr.IfExpr != nil {
-		return e.evaluateIfExpr(expr.IfExpr, env)
-	}
-
-	return NewNil(), fmt.Errorf("unsupported expression type")
+	return e.EvaluateExpression(expr, env)
 }
 
-// evaluateReturnExpr handles return statements
-func (e *Evaluator) evaluateReturnExpr(expr *parser.ReturnExpr, env *Environment) (*Value, error) {
-	value, err := e.EvaluateWithEnv(expr.Value, env)
-	if err != nil {
-		return nil, err
-	}
-
-	// Use the error mechanism to implement early return
-	return nil, NewReturn(value)
-}
-
-// evaluateBlock evaluates a block of expressions
-func (e *Evaluator) evaluateBlock(block *parser.Block, env *Environment) (*Value, error) {
-	var result *Value = NewNil()
-
-	for _, expr := range block.Expressions {
-		value, err := e.EvaluateWithEnv(expr, env)
-		if err != nil {
-			// Check if it's a return value
-			if returnVal, ok := err.(*ReturnValue); ok {
-				return returnVal.Value, nil
-			}
-			return nil, err
-		}
-		result = value
-	}
-
-	return result, nil
-}
-
-// evaluateSetExpr evaluates set expressions (variable assignment)
-func (e *Evaluator) evaluateSetExpr(expr *parser.SetExpr, env *Environment) (*Value, error) {
-	value, err := e.EvaluateWithEnv(expr.Value, env)
-	if err != nil {
-		return nil, err
-	}
-
-	env.Define(expr.Variable, value)
-	return value, nil
-}
-
-// evaluateIfExpr evaluates if expressions
-func (e *Evaluator) evaluateIfExpr(expr *parser.IfExpr, env *Environment) (*Value, error) {
-	// Evaluate the condition
-	condition, err := e.EvaluateWithEnv(expr.Condition, env)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if condition is truthy
-	if condition.IsTruthy() {
-		// Execute the then block
-		return e.evaluateBlock(expr.ThenBlock, env)
-	} else if expr.ElseBlock != nil {
-		// Execute the else block if it exists
-		return e.evaluateBlock(expr.ElseBlock, env)
-	}
-
-	// If no else block and condition is false, return nil
-	return NewNil(), nil
-}
+// Note: These methods have been moved to core.go for consolidation

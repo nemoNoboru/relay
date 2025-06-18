@@ -5,51 +5,7 @@ import (
 	"relay/pkg/parser"
 )
 
-// evaluateLiteral evaluates literal values
-func (e *Evaluator) evaluateLiteral(literal *parser.Literal, env *Environment) (*Value, error) {
-	if literal.Number != nil {
-		return NewNumber(*literal.Number), nil
-	}
-
-	if literal.String != nil {
-		return NewString(*literal.String), nil
-	}
-
-	if literal.Symbol != nil {
-		// Convert symbol :hello to string "hello" (remove the leading :)
-		symbolValue := *literal.Symbol
-		if len(symbolValue) > 0 && symbolValue[0] == ':' {
-			symbolValue = symbolValue[1:]
-		}
-		return NewString(symbolValue), nil
-	}
-
-	if literal.Bool != nil {
-		return NewBool(*literal.Bool == "true"), nil
-	}
-
-	if literal.Nil != nil {
-		return NewNil(), nil
-	}
-
-	if literal.Array != nil {
-		elements := make([]*Value, 0, len(literal.Array.Elements))
-		for _, elem := range literal.Array.Elements {
-			value, err := e.Evaluate(elem)
-			if err != nil {
-				return nil, err
-			}
-			elements = append(elements, value)
-		}
-		return NewArray(elements), nil
-	}
-
-	if literal.FuncCall != nil {
-		return e.evaluateLiteralFuncCall(literal.FuncCall, env)
-	}
-
-	return NewNil(), nil
-}
+// Note: evaluateLiteral moved to core.go
 
 // evaluateLiteralFuncCall evaluates function calls from literals
 func (e *Evaluator) evaluateLiteralFuncCall(funcCall *parser.FuncCall, env *Environment) (*Value, error) {

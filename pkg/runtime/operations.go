@@ -2,42 +2,7 @@ package runtime
 
 import "fmt"
 
-// applyBinaryOperation applies a binary operation to two values
-func (e *Evaluator) applyBinaryOperation(left *Value, op string, right *Value) (*Value, error) {
-	switch op {
-	case "+":
-		return e.add(left, right)
-	case "-":
-		return e.subtract(left, right)
-	case "*":
-		return e.multiply(left, right)
-	case "/":
-		return e.divide(left, right)
-	case "==":
-		return NewBool(left.IsEqual(right)), nil
-	case "!=":
-		return NewBool(!left.IsEqual(right)), nil
-	case "<":
-		return e.less(left, right)
-	case "<=":
-		return e.lessEqual(left, right)
-	case ">":
-		return e.greater(left, right)
-	case ">=":
-		return e.greaterEqual(left, right)
-	case "&&":
-		return NewBool(left.IsTruthy() && right.IsTruthy()), nil
-	case "||":
-		return NewBool(left.IsTruthy() || right.IsTruthy()), nil
-	case "??":
-		if left.Type == ValueTypeNil {
-			return right, nil
-		}
-		return left, nil
-	default:
-		return nil, fmt.Errorf("unsupported binary operator: %s", op)
-	}
-}
+// Note: applyBinaryOperation moved to core.go
 
 // Arithmetic operations
 func (e *Evaluator) add(left, right *Value) (*Value, error) {

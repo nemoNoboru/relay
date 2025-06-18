@@ -93,27 +93,7 @@ func (e *Evaluator) evaluatePrimaryExpr(expr *parser.PrimaryExpr, env *Environme
 	return result, nil
 }
 
-// evaluateFieldAccess evaluates direct field access (obj.field)
-func (e *Evaluator) evaluateFieldAccess(object *Value, access *parser.FieldAccess, env *Environment) (*Value, error) {
-	switch object.Type {
-	case ValueTypeObject:
-		// Direct field access on objects
-		if value, exists := object.Object[access.Field]; exists {
-			return value, nil
-		}
-		return NewNil(), nil // Return nil for non-existent fields
-
-	case ValueTypeStruct:
-		// Direct field access on structs
-		if value, exists := object.Struct.Fields[access.Field]; exists {
-			return value, nil
-		}
-		return nil, fmt.Errorf("field '%s' not found in struct '%s'", access.Field, object.Struct.Name)
-
-	default:
-		return nil, fmt.Errorf("cannot access field '%s' on %s", access.Field, object.Type)
-	}
-}
+// Note: evaluateFieldAccess moved to core.go
 
 // evaluateFuncCallAccess evaluates function calls on values (value(args))
 func (e *Evaluator) evaluateFuncCallAccess(value *Value, access *parser.FuncCallAccess, env *Environment) (*Value, error) {
@@ -185,27 +165,7 @@ func (e *Evaluator) evaluateBaseExpr(expr *parser.BaseExpr, env *Environment) (*
 	return NewNil(), fmt.Errorf("unsupported base expression")
 }
 
-// evaluateObjectLiteral evaluates object literals
-func (e *Evaluator) evaluateObjectLiteral(expr *parser.ObjectLit, env *Environment) (*Value, error) {
-	obj := make(map[string]*Value)
-
-	for _, field := range expr.Fields {
-		value, err := e.EvaluateWithEnv(field.Value, env)
-		if err != nil {
-			return nil, err
-		}
-
-		// Convert symbol keys to strings (remove leading :)
-		key := field.Key
-		if len(key) > 0 && key[0] == ':' {
-			key = key[1:]
-		}
-
-		obj[key] = value
-	}
-
-	return NewObject(obj), nil
-}
+// Note: evaluateObjectLiteral moved to core.go
 
 // evaluateLambda evaluates lambda expressions
 func (e *Evaluator) evaluateLambda(expr *parser.LambdaExpr, env *Environment) (*Value, error) {
