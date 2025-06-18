@@ -22,7 +22,7 @@ func (e *Evaluator) evaluateLiteral(literal *parser.Literal, env *Environment) (
 	if literal.Array != nil {
 		elements := make([]*Value, 0, len(literal.Array.Elements))
 		for _, elem := range literal.Array.Elements {
-			value, err := e.evaluateLiteral(elem, env)
+			value, err := e.Evaluate(elem)
 			if err != nil {
 				return nil, err
 			}
@@ -50,10 +50,10 @@ func (e *Evaluator) evaluateLiteralFuncCall(funcCall *parser.FuncCall, env *Envi
 		return nil, fmt.Errorf("'%s' is not a function", funcCall.Name)
 	}
 
-	// Evaluate arguments (these are literals, so use evaluateLiteral)
+	// Evaluate arguments (these are now expressions, so use EvaluateWithEnv)
 	args := make([]*Value, 0, len(funcCall.Args))
 	for _, arg := range funcCall.Args {
-		value, err := e.evaluateLiteral(arg, env)
+		value, err := e.EvaluateWithEnv(arg, env)
 		if err != nil {
 			return nil, err
 		}

@@ -193,6 +193,15 @@ go test ./...
 ./relay examples/simple_blog.relay
 ```
 
+## Developer Documentation
+
+For detailed technical information about the Relay runtime and language implementation:
+
+- **[Runtime Internals](RUNTIME_INTERNALS.md)** - Comprehensive guide to expression evaluation, environments, and debugging
+- **[Quick Reference](RUNTIME_QUICK_REFERENCE.md)** - Fast debugging guide for common runtime issues
+- **[Debugging Guide](DEBUGGING_GUIDE.md)** - Step-by-step troubleshooting procedures
+- **[Language Specification](spec.md)** - Complete language specification and examples
+
 ## Architecture
 
 The Relay language implementation consists of several key components:

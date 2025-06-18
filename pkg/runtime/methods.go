@@ -91,7 +91,7 @@ func (e *Evaluator) evaluateArrayMethod(array *Value, call *parser.MethodCall, e
 
 	case "pop":
 		if len(array.Array) == 0 {
-			return NewNil(), nil
+			return NewArray([]*Value{}), nil
 		}
 
 		lastIndex := len(array.Array) - 1

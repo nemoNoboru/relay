@@ -149,12 +149,12 @@ func (l *Literal) GetBoolValue() *bool {
 }
 
 type ArrayLiteral struct {
-	Elements []*Literal `"[" ( @@ ( "," @@ )* )? "]"`
+	Elements []*Expression `"[" ( @@ ( "," @@ )* )? "]"`
 }
 
 type FuncCall struct {
-	Name string     `@Ident`
-	Args []*Literal `"(" ( @@ ( "," @@ )* )? ")"`
+	Name string        `@Ident`
+	Args []*Expression `"(" ( @@ ( "," @@ )* )? ")"`
 }
 
 type MethodSignature struct {

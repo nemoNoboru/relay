@@ -32,6 +32,16 @@ func New(input io.Reader, output io.Writer) *REPL {
 	}
 }
 
+// NewWithEvaluator creates a new REPL with a pre-configured evaluator
+func NewWithEvaluator(input io.Reader, output io.Writer, evaluator *runtime.Evaluator) *REPL {
+	return &REPL{
+		scanner:   bufio.NewScanner(input),
+		output:    output,
+		evaluator: evaluator,
+		showAST:   false,
+	}
+}
+
 // Start begins the REPL session
 func (r *REPL) Start() {
 	fmt.Fprint(r.output, welcome())
@@ -467,7 +477,7 @@ func (r *REPL) formatLiteralRecursive(lit *parser.Literal, indent string) string
 			if i == len(lit.Array.Elements)-1 {
 				prefix = "└─ "
 			}
-			result += fmt.Sprintf("%s%s%s\n", indent, prefix, r.formatLiteralRecursive(elem, indent+"   "))
+			result += fmt.Sprintf("%s%s%s\n", indent, prefix, r.formatExpressionRecursive(elem, indent+"   "))
 		}
 		return result
 	case lit.FuncCall != nil:
@@ -480,7 +490,7 @@ func (r *REPL) formatLiteralRecursive(lit *parser.Literal, indent string) string
 				if i == len(f.Args)-1 {
 					prefix = "└─ "
 				}
-				result += fmt.Sprintf("%s   %s%s\n", indent, prefix, r.formatLiteralRecursive(arg, indent+"      "))
+				result += fmt.Sprintf("%s   %s%s\n", indent, prefix, r.formatExpressionRecursive(arg, indent+"      "))
 			}
 		}
 		return result
@@ -800,4 +810,30 @@ Type :examples to see sample code
 Press Ctrl+C or :quit to exit
 
 `
+}
+
+// LoadFile loads and executes a Relay file in the current REPL context
+func (r *REPL) LoadFile(filename string) error {
+	// Read the file
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	// Parse the file
+	program, err := parser.Parse(filename, file)
+	if err != nil {
+		return fmt.Errorf("parse error: %v", err)
+	}
+
+	// Execute each expression in the current evaluator context
+	for i, expr := range program.Expressions {
+		_, err := r.evaluator.Evaluate(expr)
+		if err != nil {
+			return fmt.Errorf("runtime error at expression %d: %v", i+1, err)
+		}
+	}
+
+	return nil
 }

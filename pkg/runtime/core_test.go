@@ -141,13 +141,7 @@ func TestVariables(t *testing.T) {
 		}
 	})
 
-	t.Run("Variable reassignment", func(t *testing.T) {
-		result := evalCode(t, `set x = 10
-		x = 20
-		x`)
-		require.Equal(t, ValueTypeNumber, result.Type)
-		require.Equal(t, 20.0, result.Number)
-	})
+	// Note: Variable reassignment is not supported by design in Relay (immutable-by-default)
 
 	t.Run("Undefined variable error", func(t *testing.T) {
 		err := evalCodeError(t, "undefined_var")

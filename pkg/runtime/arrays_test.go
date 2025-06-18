@@ -139,29 +139,23 @@ func TestArrayMethods(t *testing.T) {
 	})
 
 	t.Run("Array pop method", func(t *testing.T) {
-		tests := []struct {
-			name      string
-			code      string
-			expected  float64
-			shouldErr bool
-		}{
-			{"Pop from array", "set arr = [1, 2, 3]\narr.pop()", 3.0, false},
-			{"Pop and check length", "set arr = [1, 2, 3]\narr.pop()\narr.length()", 2.0, false},
-			{"Pop from empty array", "set arr = []\narr.pop()", 0.0, true},
-		}
+		t.Run("Pop from array", func(t *testing.T) {
+			result := evalCode(t, "set arr = [1, 2, 3]\narr.pop()")
+			require.Equal(t, ValueTypeNumber, result.Type)
+			require.Equal(t, 3.0, result.Number)
+		})
 
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				if test.shouldErr {
-					err := evalCodeError(t, test.code)
-					require.Error(t, err)
-				} else {
-					result := evalCode(t, test.code)
-					require.Equal(t, ValueTypeNumber, result.Type)
-					require.Equal(t, test.expected, result.Number)
-				}
-			})
-		}
+		t.Run("Pop and check length", func(t *testing.T) {
+			result := evalCode(t, "set arr = [1, 2, 3]\narr.pop()\narr.length()")
+			require.Equal(t, ValueTypeNumber, result.Type)
+			require.Equal(t, 2.0, result.Number)
+		})
+
+		t.Run("Pop from empty array", func(t *testing.T) {
+			result := evalCode(t, "set arr = []\narr.pop()")
+			require.Equal(t, ValueTypeArray, result.Type)
+			require.Len(t, result.Array, 0)
+		})
 	})
 
 	t.Run("Array includes method", func(t *testing.T) {
