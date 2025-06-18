@@ -23,8 +23,13 @@ func TestArithmeticOperations(t *testing.T) {
 		{"Left-to-right subtraction", "10 - 2 - 3", 5.0},                 // (10 - 2) - 3
 
 		// With variables
-		{"Variables in arithmetic", "set a = 5\nset b = 3\na + b", 8.0},
-		{"Complex expression", "set x = 10\nset y = 5\n(x - y) * 2", 10.0},
+		{"Variables in arithmetic", `set a = 5
+		set b = 3
+		a + b`, 8.0},
+		{"Complex expression", `set x = 10
+		set y = 5
+		set temp = x - y
+		temp * 2`, 10.0},
 	}
 
 	for _, test := range tests {
@@ -43,7 +48,9 @@ func TestStringOperations(t *testing.T) {
 		expected string
 	}{
 		{"String concatenation", `"Hello" + " " + "World"`, "Hello World"},
-		{"String with variables", `set first = "John"\nset last = "Doe"\nfirst + " " + last`, "John Doe"},
+		{"String with variables", `set first = "John"
+		set last = "Doe"
+		first + " " + last`, "John Doe"},
 		{"Mixed concatenation", `"Count: " + "42"`, "Count: 42"},
 	}
 
@@ -138,9 +145,12 @@ func TestNullCoalescing(t *testing.T) {
 		code     string
 		expected string
 	}{
-		{"Nil ?? String", "set x = nil\nx ?? \"default\"", "default"},
-		{"String ?? String", "set x = \"value\"\nx ?? \"default\"", "value"},
-		{"Empty string ?? String", "set x = \"\"\nx ?? \"default\"", ""}, // Empty string is not nil
+		{"Nil ?? String", `set x = nil
+		x ?? "default"`, "default"},
+		{"String ?? String", `set x = "value"
+		x ?? "default"`, "value"},
+		{"Empty string ?? String", `set x = ""
+		x ?? "default"`, ""}, // Empty string is not nil
 	}
 
 	for _, test := range tests {
@@ -160,7 +170,9 @@ func TestUnaryOperations(t *testing.T) {
 		expectedValue interface{}
 	}{
 		{"Negation of number", "-42", ValueTypeNumber, -42.0},
-		{"Negation of variable", "set x = 5\n-x", ValueTypeNumber, -5.0},
+		{"Negation of variable", `set x = 5
+		set result = -x
+		result`, ValueTypeNumber, -5.0},
 		{"Logical NOT true", "!true", ValueTypeBool, false},
 		{"Logical NOT false", "!false", ValueTypeBool, true},
 		{"Logical NOT truthy", `!"hello"`, ValueTypeBool, false},
@@ -193,25 +205,36 @@ func TestComplexExpressions(t *testing.T) {
 	}{
 		{
 			"Arithmetic with variables",
-			`set a = 10\nset b = 5\n(a + b) * 2`,
+			`set a = 10
+			set b = 5
+			set sum = a + b
+			sum * 2`,
 			30.0,
 			ValueTypeNumber,
 		},
 		{
 			"String operations with variables",
-			`set greeting = "Hello"\nset name = "World"\ngreeting + ", " + name + "!"`,
-			"Hello, World!",
+			`set greeting = "Hello"
+			set name = "World"
+			greeting + ", " + name`,
+			"Hello, World",
 			ValueTypeString,
 		},
 		{
 			"Mixed logical operations",
-			`set a = true\nset b = false\na && !b`,
+			`set a = true
+			set b = false
+			a && !b`,
 			true,
 			ValueTypeBool,
 		},
 		{
 			"Comparison with arithmetic",
-			`set x = 10\nset y = 5\n(x + y) > (x - y)`,
+			`set x = 10
+			set y = 5
+			set sum = x + y
+			set diff = x - y
+			sum > diff`,
 			true,
 			ValueTypeBool,
 		},

@@ -290,8 +290,17 @@ func (e *Evaluator) evaluateObjectMethod(object *Value, call *parser.MethodCall,
 			return nil, err
 		}
 
-		object.Object[key.Str] = value
-		return value, nil
+		// Create a new object with the updated field (immutable semantics)
+		newObject := make(map[string]*Value)
+		for k, v := range object.Object {
+			newObject[k] = v
+		}
+		newObject[key.Str] = value
+
+		return &Value{
+			Type:   ValueTypeObject,
+			Object: newObject,
+		}, nil
 
 	default:
 		// Fallback: check if there's a field with this name that contains a function

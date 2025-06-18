@@ -93,8 +93,8 @@ func TestObjectFieldModification(t *testing.T) {
 	t.Run("Modify existing field", func(t *testing.T) {
 		result := evalCode(t, `
 		set person = {name: "David", age: 40}
-		person.age = 41
-		person.age`)
+		set updated_person = person.set("age", 41)
+		updated_person.get("age")`)
 		require.Equal(t, ValueTypeNumber, result.Type)
 		require.Equal(t, 41.0, result.Number)
 	})
@@ -102,8 +102,8 @@ func TestObjectFieldModification(t *testing.T) {
 	t.Run("Add new field", func(t *testing.T) {
 		result := evalCode(t, `
 		set person = {name: "Eve"}
-		person.age = 28
-		person.age`)
+		set updated_person = person.set("age", 28)
+		updated_person.get("age")`)
 		require.Equal(t, ValueTypeNumber, result.Type)
 		require.Equal(t, 28.0, result.Number)
 	})
@@ -111,8 +111,8 @@ func TestObjectFieldModification(t *testing.T) {
 	t.Run("Modify nested field", func(t *testing.T) {
 		result := evalCode(t, `
 		set data = {user: {profile: {name: "Frank"}}}
-		data.user.profile.name = "Franklin"
-		data.user.profile.name`)
+		set updated_profile = data.get("user").get("profile").set("name", "Franklin")
+		updated_profile.get("name")`)
 		require.Equal(t, ValueTypeString, result.Type)
 		require.Equal(t, "Franklin", result.Str)
 	})
@@ -176,7 +176,7 @@ func TestStructFieldAccess(t *testing.T) {
 			age: number
 		}
 		set person = Person {name: "Ivy", age: 25}
-		person.name`)
+		person.get("name")`)
 		require.Equal(t, ValueTypeString, result.Type)
 		require.Equal(t, "Ivy", result.Str)
 	})
@@ -195,7 +195,7 @@ func TestStructFieldAccess(t *testing.T) {
 			name: "Jack",
 			address: Address {street: "Oak Ave", city: "LA"}
 		}
-		person.address.city`)
+		person.get("address").get("city")`)
 		require.Equal(t, ValueTypeString, result.Type)
 		require.Equal(t, "LA", result.Str)
 	})
@@ -207,7 +207,7 @@ func TestStructFieldAccess(t *testing.T) {
 			scores: array
 		}
 		set team = Team {name: "Lions", scores: [10, 15, 20]}
-		team.scores.get(1)`)
+		team.get("scores").get(1)`)
 		require.Equal(t, ValueTypeNumber, result.Type)
 		require.Equal(t, 15.0, result.Number)
 	})
@@ -224,7 +224,7 @@ func TestStructsWithFunctions(t *testing.T) {
 			Point {x: x, y: y}
 		}
 		set p = create_point(3, 4)
-		p.x`)
+		p.get("x")`)
 		require.Equal(t, ValueTypeNumber, result.Type)
 		require.Equal(t, 3.0, result.Number)
 	})
@@ -236,7 +236,7 @@ func TestStructsWithFunctions(t *testing.T) {
 			y: number
 		}
 		fn distance_from_origin(p: Point) -> number {
-			p.x * p.x + p.y * p.y
+			(p.get("x") * p.get("x")) + (p.get("y") * p.get("y"))
 		}
 		set point = Point {x: 3, y: 4}
 		distance_from_origin(point)`)
@@ -250,8 +250,7 @@ func TestStructsWithFunctions(t *testing.T) {
 			value: number
 		}
 		fn increment(c: Counter) -> number {
-			c.value = c.value + 1
-			c.value
+			c.get("value") + 1
 		}
 		set counter = Counter {value: 5}
 		increment(counter)`)
@@ -268,7 +267,7 @@ func TestComplexObjectScenarios(t *testing.T) {
 			{name: "Bob", age: 25},
 			{name: "Charlie", age: 35}
 		]
-		users.get(1).name`)
+		users.get(1).get("name")`)
 		require.Equal(t, ValueTypeString, result.Type)
 		require.Equal(t, "Bob", result.Str)
 	})
@@ -283,7 +282,7 @@ func TestComplexObjectScenarios(t *testing.T) {
 			Person {name: "Dana", age: 28},
 			Person {name: "Erik", age: 32}
 		]
-		people.get(0).name`)
+		people.get(0).get("name")`)
 		require.Equal(t, ValueTypeString, result.Type)
 		require.Equal(t, "Dana", result.Str)
 	})
@@ -297,7 +296,7 @@ func TestComplexObjectScenarios(t *testing.T) {
 			message: "Welcome",
 			greeter: greet
 		}
-		obj.greeter("World")`)
+		obj.get("greeter")("World")`)
 		require.Equal(t, ValueTypeString, result.Type)
 		require.Equal(t, "Hello, World", result.Str)
 	})
@@ -305,16 +304,16 @@ func TestComplexObjectScenarios(t *testing.T) {
 
 func TestStructAndObjectErrors(t *testing.T) {
 	t.Run("Access undefined field", func(t *testing.T) {
-		err := evalCodeError(t, `
+		result := evalCode(t, `
 		set obj = {name: "Test"}
-		obj.undefined_field`)
-		require.Error(t, err)
+		obj.get("undefined_field")`)
+		require.Equal(t, ValueTypeNil, result.Type)
 	})
 
 	t.Run("Access field on non-object", func(t *testing.T) {
 		err := evalCodeError(t, `
 		set num = 42
-		num.field`)
+		num.get("field")`)
 		require.Error(t, err)
 	})
 

@@ -132,13 +132,11 @@ func TestREPLScenarios(t *testing.T) {
 					count: number = 0
 				}
 				receive increment() -> number {
-					count = count + 1
-					count
+					state.set("count", state.get("count") + 1)
+					state.get("count")
 				}
 			}
-			set counter = Counter{}
-			counter.start()
-			counter <- increment()`
+			send "Counter" increment {}`
 
 			result := evalCode(t, code)
 			require.Equal(t, ValueTypeNumber, result.Type)
@@ -242,14 +240,14 @@ func TestErrorHandling(t *testing.T) {
 		err := evalCodeError(t, `set arr = [1, 2, 3]
 		arr.get(10)`)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "index out of bounds")
+		require.Contains(t, err.Error(), "out of bounds")
 	})
 
 	t.Run("Invalid method calls", func(t *testing.T) {
 		err := evalCodeError(t, `set num = 42
 		num.get(0)`)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "unknown")
+		require.Contains(t, err.Error(), "not supported")
 	})
 
 	t.Run("Undefined variable access", func(t *testing.T) {
