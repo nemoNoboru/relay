@@ -53,7 +53,13 @@ func main() {
 	}
 
 	switch {
+	case *serverFlag && *runFlag != "":
+		// Both server and run flags - start HTTP server with Relay file loaded
+		if err := runRelayFileWithServer(*runFlag, *hostFlag, *portFlag); err != nil {
+			log.Fatalf("Error starting server with %s: %v", *runFlag, err)
+		}
 	case *serverFlag:
+		// Just server flag - start HTTP server standalone
 		if err := startHTTPServer(*hostFlag, *portFlag); err != nil {
 			log.Fatalf("Error starting HTTP server: %v", err)
 		}
@@ -74,8 +80,13 @@ func main() {
 		if flag.NArg() > 0 {
 			filename := flag.Arg(0)
 
-			// Check if user wants to load file and start REPL
-			if flag.NArg() > 1 && flag.Arg(1) == "-repl" {
+			// Check if user wants to load file and start server
+			if flag.NArg() > 1 && flag.Arg(1) == "-server" {
+				if err := runRelayFileWithServer(filename, *hostFlag, *portFlag); err != nil {
+					log.Fatalf("Error starting server with %s: %v", filename, err)
+				}
+			} else if flag.NArg() > 1 && flag.Arg(1) == "-repl" {
+				// Check if user wants to load file and start REPL
 				if err := runRelayFile(filename, *portFlag, true); err != nil {
 					log.Fatalf("Error loading %s: %v", filename, err)
 				}
@@ -224,4 +235,74 @@ func buildRelayFile(filename string) error {
 	fmt.Printf("Building %s...\n", filename)
 	// TODO: Implement relay file compilation
 	return fmt.Errorf("not implemented yet")
+}
+
+func runRelayFileWithServer(filename string, host string, port int) error {
+	// Check if file exists
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return fmt.Errorf("file %s does not exist", filename)
+	}
+
+	// Check file extension
+	ext := filepath.Ext(filename)
+	if ext != ".relay" && ext != ".rl" {
+		return fmt.Errorf("unsupported file extension %s (expected .relay or .rl)", ext)
+	}
+
+	// Read the file
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	// Parse the file
+	program, err := parser.Parse(filename, file)
+	if err != nil {
+		return fmt.Errorf("parse error: %v", err)
+	}
+
+	// Create evaluator
+	evaluator := runtime.NewEvaluator()
+	defer evaluator.StopAllServers()
+
+	// Execute the program
+	fmt.Printf("Executing %s...\n", filename)
+	var lastResult *runtime.Value
+	for i, expr := range program.Expressions {
+		result, err := evaluator.Evaluate(expr)
+		if err != nil {
+			return fmt.Errorf("runtime error at expression %d: %v", i+1, err)
+		}
+		lastResult = result
+	}
+
+	// Show the result of the last expression (if any)
+	if lastResult != nil && len(program.Expressions) > 0 {
+		// Only show result if it's not nil and not a function/struct definition
+		if lastResult.Type != runtime.ValueTypeNil {
+			fmt.Printf("Result: %s\n", lastResult.String())
+		}
+	}
+
+	// Create HTTP server configuration
+	config := &runtime.HTTPServerConfig{
+		Host:         host,
+		Port:         port,
+		EnableCORS:   true,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		Headers:      make(map[string]string),
+	}
+
+	// Create and start HTTP server with the loaded evaluator
+	httpServer := runtime.NewHTTPServer(evaluator, config)
+
+	fmt.Printf("Starting Relay HTTP server with loaded context...\n")
+	fmt.Printf("JSON-RPC 2.0 endpoint: http://%s:%d/rpc\n", host, port)
+	fmt.Printf("Health check: http://%s:%d/health\n", host, port)
+	fmt.Printf("Server info: http://%s:%d/info\n", host, port)
+	fmt.Printf("Press Ctrl+C to stop\n\n")
+
+	return httpServer.Start()
 }
