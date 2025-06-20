@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"relay/pkg/parser"
 	"relay/pkg/repl"
@@ -35,7 +36,9 @@ func main() {
 		runFlag     = flag.String("run", "", "Run a .relay/.rl file")
 		buildFlag   = flag.String("build", "", "Build a .relay/.rl file to binary")
 		replFlag    = flag.Bool("repl", false, "Start interactive REPL")
+		serverFlag  = flag.Bool("server", false, "Start HTTP server with JSON-RPC 2.0 endpoints")
 		portFlag    = flag.Int("port", 8080, "Port to run server on")
+		hostFlag    = flag.String("host", "0.0.0.0", "Host to bind server to")
 	)
 	flag.Parse()
 
@@ -44,12 +47,16 @@ func main() {
 		return
 	}
 
-	if *helpFlag || (flag.NArg() == 0 && *runFlag == "" && *buildFlag == "" && !*replFlag) {
+	if *helpFlag || (flag.NArg() == 0 && *runFlag == "" && *buildFlag == "" && !*replFlag && !*serverFlag) {
 		showHelp()
 		return
 	}
 
 	switch {
+	case *serverFlag:
+		if err := startHTTPServer(*hostFlag, *portFlag); err != nil {
+			log.Fatalf("Error starting HTTP server: %v", err)
+		}
 	case *replFlag:
 		if err := startREPL(""); err != nil {
 			log.Fatalf("Error starting REPL: %v", err)
@@ -90,6 +97,7 @@ func showHelp() {
 	fmt.Println("  relay -run <file.relay|file.rl>")
 	fmt.Println("  relay -build <file.relay|file.rl>")
 	fmt.Println("  relay -repl")
+	fmt.Println("  relay -server")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -version     Show version")
@@ -97,7 +105,9 @@ func showHelp() {
 	fmt.Println("  -run         Run a .relay/.rl file")
 	fmt.Println("  -build       Build a .relay/.rl file to binary")
 	fmt.Println("  -repl        Start interactive REPL")
+	fmt.Println("  -server      Start HTTP server with JSON-RPC 2.0 endpoints")
 	fmt.Println("  -port        Port to run server on (default: 8080)")
+	fmt.Println("  -host        Host to bind server to (default: 0.0.0.0)")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  relay blog.rl")
@@ -105,6 +115,7 @@ func showHelp() {
 	fmt.Println("  relay -run blog.relay -port 3000")
 	fmt.Println("  relay -build blog.relay")
 	fmt.Println("  relay -repl")
+	fmt.Println("  relay -server -port 9090 -host 127.0.0.1")
 }
 
 func startREPL(preloadFile string) error {
@@ -121,6 +132,33 @@ func startREPL(preloadFile string) error {
 
 	r.Start()
 	return nil
+}
+
+func startHTTPServer(host string, port int) error {
+	// Create evaluator
+	evaluator := runtime.NewEvaluator()
+	defer evaluator.StopAllServers()
+
+	// Create HTTP server configuration
+	config := &runtime.HTTPServerConfig{
+		Host:         host,
+		Port:         port,
+		EnableCORS:   true,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		Headers:      make(map[string]string),
+	}
+
+	// Create and start HTTP server
+	httpServer := runtime.NewHTTPServer(evaluator, config)
+
+	fmt.Printf("Starting Relay HTTP server...\n")
+	fmt.Printf("JSON-RPC 2.0 endpoint: http://%s:%d/rpc\n", host, port)
+	fmt.Printf("Health check: http://%s:%d/health\n", host, port)
+	fmt.Printf("Server info: http://%s:%d/info\n", host, port)
+	fmt.Printf("Press Ctrl+C to stop\n\n")
+
+	return httpServer.Start()
 }
 
 func runRelayFile(filename string, port int, startREPL bool) error {
