@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"fmt"
 	"relay/pkg/parser"
 )
 
@@ -26,9 +27,10 @@ func NewReturn(value *Value) *ReturnValue {
 // It maintains global state including environments, struct definitions, and running servers.
 // The actual evaluation logic is implemented in core.go for better organization.
 type Evaluator struct {
-	globalEnv  *Environment                 // Global variable environment
-	structDefs map[string]*StructDefinition // Registered struct types
-	servers    map[string]*Value            // Running server instances
+	globalEnv        *Environment                 // Global variable environment
+	structDefs       map[string]*StructDefinition // Registered struct types
+	servers          map[string]*Value            // Running server instances
+	methodDispatcher MethodDispatcher             // Method dispatch system
 }
 
 // NewEvaluator creates a new evaluator with built-in functions and empty state.
@@ -41,9 +43,41 @@ func NewEvaluator() *Evaluator {
 		structDefs: make(map[string]*StructDefinition),
 		servers:    make(map[string]*Value),
 	}
+
+	// Initialize method dispatcher with all type handlers
+	eval.methodDispatcher = eval.newMethodDispatcherWithAllHandlers()
+
 	eval.defineBuiltins()
 
 	return eval
+}
+
+// ExecuteFunction implements FunctionExecutor interface for higher-order array methods
+func (e *Evaluator) ExecuteFunction(fn *Value, args []*Value) (*Value, error) {
+	if fn.Type != ValueTypeFunction {
+		return nil, fmt.Errorf("cannot call non-function value")
+	}
+
+	// Use the evaluator's function calling mechanism
+	return e.callFunction(fn, args, e.globalEnv)
+}
+
+// newMethodDispatcherWithAllHandlers creates a method dispatcher with all built-in handlers
+func (e *Evaluator) newMethodDispatcherWithAllHandlers() MethodDispatcher {
+	dispatcher := NewMethodDispatcher()
+
+	// Create array handler and set function executor
+	arrayHandler := NewArrayMethodHandler()
+	arrayHandler.SetFunctionExecutor(e) // evaluator implements FunctionExecutor
+
+	// Register all built-in type handlers
+	dispatcher.RegisterHandler(ValueTypeArray, arrayHandler)
+	dispatcher.RegisterHandler(ValueTypeObject, NewObjectMethodHandler())
+	dispatcher.RegisterHandler(ValueTypeStruct, NewStructMethodHandler())
+	dispatcher.RegisterHandler(ValueTypeString, NewStringMethodHandler())
+	dispatcher.RegisterHandler(ValueTypeServerState, NewServerStateMethodHandler())
+
+	return dispatcher
 }
 
 // Evaluate evaluates an expression in the global environment.

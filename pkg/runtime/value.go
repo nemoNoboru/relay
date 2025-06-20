@@ -154,7 +154,6 @@ type Server struct {
 	State       map[string]*Value    // Server state variables
 	Receivers   map[string]*Function // Receive function handlers
 	MessageChan chan *Message        // Channel for incoming messages
-	StateMutex  sync.RWMutex         // Protects state access
 	Running     bool                 // Whether server is running
 	Environment *Environment         // Server's environment
 }
@@ -251,6 +250,18 @@ func NewServerState(state *map[string]*Value, mutex *sync.RWMutex) *Value {
 	}
 }
 
+// NewServerStateActorSafe creates a new server state value for actor model (no mutex needed)
+// Since servers process messages sequentially in their own goroutine, no synchronization needed
+func NewServerStateActorSafe(state *map[string]*Value) *Value {
+	return &Value{
+		Type: ValueTypeServerState,
+		ServerState: &ServerState{
+			State: state,
+			Mutex: nil, // No mutex needed in actor model
+		},
+	}
+}
+
 // String returns a string representation of the value
 func (v *Value) String() string {
 	switch v.Type {
@@ -315,8 +326,11 @@ func (v *Value) String() string {
 		}
 		return fmt.Sprintf("<server %s: %s>", v.Server.Name, status)
 	case ValueTypeServerState:
-		v.ServerState.Mutex.RLock()
-		defer v.ServerState.Mutex.RUnlock()
+		// In actor model, mutex is nil since server processes messages sequentially
+		if v.ServerState.Mutex != nil {
+			v.ServerState.Mutex.RLock()
+			defer v.ServerState.Mutex.RUnlock()
+		}
 		result := "{"
 		first := true
 		for key, value := range *v.ServerState.State {
@@ -355,8 +369,11 @@ func (v *Value) IsTruthy() bool {
 	case ValueTypeServer:
 		return true // Servers are always truthy
 	case ValueTypeServerState:
-		v.ServerState.Mutex.RLock()
-		defer v.ServerState.Mutex.RUnlock()
+		// In actor model, mutex is nil since server processes messages sequentially
+		if v.ServerState.Mutex != nil {
+			v.ServerState.Mutex.RLock()
+			defer v.ServerState.Mutex.RUnlock()
+		}
 		return len(*v.ServerState.State) > 0
 	default:
 		return false
@@ -508,8 +525,8 @@ func (s *Server) handleMessage(message *Message, evaluator interface{}) {
 	// Create server environment with state access
 	serverEnv := NewEnvironment(s.Environment)
 
-	// Add state variable to environment (as mutable server state for .get/.set access)
-	stateValue := NewServerState(&s.State, &s.StateMutex)
+	// Add state variable to environment (actor-safe - no mutex needed)
+	stateValue := NewServerStateActorSafe(&s.State)
 	serverEnv.Define("state", stateValue)
 
 	// Type assert evaluator and call receive function
@@ -547,20 +564,14 @@ func (s *Server) handleMessage(message *Message, evaluator interface{}) {
 	}
 }
 
-// GetState safely gets a state variable
+// GetState gets a state variable (no mutex needed in actor model)
 func (s *Server) GetState(key string) (*Value, bool) {
-	s.StateMutex.RLock()
-	defer s.StateMutex.RUnlock()
-
 	value, exists := s.State[key]
 	return value, exists
 }
 
-// SetState safely sets a state variable
+// SetState sets a state variable (no mutex needed in actor model)
 func (s *Server) SetState(key string, value *Value) {
-	s.StateMutex.Lock()
-	defer s.StateMutex.Unlock()
-
 	s.State[key] = value
 }
 

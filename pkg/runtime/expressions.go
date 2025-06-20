@@ -73,7 +73,11 @@ func (e *Evaluator) evaluatePrimaryExpr(expr *parser.PrimaryExpr, env *Environme
 	result := base
 	for _, access := range expr.Access {
 		if access.MethodCall != nil {
-			result, err = e.evaluateMethodCall(result, access.MethodCall, env)
+			args, err := e.evaluateArguments(access.MethodCall.Args, env)
+			if err != nil {
+				return nil, err
+			}
+			result, err = e.methodDispatcher.CallMethod(result, access.MethodCall.Method, args)
 			if err != nil {
 				return nil, err
 			}
