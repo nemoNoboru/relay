@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -38,34 +40,43 @@ func (e *JSONRPCError) Error() string {
 	return fmt.Sprintf("JSON-RPC error %d: %s", e.Code, e.Message)
 }
 
-// HTTPServerConfig holds configuration for the HTTP server
+// HTTPServerConfig contains configuration for the HTTP server
 type HTTPServerConfig struct {
-	Port         int               `json:"port"`
-	Host         string            `json:"host"`
-	EnableCORS   bool              `json:"enable_cors"`
-	ReadTimeout  time.Duration     `json:"read_timeout"`
-	WriteTimeout time.Duration     `json:"write_timeout"`
-	Headers      map[string]string `json:"headers"`
-}
-
-// DefaultHTTPServerConfig returns default HTTP server configuration
-func DefaultHTTPServerConfig() *HTTPServerConfig {
-	return &HTTPServerConfig{
-		Port:         8080,
-		Host:         "0.0.0.0",
-		EnableCORS:   true,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		Headers:      make(map[string]string),
-	}
+	Host         string
+	Port         int
+	EnableCORS   bool
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+	Headers      map[string]string
+	// New fields for P2P functionality
+	NodeID            string
+	EnableRegistry    bool
+	DiscoveryInterval time.Duration
 }
 
 // HTTPServer represents the HTTP server that exposes Relay servers via JSON-RPC 2.0
 type HTTPServer struct {
-	config    *HTTPServerConfig
-	evaluator *Evaluator
-	server    *http.Server
-	running   bool
+	config            *HTTPServerConfig
+	evaluator         *Evaluator
+	server            *http.Server
+	running           bool
+	exposableRegistry *ExposableServerRegistry // New field for P2P registry
+	websocketP2P      *WebSocketP2P            // WebSocket P2P communication
+}
+
+// DefaultHTTPServerConfig returns default configuration
+func DefaultHTTPServerConfig() *HTTPServerConfig {
+	return &HTTPServerConfig{
+		Host:              "0.0.0.0",
+		Port:              8080,
+		EnableCORS:        true,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		Headers:           make(map[string]string),
+		NodeID:            generateNodeID(),
+		EnableRegistry:    true,
+		DiscoveryInterval: 30 * time.Second,
+	}
 }
 
 // NewHTTPServer creates a new HTTP server instance
@@ -74,11 +85,35 @@ func NewHTTPServer(evaluator *Evaluator, config *HTTPServerConfig) *HTTPServer {
 		config = DefaultHTTPServerConfig()
 	}
 
-	return &HTTPServer{
+	// Generate node ID if not provided
+	if config.NodeID == "" {
+		config.NodeID = generateNodeID()
+	}
+
+	httpServer := &HTTPServer{
 		config:    config,
 		evaluator: evaluator,
 		running:   false,
 	}
+
+	// Create exposable registry if enabled
+	if config.EnableRegistry {
+		nodeAddress := fmt.Sprintf("%s:%d", config.Host, config.Port)
+		baseRegistry := NewEvaluatorServerRegistry(evaluator)
+		httpServer.exposableRegistry = NewExposableServerRegistry(baseRegistry, config.NodeID, nodeAddress)
+
+		// Create WebSocket P2P system
+		httpServer.websocketP2P = NewWebSocketP2P(httpServer.exposableRegistry, config.NodeID)
+	}
+
+	return httpServer
+}
+
+// generateNodeID creates a unique node identifier
+func generateNodeID() string {
+	bytes := make([]byte, 8)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
 }
 
 // Start starts the HTTP server
@@ -98,6 +133,22 @@ func (h *HTTPServer) Start() error {
 	// Server info endpoint
 	mux.HandleFunc("/info", h.handleInfo)
 
+	// Setup registry endpoints if enabled
+	if h.config.EnableRegistry && h.exposableRegistry != nil {
+		h.exposableRegistry.SetupHTTPEndpoints(mux)
+
+		// Setup WebSocket P2P endpoints
+		if h.websocketP2P != nil {
+			h.websocketP2P.SetupWebSocketEndpoint(mux)
+			h.websocketP2P.Start()
+		}
+
+		// Start periodic peer discovery
+		if h.config.DiscoveryInterval > 0 {
+			h.exposableRegistry.StartPeriodicDiscovery(h.config.DiscoveryInterval)
+		}
+	}
+
 	// Apply middleware
 	handler := h.applyMiddleware(mux)
 
@@ -113,6 +164,12 @@ func (h *HTTPServer) Start() error {
 	log.Printf("Starting Relay HTTP server on %s:%d", h.config.Host, h.config.Port)
 	log.Printf("JSON-RPC 2.0 endpoint: http://%s:%d/rpc", h.config.Host, h.config.Port)
 
+	if h.config.EnableRegistry {
+		log.Printf("Server registry: http://%s:%d/registry", h.config.Host, h.config.Port)
+		log.Printf("WebSocket P2P endpoint: ws://%s:%d/ws/p2p", h.config.Host, h.config.Port)
+		log.Printf("Node ID: %s", h.config.NodeID)
+	}
+
 	return h.server.ListenAndServe()
 }
 
@@ -123,6 +180,11 @@ func (h *HTTPServer) Stop() error {
 	}
 
 	h.running = false
+
+	// Stop WebSocket P2P system
+	if h.websocketP2P != nil {
+		h.websocketP2P.Stop()
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -185,14 +247,27 @@ func (h *HTTPServer) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 
 // processRPCCall processes a JSON-RPC method call
 func (h *HTTPServer) processRPCCall(request JSONRPCRequest) (interface{}, error) {
+	// Check if this is a remote server call
+	if request.Method == "remote_call" {
+		return h.processRemoteCall(request)
+	}
+
 	// Parse method - format: "server_name.method_name" or just "method_name" for default server
 	serverName, methodName, err := h.parseMethod(request.Method)
 	if err != nil {
 		return nil, &JSONRPCError{Code: -32601, Message: "Method not found", Data: err.Error()}
 	}
 
-	// Get the server
-	server, exists := h.evaluator.GetServer(serverName)
+	// Get the server (use exposable registry if available, otherwise fallback to evaluator)
+	var server *Value
+	var exists bool
+
+	if h.exposableRegistry != nil {
+		server, exists = h.exposableRegistry.GetServer(serverName)
+	} else {
+		server, exists = h.evaluator.GetServer(serverName)
+	}
+
 	if !exists {
 		return nil, &JSONRPCError{Code: -32601, Message: "Method not found", Data: fmt.Sprintf("Server '%s' not found", serverName)}
 	}
@@ -210,6 +285,60 @@ func (h *HTTPServer) processRPCCall(request JSONRPCRequest) (interface{}, error)
 	}
 
 	// Convert result back to JSON-serializable format
+	return h.convertValueToJSON(result), nil
+}
+
+// processRemoteCall processes a remote server call via WebSocket P2P
+func (h *HTTPServer) processRemoteCall(request JSONRPCRequest) (interface{}, error) {
+	if h.websocketP2P == nil {
+		return nil, &JSONRPCError{Code: -32601, Message: "Method not found", Data: "WebSocket P2P not enabled"}
+	}
+
+	// Parse remote call parameters
+	params, ok := request.Params.(map[string]interface{})
+	if !ok {
+		return nil, &JSONRPCError{Code: -32602, Message: "Invalid params", Data: "remote_call requires object parameters"}
+	}
+
+	nodeID, ok := params["node_id"].(string)
+	if !ok {
+		return nil, &JSONRPCError{Code: -32602, Message: "Invalid params", Data: "node_id is required"}
+	}
+
+	serverName, ok := params["server_name"].(string)
+	if !ok {
+		return nil, &JSONRPCError{Code: -32602, Message: "Invalid params", Data: "server_name is required"}
+	}
+
+	method, ok := params["method"].(string)
+	if !ok {
+		return nil, &JSONRPCError{Code: -32602, Message: "Invalid params", Data: "method is required"}
+	}
+
+	// Convert arguments
+	var args []*Value
+	if argsParam, exists := params["args"]; exists {
+		convertedArgs, err := h.convertParams(argsParam)
+		if err != nil {
+			return nil, &JSONRPCError{Code: -32602, Message: "Invalid params", Data: fmt.Sprintf("invalid args: %v", err)}
+		}
+		args = convertedArgs
+	}
+
+	// Get timeout (default to 30 seconds)
+	timeout := 30 * time.Second
+	if timeoutParam, exists := params["timeout"]; exists {
+		if timeoutFloat, ok := timeoutParam.(float64); ok {
+			timeout = time.Duration(timeoutFloat) * time.Second
+		}
+	}
+
+	// Call remote server
+	result, err := h.websocketP2P.CallRemoteServer(nodeID, serverName, method, args, timeout)
+	if err != nil {
+		return nil, &JSONRPCError{Code: -32603, Message: "Internal error", Data: err.Error()}
+	}
+
 	return h.convertValueToJSON(result), nil
 }
 
@@ -438,4 +567,57 @@ func (h *HTTPServer) headersMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// GetExposableRegistry returns the exposable registry if enabled
+func (h *HTTPServer) GetExposableRegistry() *ExposableServerRegistry {
+	return h.exposableRegistry
+}
+
+// GetNodeID returns the node ID for this server
+func (h *HTTPServer) GetNodeID() string {
+	return h.config.NodeID
+}
+
+// AddPeer adds a peer node to the registry
+func (h *HTTPServer) AddPeer(nodeID, address string) {
+	if h.exposableRegistry != nil {
+		h.exposableRegistry.AddPeer(nodeID, address)
+	}
+}
+
+// RemovePeer removes a peer node from the registry
+func (h *HTTPServer) RemovePeer(nodeID string) {
+	if h.exposableRegistry != nil {
+		h.exposableRegistry.RemovePeer(nodeID)
+	}
+}
+
+// GetWebSocketP2P returns the WebSocket P2P system
+func (h *HTTPServer) GetWebSocketP2P() *WebSocketP2P {
+	return h.websocketP2P
+}
+
+// ConnectToPeer connects to a peer node via WebSocket
+func (h *HTTPServer) ConnectToPeer(nodeID, address string) error {
+	if h.websocketP2P == nil {
+		return fmt.Errorf("WebSocket P2P not enabled")
+	}
+	return h.websocketP2P.ConnectToPeer(nodeID, address)
+}
+
+// SendP2PMessage sends a message to a peer node
+func (h *HTTPServer) SendP2PMessage(to, msgType string, data map[string]interface{}) error {
+	if h.websocketP2P == nil {
+		return fmt.Errorf("WebSocket P2P not enabled")
+	}
+	return h.websocketP2P.SendMessage(to, msgType, data)
+}
+
+// CallRemoteServer calls a method on a server running on a remote node
+func (h *HTTPServer) CallRemoteServer(nodeID, serverName, method string, args []*Value, timeout time.Duration) (*Value, error) {
+	if h.websocketP2P == nil {
+		return nil, fmt.Errorf("WebSocket P2P not enabled")
+	}
+	return h.websocketP2P.CallRemoteServer(nodeID, serverName, method, args, timeout)
 }

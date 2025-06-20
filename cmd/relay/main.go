@@ -39,6 +39,10 @@ func main() {
 		serverFlag  = flag.Bool("server", false, "Start HTTP server with JSON-RPC 2.0 endpoints")
 		portFlag    = flag.Int("port", 8080, "Port to run server on")
 		hostFlag    = flag.String("host", "0.0.0.0", "Host to bind server to")
+		// New P2P flags
+		nodeIDFlag     = flag.String("node-id", "", "Node ID for peer-to-peer networking (auto-generated if not provided)")
+		addPeerFlag    = flag.String("add-peer", "", "Add a peer node (format: http://host:port)")
+		disableRegFlag = flag.Bool("disable-registry", false, "Disable server registry for peer-to-peer functionality")
 	)
 	flag.Parse()
 
@@ -55,12 +59,12 @@ func main() {
 	switch {
 	case *serverFlag && *runFlag != "":
 		// Both server and run flags - start HTTP server with Relay file loaded
-		if err := runRelayFileWithServer(*runFlag, *hostFlag, *portFlag); err != nil {
+		if err := runRelayFileWithServer(*runFlag, *hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
 			log.Fatalf("Error starting server with %s: %v", *runFlag, err)
 		}
 	case *serverFlag:
 		// Just server flag - start HTTP server standalone
-		if err := startHTTPServer(*hostFlag, *portFlag); err != nil {
+		if err := startHTTPServer(*hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
 			log.Fatalf("Error starting HTTP server: %v", err)
 		}
 	case *replFlag:
@@ -82,7 +86,7 @@ func main() {
 
 			// Check if user wants to load file and start server
 			if flag.NArg() > 1 && flag.Arg(1) == "-server" {
-				if err := runRelayFileWithServer(filename, *hostFlag, *portFlag); err != nil {
+				if err := runRelayFileWithServer(filename, *hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
 					log.Fatalf("Error starting server with %s: %v", filename, err)
 				}
 			} else if flag.NArg() > 1 && flag.Arg(1) == "-repl" {
@@ -119,6 +123,9 @@ func showHelp() {
 	fmt.Println("  -server      Start HTTP server with JSON-RPC 2.0 endpoints")
 	fmt.Println("  -port        Port to run server on (default: 8080)")
 	fmt.Println("  -host        Host to bind server to (default: 0.0.0.0)")
+	fmt.Println("  -node-id     Node ID for peer-to-peer networking (auto-generated if not provided)")
+	fmt.Println("  -add-peer    Add a peer node (format: http://host:port)")
+	fmt.Println("  -disable-registry Disable server registry for peer-to-peer functionality")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  relay blog.rl")
@@ -145,28 +152,52 @@ func startREPL(preloadFile string) error {
 	return nil
 }
 
-func startHTTPServer(host string, port int) error {
+func startHTTPServer(host string, port int, nodeID, addPeer string, disableRegistry bool) error {
 	// Create evaluator
 	evaluator := runtime.NewEvaluator()
 	defer evaluator.StopAllServers()
 
 	// Create HTTP server configuration
 	config := &runtime.HTTPServerConfig{
-		Host:         host,
-		Port:         port,
-		EnableCORS:   true,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		Headers:      make(map[string]string),
+		Host:              host,
+		Port:              port,
+		EnableCORS:        true,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		Headers:           make(map[string]string),
+		EnableRegistry:    !disableRegistry,
+		DiscoveryInterval: 30 * time.Second,
+	}
+
+	// Set custom node ID if provided
+	if nodeID != "" {
+		config.NodeID = nodeID
 	}
 
 	// Create and start HTTP server
 	httpServer := runtime.NewHTTPServer(evaluator, config)
 
+	// Add peer if specified
+	if addPeer != "" {
+		if httpServer.GetExposableRegistry() != nil {
+			err := httpServer.GetExposableRegistry().AddPeerFromURL(addPeer)
+			if err != nil {
+				fmt.Printf("Warning: Failed to add peer %s: %v\n", addPeer, err)
+			} else {
+				fmt.Printf("Successfully added peer: %s\n", addPeer)
+			}
+		}
+	}
+
 	fmt.Printf("Starting Relay HTTP server...\n")
 	fmt.Printf("JSON-RPC 2.0 endpoint: http://%s:%d/rpc\n", host, port)
 	fmt.Printf("Health check: http://%s:%d/health\n", host, port)
 	fmt.Printf("Server info: http://%s:%d/info\n", host, port)
+
+	if config.EnableRegistry {
+		fmt.Printf("Server registry: http://%s:%d/registry\n", host, port)
+	}
+
 	fmt.Printf("Press Ctrl+C to stop\n\n")
 
 	return httpServer.Start()
@@ -237,7 +268,7 @@ func buildRelayFile(filename string) error {
 	return fmt.Errorf("not implemented yet")
 }
 
-func runRelayFileWithServer(filename string, host string, port int) error {
+func runRelayFileWithServer(filename string, host string, port int, nodeID, addPeer string, disableRegistry bool) error {
 	// Check if file exists
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return fmt.Errorf("file %s does not exist", filename)
@@ -287,21 +318,46 @@ func runRelayFileWithServer(filename string, host string, port int) error {
 
 	// Create HTTP server configuration
 	config := &runtime.HTTPServerConfig{
-		Host:         host,
-		Port:         port,
-		EnableCORS:   true,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		Headers:      make(map[string]string),
+		Host:              host,
+		Port:              port,
+		EnableCORS:        true,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		Headers:           make(map[string]string),
+		EnableRegistry:    !disableRegistry,
+		DiscoveryInterval: 30 * time.Second,
+	}
+
+	// Set custom node ID if provided
+	if nodeID != "" {
+		config.NodeID = nodeID
 	}
 
 	// Create and start HTTP server with the loaded evaluator
 	httpServer := runtime.NewHTTPServer(evaluator, config)
 
+	// Add peer if specified
+	if addPeer != "" {
+		if httpServer.GetExposableRegistry() != nil {
+			err := httpServer.GetExposableRegistry().AddPeerFromURL(addPeer)
+			if err != nil {
+				fmt.Printf("Warning: Failed to add peer %s: %v\n", addPeer, err)
+			} else {
+				fmt.Printf("Successfully added peer: %s\n", addPeer)
+			}
+		}
+	}
+
 	fmt.Printf("Starting Relay HTTP server with loaded context...\n")
 	fmt.Printf("JSON-RPC 2.0 endpoint: http://%s:%d/rpc\n", host, port)
 	fmt.Printf("Health check: http://%s:%d/health\n", host, port)
 	fmt.Printf("Server info: http://%s:%d/info\n", host, port)
+
+	if config.EnableRegistry {
+		fmt.Printf("Server registry: http://%s:%d/registry\n", host, port)
+		fmt.Printf("WebSocket P2P endpoint: ws://%s:%d/ws/p2p\n", host, port)
+	}
+
 	fmt.Printf("Press Ctrl+C to stop\n\n")
 
 	return httpServer.Start()

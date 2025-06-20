@@ -1,0 +1,19 @@
+Executing examples/simple_p2p_test.rl...
+"WebSocket P2P test servers initialized"
+"Available servers: counter_server, echo_server"
+"Try: counter_server.increment, echo_server.echo"
+Starting Relay HTTP server with loaded context...
+JSON-RPC 2.0 endpoint: http://0.0.0.0:8080/rpc
+Health check: http://0.0.0.0:8080/health
+Server info: http://0.0.0.0:8080/info
+Server registry: http://0.0.0.0:8080/registry
+WebSocket P2P endpoint: ws://0.0.0.0:8080/ws/p2p
+Press Ctrl+C to stop
+
+2025/06/20 20:10:53 WebSocket P2P system started for node 2f52a1bdc0971d85
+2025/06/20 20:10:53 Starting Relay HTTP server on 0.0.0.0:8080
+2025/06/20 20:10:53 JSON-RPC 2.0 endpoint: http://0.0.0.0:8080/rpc
+2025/06/20 20:10:53 Server registry: http://0.0.0.0:8080/registry
+2025/06/20 20:10:53 WebSocket P2P endpoint: ws://0.0.0.0:8080/ws/p2p
+2025/06/20 20:10:53 Node ID: 2f52a1bdc0971d85
+2025/06/20 20:10:53 Error starting server with examples/simple_p2p_test.rl: listen tcp 0.0.0.0:8080: bind: address already in use
