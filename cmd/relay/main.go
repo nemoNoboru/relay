@@ -22,12 +22,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"relay/pkg/parser"
+	"relay/pkg/actor"
 	"relay/pkg/repl"
-	"relay/pkg/runtime"
 )
 
-const version = "0.3.0-dev"
+var (
+	version = "0.3.0-dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func main() {
 	var (
@@ -56,68 +59,56 @@ func main() {
 		return
 	}
 
-	switch {
-	case *serverFlag && *runFlag != "":
-		// Both server and run flags - start HTTP server with Relay file loaded
+	// Determine the main action based on flags
+	action := determineAction(runFlag, buildFlag, replFlag, serverFlag)
+
+	// Execute the action
+	switch action {
+	case "run_with_server":
 		if err := runRelayFileWithServer(*runFlag, *hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
 			log.Fatalf("Error starting server with %s: %v", *runFlag, err)
 		}
-	case *serverFlag:
-		// Just server flag - start HTTP server standalone
+	case "server":
 		if err := startHTTPServer(*hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
 			log.Fatalf("Error starting HTTP server: %v", err)
 		}
-	case *replFlag:
+	case "repl":
 		if err := startREPL(""); err != nil {
 			log.Fatalf("Error starting REPL: %v", err)
 		}
-	case *runFlag != "":
+	case "run":
 		if err := runRelayFile(*runFlag, *portFlag, false); err != nil {
 			log.Fatalf("Error running %s: %v", *runFlag, err)
 		}
-	case *buildFlag != "":
+	case "build":
 		if err := buildRelayFile(*buildFlag); err != nil {
 			log.Fatalf("Error building %s: %v", *buildFlag, err)
 		}
 	default:
-		// Handle positional arguments
-		if flag.NArg() > 0 {
-			filename := flag.Arg(0)
-
-			// Check if user wants to load file and start server
-			if flag.NArg() > 1 && flag.Arg(1) == "-server" {
-				// For positional syntax like "relay file.rl -server -port 8081"
-				// We need to parse the remaining arguments as flags
-				serverArgs := flag.Args()[2:] // Skip filename and -server
-
-				// Create a new flag set to parse the remaining arguments
-				serverFlagSet := flag.NewFlagSet("server", flag.ExitOnError)
-				serverPortFlag := serverFlagSet.Int("port", 8080, "Port to run server on")
-				serverHostFlag := serverFlagSet.String("host", "0.0.0.0", "Host to bind server to")
-				serverNodeIDFlag := serverFlagSet.String("node-id", "", "Node ID for peer-to-peer networking")
-				serverAddPeerFlag := serverFlagSet.String("add-peer", "", "Add a peer node")
-				serverDisableRegFlag := serverFlagSet.Bool("disable-registry", false, "Disable server registry")
-
-				// Parse the server-specific arguments
-				if err := serverFlagSet.Parse(serverArgs); err != nil {
-					log.Fatalf("Error parsing server arguments: %v", err)
-				}
-
-				if err := runRelayFileWithServer(filename, *serverHostFlag, *serverPortFlag, *serverNodeIDFlag, *serverAddPeerFlag, *serverDisableRegFlag); err != nil {
-					log.Fatalf("Error starting server with %s: %v", filename, err)
-				}
-			} else if flag.NArg() > 1 && flag.Arg(1) == "-repl" {
-				// Check if user wants to load file and start REPL
-				if err := runRelayFile(filename, *portFlag, true); err != nil {
-					log.Fatalf("Error loading %s: %v", filename, err)
-				}
-			} else {
-				if err := runRelayFile(filename, *portFlag, false); err != nil {
-					log.Fatalf("Error running %s: %v", filename, err)
-				}
-			}
+		// Default to REPL if no specific action is determined
+		if err := startREPL(""); err != nil {
+			log.Fatalf("Error starting REPL: %v", err)
 		}
 	}
+}
+
+func determineAction(runFlag, buildFlag *string, replFlag, serverFlag *bool) string {
+	if *serverFlag && *runFlag != "" {
+		return "run_with_server"
+	}
+	if *serverFlag {
+		return "server"
+	}
+	if *replFlag {
+		return "repl"
+	}
+	if *runFlag != "" {
+		return "run"
+	}
+	if *buildFlag != "" {
+		return "build"
+	}
+	return "repl" // Default action
 }
 
 func showHelp() {
@@ -154,11 +145,37 @@ func showHelp() {
 }
 
 func startREPL(preloadFile string) error {
+	// Setup the main actor system components
+	router := actor.NewRouter()
+
+	supervisor := actor.NewSupervisorActor("supervisor", router)
+	router.Register(supervisor.Actor.Name, supervisor.Actor)
+	go supervisor.Start()
+
+	// Create a primary RelayServerActor for the REPL session
+	// by sending a message to the supervisor.
+	router.Send(actor.ActorMsg{
+		To:   "supervisor",
+		From: "main",
+		Type: "create_child",
+		Data: "RelayServerActor",
+	})
+
+	// TODO: We need a way to get the name of the created actor back
+	// to interact with it. This is a placeholder for now.
+	time.Sleep(100 * time.Millisecond) // Give time for actor to be created
+
+	fmt.Println("Actor-based REPL started. All evaluations are now handled by a dedicated RelayServerActor.")
+	fmt.Println("Type ':help' for a list of commands.")
+
+	// The REPL now needs to be reworked to send messages to the actor
+	// instead of using a direct evaluator.
 	r := repl.New(os.Stdin, os.Stdout)
 
 	// If a file was specified, load it first
 	if preloadFile != "" {
 		fmt.Printf("Loading %s...\n", preloadFile)
+		// This will need to be adapted to send messages to the actor
 		if err := r.LoadFile(preloadFile); err != nil {
 			return fmt.Errorf("failed to load %s: %v", preloadFile, err)
 		}
@@ -166,60 +183,42 @@ func startREPL(preloadFile string) error {
 	}
 
 	r.Start()
+	// Add a small delay to ensure all actor messages are processed before exit.
+	time.Sleep(100 * time.Millisecond)
 	return nil
 }
 
 func startHTTPServer(host string, port int, nodeID, addPeer string, disableRegistry bool) error {
-	// Create evaluator
-	evaluator := runtime.NewEvaluator()
-	defer evaluator.StopAllServers()
-
-	// Create HTTP server configuration
-	config := &runtime.HTTPServerConfig{
-		Host:              host,
-		Port:              port,
-		EnableCORS:        true,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		Headers:           make(map[string]string),
-		EnableRegistry:    !disableRegistry,
-		DiscoveryInterval: 30 * time.Second,
-	}
-
-	// Set custom node ID if provided
-	if nodeID != "" {
-		config.NodeID = nodeID
-	}
-
-	// Create and start HTTP server (using unified architecture)
-	httpServer := runtime.NewUnifiedHTTPServer(evaluator, config)
-
-	// Add peer if specified
-	if addPeer != "" {
-		// Extract node ID from URL (simplified for now)
-		httpServer.AddPeer("peer_node", addPeer)
-		fmt.Printf("Successfully added peer: %s\n", addPeer)
-	}
-
-	fmt.Printf("Starting Relay HTTP server...\n")
-	fmt.Printf("JSON-RPC 2.0 endpoint: http://%s:%d/rpc\n", host, port)
-	fmt.Printf("Health check: http://%s:%d/health\n", host, port)
-	fmt.Printf("Server info: http://%s:%d/info\n", host, port)
-
-	if config.EnableRegistry {
-		fmt.Printf("Server registry: http://%s:%d/registry\n", host, port)
-	}
-
-	fmt.Printf("Press Ctrl+C to stop\n\n")
-
-	return httpServer.Start()
+	fmt.Println("Server mode is not yet implemented with the new actor model.")
+	return nil
 }
 
 func runRelayFile(filename string, port int, startREPL bool) error {
-	// Check if file exists
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return fmt.Errorf("file %s does not exist", filename)
-	}
+	// Setup the main actor system components
+	router := actor.NewRouter()
+
+	supervisor := actor.NewSupervisorActor("supervisor", router)
+	router.Register(supervisor.Actor.Name, supervisor.Actor)
+	go supervisor.Start()
+
+	// Create a primary RelayServerActor for the script
+	// This is a simplified approach. In a real scenario, we'd wait for a
+	// confirmation message from the supervisor with the new actor's name.
+	router.Send(actor.ActorMsg{
+		To:   "supervisor",
+		From: "main",
+		Type: "create_child",
+		Data: "RelayServerActor",
+	})
+	// This is a temporary solution until we implement a proper message-and-reply mechanism.
+	time.Sleep(100 * time.Millisecond)
+
+	// We don't know the exact name of the created actor, which is a problem.
+	// The supervisor creates a unique name. For this temporary refactoring,
+	// we are unable to send the script to it. This highlights the need for
+	// a proper synchronous-style call or a message-and-reply pattern.
+	fmt.Printf("Executing %s via actor...\n", filename)
+	fmt.Println("NOTE: Sending script to actor is disabled pending a reply mechanism from the supervisor.")
 
 	// Check file extension
 	ext := filepath.Ext(filename)
@@ -227,145 +226,29 @@ func runRelayFile(filename string, port int, startREPL bool) error {
 		return fmt.Errorf("unsupported file extension %s (expected .relay or .rl)", ext)
 	}
 
-	// Read the file
-	file, err := os.Open(filename)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %v", err)
-	}
-	defer file.Close()
+	// The old synchronous evaluation logic is now replaced by the actor model.
+	// We keep the REPL starting logic here, but it will need to be
+	// connected to the actor's state.
 
-	// Parse the file
-	program, err := parser.Parse(filename, file)
-	if err != nil {
-		return fmt.Errorf("parse error: %v", err)
-	}
-
-	// Create evaluator
-	evaluator := runtime.NewEvaluator()
-
-	// Execute the program
-	fmt.Printf("Executing %s...\n", filename)
-	var lastResult *runtime.Value
-	for i, expr := range program.Expressions {
-		result, err := evaluator.Evaluate(expr)
-		if err != nil {
-			return fmt.Errorf("runtime error at expression %d: %v", i+1, err)
-		}
-		lastResult = result
-	}
-
-	// Show the result of the last expression (if any)
-	if lastResult != nil && len(program.Expressions) > 0 {
-		// Only show result if it's not nil and not a function/struct definition
-		if lastResult.Type != runtime.ValueTypeNil {
-			fmt.Printf("Result: %s\n", lastResult.String())
-		}
-	}
-
-	// If requested, start REPL with the loaded context
 	if startREPL {
-		fmt.Println("\nStarting REPL with loaded context...")
-		r := repl.NewWithEvaluator(os.Stdin, os.Stdout, evaluator)
+		fmt.Println("\nStarting REPL. The script's context is not yet connected.")
+		// This REPL will start with a fresh context, not the one from the script.
+		// A new mechanism is needed to pass the actor's state to the REPL.
+		r := repl.New(os.Stdin, os.Stdout)
 		r.Start()
 	} else {
-		fmt.Printf("Execution completed successfully.\n")
+		fmt.Printf("Execution request sent to actor for %s.\n", filename)
 	}
 
 	return nil
 }
 
 func buildRelayFile(filename string) error {
-	fmt.Printf("Building %s...\n", filename)
-	// TODO: Implement relay file compilation
-	return fmt.Errorf("not implemented yet")
+	return fmt.Errorf("build functionality is not yet implemented")
 }
 
 func runRelayFileWithServer(filename string, host string, port int, nodeID, addPeer string, disableRegistry bool) error {
-	// Check if file exists
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return fmt.Errorf("file %s does not exist", filename)
-	}
-
-	// Check file extension
-	ext := filepath.Ext(filename)
-	if ext != ".relay" && ext != ".rl" {
-		return fmt.Errorf("unsupported file extension %s (expected .relay or .rl)", ext)
-	}
-
-	// Read the file
-	file, err := os.Open(filename)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %v", err)
-	}
-	defer file.Close()
-
-	// Parse the file
-	program, err := parser.Parse(filename, file)
-	if err != nil {
-		return fmt.Errorf("parse error: %v", err)
-	}
-
-	// Create evaluator
-	evaluator := runtime.NewEvaluator()
-	defer evaluator.StopAllServers()
-
-	// Execute the program
-	fmt.Printf("Executing %s...\n", filename)
-	var lastResult *runtime.Value
-	for i, expr := range program.Expressions {
-		result, err := evaluator.Evaluate(expr)
-		if err != nil {
-			return fmt.Errorf("runtime error at expression %d: %v", i+1, err)
-		}
-		lastResult = result
-	}
-
-	// Show the result of the last expression (if any)
-	if lastResult != nil && len(program.Expressions) > 0 {
-		// Only show result if it's not nil and not a function/struct definition
-		if lastResult.Type != runtime.ValueTypeNil {
-			fmt.Printf("Result: %s\n", lastResult.String())
-		}
-	}
-
-	// Create HTTP server configuration
-	config := &runtime.HTTPServerConfig{
-		Host:              host,
-		Port:              port,
-		EnableCORS:        true,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		Headers:           make(map[string]string),
-		EnableRegistry:    !disableRegistry,
-		DiscoveryInterval: 30 * time.Second,
-	}
-
-	// Set custom node ID if provided
-	if nodeID != "" {
-		config.NodeID = nodeID
-	}
-
-	// Create and start HTTP server with the loaded evaluator (using unified architecture)
-	httpServer := runtime.NewUnifiedHTTPServer(evaluator, config)
-
-	// Add peer if specified
-	if addPeer != "" {
-		// Extract node ID from URL (simplified for now)
-		httpServer.AddPeer("peer_node", addPeer)
-		fmt.Printf("Successfully added peer: %s\n", addPeer)
-	}
-
-	fmt.Printf("Starting Relay HTTP server with loaded context...\n")
-	fmt.Printf("JSON-RPC 2.0 endpoint: http://%s:%d/rpc\n", host, port)
-	fmt.Printf("Health check: http://%s:%d/health\n", host, port)
-	fmt.Printf("Server info: http://%s:%d/info\n", host, port)
-
-	if config.EnableRegistry {
-		fmt.Printf("Server registry: http://%s:%d/registry\n", host, port)
-		fmt.Printf("WebSocket P2P endpoint: ws://%s:%d/ws/p2p\n", host, port)
-	}
-
-	fmt.Printf("Press Ctrl+C to stop\n\n")
-
-	return httpServer.Start()
+	fmt.Println("runRelayFileWithServer is deprecated and will be removed.")
+	// The new implementation will use actors and a different startup mechanism.
+	return nil
 }

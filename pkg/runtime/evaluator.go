@@ -75,7 +75,6 @@ func (e *Evaluator) newMethodDispatcherWithAllHandlers() MethodDispatcher {
 	dispatcher.RegisterHandler(ValueTypeObject, NewObjectMethodHandler())
 	dispatcher.RegisterHandler(ValueTypeStruct, NewStructMethodHandler())
 	dispatcher.RegisterHandler(ValueTypeString, NewStringMethodHandler())
-	dispatcher.RegisterHandler(ValueTypeServerState, NewServerStateMethodHandler())
 
 	return dispatcher
 }
@@ -102,5 +101,79 @@ func (e *Evaluator) GetAllServers() map[string]*Value {
 	return result
 }
 
+// GetServer returns a registered server by name.
+func (e *Evaluator) GetServer(name string) (*Value, bool) {
+	server, exists := e.servers[name]
+	return server, exists
+}
+
+// StopAllServers stops all running servers managed by the evaluator.
+func (e *Evaluator) StopAllServers() {
+	for _, serverVal := range e.servers {
+		if serverVal.Type == ValueTypeServer && serverVal.Server.Running {
+			serverVal.Server.Stop()
+		}
+	}
+}
+
+// RegisterServer adds a server to the evaluator's registry.
+// This is useful for testing or for manually adding servers.
+func (e *Evaluator) RegisterServer(name string, server *Value) {
+	e.servers[name] = server
+}
+
 // Note: The core evaluation logic has been consolidated in core.go for better organization.
 // This file now focuses on evaluator initialization and high-level coordination.
+
+func (e *Evaluator) evaluateServerExpr(expr *parser.ServerExpr, env *Environment) (*Value, error) {
+	// Extract state and receive functions from the server body
+	state := make(map[string]*Value)
+	receives := make(map[string]*Function)
+	serverEnv := NewEnvironment(env)
+
+	if expr.Body != nil {
+		for _, element := range expr.Body.Elements {
+			if element.State != nil {
+				for _, field := range element.State.Fields {
+					var val *Value
+					if field.DefaultValue != nil {
+						// For now, we'll just handle simple literals.
+						// A full implementation would need to evaluate expressions.
+						if field.DefaultValue.Number != nil {
+							val = NewNumber(*field.DefaultValue.Number)
+						} else if field.DefaultValue.String != nil {
+							val = NewString(*field.DefaultValue.String)
+						} else {
+							val = NewNil()
+						}
+					} else {
+						val = NewNil()
+					}
+					state[field.Name] = val
+				}
+			}
+			if element.Receive != nil {
+				params := make([]string, len(element.Receive.Parameters))
+				for i, p := range element.Receive.Parameters {
+					params[i] = p.Name
+				}
+				fn := &Function{
+					Name:       element.Receive.Name,
+					Parameters: params,
+					Body:       element.Receive.Body,
+					ClosureEnv: serverEnv,
+				}
+				receives[element.Receive.Name] = fn
+			}
+		}
+	}
+
+	// Create a new server instance
+	server := NewServer(expr.Name, state, receives, serverEnv)
+
+	// Register the server with the evaluator
+	e.servers[expr.Name] = server
+
+	// Server definitions don't return a value, they register a server
+	return NewNil(), nil
+}

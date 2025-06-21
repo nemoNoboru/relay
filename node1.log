@@ -1,0 +1,34 @@
+Executing examples/e2e_p2p_test.rl...
+"Simple E2E P2P Test Servers Initialized Successfully!"
+"Available servers: distributed_counter, health_monitor"
+Starting Relay HTTP server with loaded context...
+JSON-RPC 2.0 endpoint: http://0.0.0.0:8081/rpc
+Health check: http://0.0.0.0:8081/health
+Server info: http://0.0.0.0:8081/info
+Server registry: http://0.0.0.0:8081/registry
+WebSocket P2P endpoint: ws://0.0.0.0:8081/ws/p2p
+Press Ctrl+C to stop
+
+2025/06/21 17:09:31 Message router started
+2025/06/21 17:09:31 Starting Unified Relay HTTP server on 0.0.0.0:8081
+2025/06/21 17:09:31 JSON-RPC 2.0 endpoint: http://0.0.0.0:8081/rpc
+2025/06/21 17:09:31 WebSocket P2P endpoint: ws://0.0.0.0:8081/ws/p2p
+2025/06/21 17:09:31 Server registry: http://0.0.0.0:8081/registry
+2025/06/21 17:09:31 Node ID: node1
+2025/06/21 17:09:42 GET /health 64.5µs
+2025/06/21 17:09:42 POST /rpc 136.25µs
+2025/06/21 17:09:42 POST /rpc 67.167µs
+2025/06/21 17:09:42 POST /rpc 61.208µs
+2025/06/21 17:09:42 POST /rpc 64.333µs
+2025/06/21 17:09:47 POST /rpc 73.875µs
+2025/06/21 17:09:47 POST /rpc 56.083µs
+2025/06/21 17:09:48 POST /rpc 43.625µs
+2025/06/21 17:09:48 POST /rpc 45.083µs
+2025/06/21 17:09:48 GET /registry 54.583µs
+2025/06/21 17:09:48 POST /rpc 55.916µs
+2025/06/21 17:09:48 POST /rpc 53.75µs
+2025/06/21 17:09:48 POST /rpc 63.209µs
+2025/06/21 17:09:48 POST /rpc 44.875µs
+2025/06/21 17:09:48 POST /rpc 45.208µs
+2025/06/21 17:09:48 POST /rpc 43.791µs
+2025/06/21 17:09:48 POST /rpc 50.25µs
