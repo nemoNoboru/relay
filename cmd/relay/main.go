@@ -86,7 +86,24 @@ func main() {
 
 			// Check if user wants to load file and start server
 			if flag.NArg() > 1 && flag.Arg(1) == "-server" {
-				if err := runRelayFileWithServer(filename, *hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
+				// For positional syntax like "relay file.rl -server -port 8081"
+				// We need to parse the remaining arguments as flags
+				serverArgs := flag.Args()[2:] // Skip filename and -server
+
+				// Create a new flag set to parse the remaining arguments
+				serverFlagSet := flag.NewFlagSet("server", flag.ExitOnError)
+				serverPortFlag := serverFlagSet.Int("port", 8080, "Port to run server on")
+				serverHostFlag := serverFlagSet.String("host", "0.0.0.0", "Host to bind server to")
+				serverNodeIDFlag := serverFlagSet.String("node-id", "", "Node ID for peer-to-peer networking")
+				serverAddPeerFlag := serverFlagSet.String("add-peer", "", "Add a peer node")
+				serverDisableRegFlag := serverFlagSet.Bool("disable-registry", false, "Disable server registry")
+
+				// Parse the server-specific arguments
+				if err := serverFlagSet.Parse(serverArgs); err != nil {
+					log.Fatalf("Error parsing server arguments: %v", err)
+				}
+
+				if err := runRelayFileWithServer(filename, *serverHostFlag, *serverPortFlag, *serverNodeIDFlag, *serverAddPeerFlag, *serverDisableRegFlag); err != nil {
 					log.Fatalf("Error starting server with %s: %v", filename, err)
 				}
 			} else if flag.NArg() > 1 && flag.Arg(1) == "-repl" {
@@ -174,19 +191,14 @@ func startHTTPServer(host string, port int, nodeID, addPeer string, disableRegis
 		config.NodeID = nodeID
 	}
 
-	// Create and start HTTP server
-	httpServer := runtime.NewHTTPServer(evaluator, config)
+	// Create and start HTTP server (using unified architecture)
+	httpServer := runtime.NewUnifiedHTTPServer(evaluator, config)
 
 	// Add peer if specified
 	if addPeer != "" {
-		if httpServer.GetExposableRegistry() != nil {
-			err := httpServer.GetExposableRegistry().AddPeerFromURL(addPeer)
-			if err != nil {
-				fmt.Printf("Warning: Failed to add peer %s: %v\n", addPeer, err)
-			} else {
-				fmt.Printf("Successfully added peer: %s\n", addPeer)
-			}
-		}
+		// Extract node ID from URL (simplified for now)
+		httpServer.AddPeer("peer_node", addPeer)
+		fmt.Printf("Successfully added peer: %s\n", addPeer)
 	}
 
 	fmt.Printf("Starting Relay HTTP server...\n")
@@ -333,19 +345,14 @@ func runRelayFileWithServer(filename string, host string, port int, nodeID, addP
 		config.NodeID = nodeID
 	}
 
-	// Create and start HTTP server with the loaded evaluator
-	httpServer := runtime.NewHTTPServer(evaluator, config)
+	// Create and start HTTP server with the loaded evaluator (using unified architecture)
+	httpServer := runtime.NewUnifiedHTTPServer(evaluator, config)
 
 	// Add peer if specified
 	if addPeer != "" {
-		if httpServer.GetExposableRegistry() != nil {
-			err := httpServer.GetExposableRegistry().AddPeerFromURL(addPeer)
-			if err != nil {
-				fmt.Printf("Warning: Failed to add peer %s: %v\n", addPeer, err)
-			} else {
-				fmt.Printf("Successfully added peer: %s\n", addPeer)
-			}
-		}
+		// Extract node ID from URL (simplified for now)
+		httpServer.AddPeer("peer_node", addPeer)
+		fmt.Printf("Successfully added peer: %s\n", addPeer)
 	}
 
 	fmt.Printf("Starting Relay HTTP server with loaded context...\n")

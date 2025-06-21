@@ -1,0 +1,63 @@
+// Node C servers
+server counter_c {
+    state {
+        count: number = 0,
+        node_name: string = "node_a"
+    }
+    
+    receive fn increment() -> number {
+        set new_count = state.get("count") + 1
+        state.set("count", new_count)
+        new_count
+    }
+    
+    receive fn get_count() -> number {
+        state.get("count")
+    }
+    
+    receive fn get_info() -> string {
+        "Counter A on " + state.get("node_name") + " with count: " + string(state.get("count"))
+    }
+    
+    receive fn reset() -> number {
+        state.set("count", 0)
+        0
+    }
+}
+
+server echo_a {
+    state {
+        message_count: number = 0
+    }
+    
+    receive fn echo(msg: string) -> string {
+        set count = state.get("message_count") + 1
+        state.set("message_count", count)
+        "Node C Echo [" + string(count) + "]: " + msg
+    }
+    
+    receive fn get_message_count() -> number {
+        state.get("message_count")
+    }
+}
+
+server calculator_a {
+    receive fn add(a: number, b: number) -> number {
+        a + b
+    }
+    
+    receive fn multiply(a: number, b: number) -> number {
+        a * b
+    }
+    
+    receive fn power(base: number, exp: number) -> number {
+        // Simple power function for small integers
+        set result = 1
+        set i = 0
+        while i < exp {
+            set result = result * base
+            set i = i + 1
+        }
+        result
+    }
+} 

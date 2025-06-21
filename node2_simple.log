@@ -1,0 +1,27 @@
+Executing examples/e2e_p2p_test_simple.rl...
+"Simple E2E P2P Test Servers Initialized Successfully!"
+"Available servers: distributed_counter, health_monitor"
+2025/06/21 14:57:57 Added P2P node: peer_node at http://localhost:8081
+Successfully added peer: http://localhost:8081
+Starting Relay HTTP server with loaded context...
+JSON-RPC 2.0 endpoint: http://0.0.0.0:8082/rpc
+Health check: http://0.0.0.0:8082/health
+Server info: http://0.0.0.0:8082/info
+Server registry: http://0.0.0.0:8082/registry
+WebSocket P2P endpoint: ws://0.0.0.0:8082/ws/p2p
+Press Ctrl+C to stop
+
+2025/06/21 14:57:57 Message router started
+2025/06/21 14:57:57 Starting Unified Relay HTTP server on 0.0.0.0:8082
+2025/06/21 14:57:57 JSON-RPC 2.0 endpoint: http://0.0.0.0:8082/rpc
+2025/06/21 14:57:57 WebSocket P2P endpoint: ws://0.0.0.0:8082/ws/p2p
+2025/06/21 14:57:57 Server registry: http://0.0.0.0:8082/registry
+2025/06/21 14:57:57 Node ID: node2_simple
+2025/06/21 14:58:05 GET /health 41.167µs
+2025/06/21 14:58:05 POST /rpc 135.166µs
+2025/06/21 14:58:05 POST /rpc 69.583µs
+2025/06/21 14:58:05 POST /rpc 46.708µs
+2025/06/21 14:58:05 POST /rpc 83.167µs
+2025/06/21 14:58:10 POST /rpc 49.334µs
+2025/06/21 14:58:10 GET /registry 56.584µs
+2025/06/21 14:58:10 POST /rpc 53.833µs

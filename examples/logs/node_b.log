@@ -1,0 +1,22 @@
+Executing e2e_multi_node_test_b.rl...
+Result: <server data_store_b: running>
+Starting Relay HTTP server with loaded context...
+JSON-RPC 2.0 endpoint: http://0.0.0.0:9092/rpc
+Health check: http://0.0.0.0:9092/health
+Server info: http://0.0.0.0:9092/info
+Server registry: http://0.0.0.0:9092/registry
+WebSocket P2P endpoint: ws://0.0.0.0:9092/ws/p2p
+Press Ctrl+C to stop
+
+2025/06/20 22:59:25 Message router started
+2025/06/20 22:59:25 Starting Unified Relay HTTP server on 0.0.0.0:9092
+2025/06/20 22:59:25 JSON-RPC 2.0 endpoint: http://0.0.0.0:9092/rpc
+2025/06/20 22:59:25 WebSocket P2P endpoint: ws://0.0.0.0:9092/ws/p2p
+2025/06/20 22:59:25 Server registry: http://0.0.0.0:9092/registry
+2025/06/20 22:59:25 Node ID: node_b_mh_1750453164
+2025/06/20 22:59:25 P2P: Connection established with peer: node_a_mh_1750453164
+2025/06/20 22:59:25 GET /ws/p2p 80.417µs
+2025/06/20 22:59:25 P2P: Registered new peer: node_a_mh_1750453164
+2025/06/20 22:59:27 P2P: Connection established with peer: node_c_mh_1750453164
+2025/06/20 22:59:27 GET /ws/p2p 92µs
+2025/06/20 22:59:27 P2P: Registered new peer: node_c_mh_1750453164

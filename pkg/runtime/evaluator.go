@@ -93,5 +93,14 @@ func (e *Evaluator) EvaluateWithEnv(expr *parser.Expression, env *Environment) (
 	return e.EvaluateExpression(expr, env)
 }
 
+// GetAllServers returns all registered servers (thread-safe copy)
+func (e *Evaluator) GetAllServers() map[string]*Value {
+	result := make(map[string]*Value)
+	for name, server := range e.servers {
+		result[name] = server
+	}
+	return result
+}
+
 // Note: The core evaluation logic has been consolidated in core.go for better organization.
 // This file now focuses on evaluator initialization and high-level coordination.

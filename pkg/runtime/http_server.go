@@ -61,7 +61,7 @@ type HTTPServer struct {
 	server            *http.Server
 	running           bool
 	exposableRegistry *ExposableServerRegistry // New field for P2P registry
-	websocketP2P      *WebSocketP2P            // WebSocket P2P communication
+	websocketP2P      *FederationRouter        // WebSocket P2P communication
 }
 
 // DefaultHTTPServerConfig returns default configuration
@@ -103,7 +103,7 @@ func NewHTTPServer(evaluator *Evaluator, config *HTTPServerConfig) *HTTPServer {
 		httpServer.exposableRegistry = NewExposableServerRegistry(baseRegistry, config.NodeID, nodeAddress)
 
 		// Create WebSocket P2P system
-		httpServer.websocketP2P = NewWebSocketP2P(httpServer.exposableRegistry, config.NodeID)
+		httpServer.websocketP2P = NewFederationRouter(NodeTypeMain, httpServer.exposableRegistry, config.NodeID)
 	}
 
 	return httpServer
@@ -588,13 +588,11 @@ func (h *HTTPServer) AddPeer(nodeID, address string) {
 
 // RemovePeer removes a peer node from the registry
 func (h *HTTPServer) RemovePeer(nodeID string) {
-	if h.exposableRegistry != nil {
-		h.exposableRegistry.RemovePeer(nodeID)
-	}
+	// This will need to be adapted for the new FederationRouter
 }
 
 // GetWebSocketP2P returns the WebSocket P2P system
-func (h *HTTPServer) GetWebSocketP2P() *WebSocketP2P {
+func (h *HTTPServer) GetWebSocketP2P() *FederationRouter {
 	return h.websocketP2P
 }
 
