@@ -43,8 +43,8 @@ func TestSupervisorCreatesAndManagesActors(t *testing.T) {
 	createMsg := ActorMsg{
 		To:        "supervisor",
 		From:      "test",
-		Type:      "create_child",
-		Data:      "RelayServerActor",
+		Type:      "create_child:RelayServerActor",
+		Data:      "",
 		ReplyChan: replyChan,
 	}
 	router.Send(createMsg)

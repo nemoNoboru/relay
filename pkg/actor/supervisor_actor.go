@@ -2,22 +2,26 @@ package actor
 
 import (
 	"log"
+	"relay/pkg/runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
-// SupervisorActor manages the lifecycle of all other actors, including RelayServerActors.
+// SupervisorActor is responsible for managing the lifecycle of other actors.
 type SupervisorActor struct {
-	Actor  *Actor
-	actors map[string]*Actor
-	mu     sync.RWMutex
+	*Actor
+	children map[string]*Actor
+	mu       sync.RWMutex
+	router   *Router
 }
 
 // NewSupervisorActor creates a new SupervisorActor.
 func NewSupervisorActor(name string, router *Router) *SupervisorActor {
 	s := &SupervisorActor{
-		actors: make(map[string]*Actor),
+		children: make(map[string]*Actor),
+		router:   router,
 	}
 	s.Actor = NewActor(name, router, s.Receive)
 	return s
@@ -36,7 +40,7 @@ func (s *SupervisorActor) Stop() {
 	defer s.mu.Unlock()
 
 	var wg sync.WaitGroup
-	for _, a := range s.actors {
+	for _, a := range s.children {
 		wg.Add(1)
 		go func(act *Actor) {
 			defer wg.Done()
@@ -44,90 +48,75 @@ func (s *SupervisorActor) Stop() {
 		}(a)
 	}
 	wg.Wait()
-	log.Printf("Supervisor %s and all its actors stopped", s.Actor.Name)
+	log.Printf("Supervisor %s and all its actors stopped", s.Name)
 }
 
-// Receive handles incoming messages for the supervisor.
+// Receive handles messages for the SupervisorActor.
 func (s *SupervisorActor) Receive(msg ActorMsg) {
-	// For now, we'll just log the received message.
-	// Later, this will involve creating/routing to other actors.
-	log.Printf("Supervisor %s received message: %v", s.Actor.Name, msg)
+	switch {
+	case strings.HasPrefix(msg.Type, "create_child:"):
+		childTypeName := strings.TrimPrefix(msg.Type, "create_child:")
 
-	switch msg.Type {
-	case "create_child":
-		childTypeName, ok := msg.Data.(string)
-		if !ok {
-			log.Printf("Supervisor %s: invalid data for 'create_child', expected string", s.Actor.Name)
+		// Generate a unique name for the child actor
+		baseName := s.Name + "-" + childTypeName
+		childName := baseName + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+
+		var newChild *Actor
+		if childTypeName == "RelayServerActor" {
+			// The data can be a gateway name (string) or ServerInitData.
+			var gatewayName string
+			var initData *runtime.ServerInitData
+
+			if data, ok := msg.Data.(runtime.ServerInitData); ok {
+				initData = &data
+				childName = data.Name // Use the name from the server definition
+			} else if name, ok := msg.Data.(string); ok {
+				gatewayName = name
+			}
+
+			newChildActor := NewRelayServerActor(childName, gatewayName, s.Name, s.router, initData)
+			newChildActor.Start()
+			newChild = newChildActor.Actor
+		} else {
+			log.Printf("Supervisor %s cannot create child of unknown type: %s", s.Name, msg.Type)
 			return
 		}
 
-		// Generate a unique name for the child
-		childName := s.Actor.Name + "-" + childTypeName + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-
-		var newChildActor *RelayServerActor
-		switch childTypeName {
-		case "RelayServerActor":
-			newChildActor = NewRelayServerActor(childName, s.Actor.router)
-		default:
-			log.Printf("Supervisor %s: unknown child type '%s'", s.Actor.Name, childTypeName)
-			return
-		}
-
-		newChildActor.Start()
 		s.mu.Lock()
-		s.actors[childName] = newChildActor.actor
+		s.children[childName] = newChild
 		s.mu.Unlock()
-		log.Printf("Supervisor %s created child %s", s.Actor.Name, childName)
+		log.Printf("Supervisor %s created child %s", s.Name, childName)
 
-		// Reply to the requester with the name of the created child if a reply
-		// channel was provided.
-		if msg.ReplyChan != nil {
+		if newChild != nil && msg.ReplyChan != nil {
 			reply := ActorMsg{
 				To:   msg.From,
-				From: s.Actor.Name,
+				From: s.Name,
 				Type: "child_created",
-				Data: childName,
+				Data: newChild.Name,
 			}
-			select {
-			case msg.ReplyChan <- reply:
-			case <-time.After(2 * time.Second):
-				log.Printf("Supervisor %s: timeout sending reply for 'create_child' to %s", s.Actor.Name, msg.From)
-			}
+			msg.ReplyChan <- reply
 		}
 
-	case "stop_child":
+	case msg.Type == "stop_child":
 		childName, ok := msg.Data.(string)
 		if !ok {
-			log.Printf("Supervisor %s: invalid data for stop_child, expected string", s.Actor.Name)
+			log.Printf("Supervisor %s: invalid data for 'stop_child', expected string", s.Name)
 			return
 		}
-
 		s.mu.Lock()
-		childActor, exists := s.actors[childName]
+		child, exists := s.children[childName]
 		if exists {
-			delete(s.actors, childName)
+			child.Stop()
+			delete(s.children, childName)
+			log.Printf("Supervisor %s stopped child %s", s.Name, childName)
+		} else {
+			log.Printf("Supervisor %s: child %s not found to stop", s.Name, childName)
 		}
 		s.mu.Unlock()
 
-		if exists {
-			childActor.Stop()
-			log.Printf("Supervisor %s stopped child %s", s.Actor.Name, childName)
-		} else {
-			log.Printf("Supervisor %s: child %s not found", s.Actor.Name, childName)
-		}
-
-	case "stop":
+	case msg.Type == "stop":
 		s.Stop()
 	default:
-		s.mu.RLock()
-		targetActor, ok := s.actors[msg.To]
-		s.mu.RUnlock()
-
-		if ok {
-			targetActor.Send(msg)
-		} else {
-			// In the future, we might create the actor here if it doesn't exist.
-			log.Printf("Supervisor %s: actor %s not found", s.Actor.Name, msg.To)
-		}
+		log.Printf("Supervisor %s received unhandled message type: %s", s.Name, msg.Type)
 	}
 }

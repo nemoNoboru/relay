@@ -105,6 +105,13 @@ func (e *Evaluator) defineLenFunction() {
 	e.globalEnv.Define("len", lenFunc)
 }
 
+// SetGlobal defines a new variable in the evaluator's global environment.
+// This is used to inject values or functions from outside the runtime,
+// for example, an actor-aware 'send' function.
+func (e *Evaluator) SetGlobal(name string, value *Value) {
+	e.globalEnv.Define(name, value)
+}
+
 // defineStringFunction adds the string function
 func (e *Evaluator) defineStringFunction() {
 	stringFunc := &Value{

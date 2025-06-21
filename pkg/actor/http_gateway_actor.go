@@ -26,15 +26,15 @@ type JSONRPCResponse struct {
 
 // HTTPGatewayActor is an actor that acts as an HTTP gateway to the actor system.
 type HTTPGatewayActor struct {
-	actor          *Actor
-	server         *http.Server
-	supervisorName string
+	actor           *Actor
+	server          *http.Server
+	workerActorName string
 }
 
 // NewHTTPGatewayActor creates a new HTTPGatewayActor.
-func NewHTTPGatewayActor(name, addr, supervisorName string, router *Router) *HTTPGatewayActor {
+func NewHTTPGatewayActor(name, addr, workerActorName string, router *Router) *HTTPGatewayActor {
 	g := &HTTPGatewayActor{
-		supervisorName: supervisorName,
+		workerActorName: workerActorName,
 	}
 	g.actor = NewActor(name, router, g.Receive)
 	g.server = &http.Server{Addr: addr, Handler: g}
@@ -78,45 +78,10 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	code := string(body)
 
-	// 1. Ask supervisor to create a child, waiting for a direct reply.
-	replyChan := make(chan ActorMsg, 1)
-	createMsg := ActorMsg{
-		To:        g.supervisorName,
-		From:      g.actor.Name,
-		Type:      "create_child",
-		Data:      "RelayServerActor",
-		ReplyChan: replyChan,
-	}
-	g.actor.router.Send(createMsg)
-
-	var childName string
-	select {
-	case reply := <-replyChan:
-		var ok bool
-		childName, ok = reply.Data.(string)
-		if !ok || childName == "" {
-			http.Error(w, "Failed to create child actor", http.StatusInternalServerError)
-			return
-		}
-	case <-time.After(2 * time.Second):
-		http.Error(w, "Timeout waiting for child actor creation", http.StatusInternalServerError)
-		return
-	}
-	defer func() {
-		// 4. Tell supervisor to stop the child once we're done.
-		stopMsg := ActorMsg{
-			To:   g.supervisorName,
-			From: g.actor.Name,
-			Type: "stop_child",
-			Data: childName,
-		}
-		g.actor.router.Send(stopMsg)
-	}()
-
-	// 2. Send code to the new child for evaluation, waiting for a direct reply.
+	// 1. Send code to the dedicated worker for evaluation, waiting for a direct reply.
 	evalReplyChan := make(chan ActorMsg, 1)
 	evalMsg := ActorMsg{
-		To:        childName,
+		To:        g.workerActorName,
 		From:      g.actor.Name,
 		Type:      "eval",
 		Data:      code,
@@ -124,7 +89,7 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	g.actor.router.Send(evalMsg)
 
-	// 3. Wait for the result and write it to the response.
+	// 2. Wait for the result and write it to the response.
 	select {
 	case resultMsg := <-evalReplyChan:
 		result, ok := resultMsg.Data.(*runtime.Value)

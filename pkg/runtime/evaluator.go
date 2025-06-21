@@ -31,17 +31,19 @@ type Evaluator struct {
 	structDefs       map[string]*StructDefinition // Registered struct types
 	servers          map[string]*Value            // Running server instances
 	methodDispatcher MethodDispatcher             // Method dispatch system
+	serverCreator    func(data ServerInitData)    // Callback to ask the actor system to create a server
 }
 
 // NewEvaluator creates a new evaluator with built-in functions and empty state.
 // Initializes the global environment and registers all built-in functions.
-func NewEvaluator() *Evaluator {
+func NewEvaluator(serverCreator func(data ServerInitData)) *Evaluator {
 	global := NewEnvironment(nil)
 
 	eval := &Evaluator{
-		globalEnv:  global,
-		structDefs: make(map[string]*StructDefinition),
-		servers:    make(map[string]*Value),
+		globalEnv:     global,
+		structDefs:    make(map[string]*StructDefinition),
+		servers:       make(map[string]*Value),
+		serverCreator: serverCreator,
 	}
 
 	// Initialize method dispatcher with all type handlers
@@ -126,6 +128,13 @@ func (e *Evaluator) RegisterServer(name string, server *Value) {
 // This file now focuses on evaluator initialization and high-level coordination.
 
 func (e *Evaluator) evaluateServerExpr(expr *parser.ServerExpr, env *Environment) (*Value, error) {
+	// If there's no server creator callback, this evaluator cannot create servers.
+	// This maintains backward compatibility for tests that don't need actor creation.
+	if e.serverCreator == nil {
+		// For now, we can log a warning. In the future, this might be an error.
+		return NewNil(), nil
+	}
+
 	// Extract state and receive functions from the server body
 	state := make(map[string]*Value)
 	receives := make(map[string]*Function)
@@ -137,8 +146,8 @@ func (e *Evaluator) evaluateServerExpr(expr *parser.ServerExpr, env *Environment
 				for _, field := range element.State.Fields {
 					var val *Value
 					if field.DefaultValue != nil {
-						// For now, we'll just handle simple literals.
 						// A full implementation would need to evaluate expressions.
+						// For now, we'll just handle simple literals.
 						if field.DefaultValue.Number != nil {
 							val = NewNumber(*field.DefaultValue.Number)
 						} else if field.DefaultValue.String != nil {
@@ -168,12 +177,14 @@ func (e *Evaluator) evaluateServerExpr(expr *parser.ServerExpr, env *Environment
 		}
 	}
 
-	// Create a new server instance
-	server := NewServer(expr.Name, state, receives, serverEnv)
+	// Instead of creating a server locally, we ask the actor system to do it.
+	initData := ServerInitData{
+		Name:     expr.Name,
+		State:    state,
+		Receives: receives,
+	}
+	e.serverCreator(initData)
 
-	// Register the server with the evaluator
-	e.servers[expr.Name] = server
-
-	// Server definitions don't return a value, they register a server
+	// Server definitions don't return a value, they register a server with the supervisor.
 	return NewNil(), nil
 }

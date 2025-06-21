@@ -106,8 +106,16 @@ func (r *Router) Send(msg ActorMsg) {
 	if actor, ok := r.actors[msg.To]; ok {
 		actor.Send(msg)
 	} else {
-		log.Printf("Router: actor '%s' not found for message: %v", msg.To, msg)
+		log.Printf("Router: actor '%s' not found for message: %+v", msg.To, msg)
 	}
+}
+
+// HasActor checks if an actor with the given name is registered with the router.
+func (r *Router) HasActor(name string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.actors[name]
+	return ok
 }
 
 // StopAll stops all actors registered with the router.

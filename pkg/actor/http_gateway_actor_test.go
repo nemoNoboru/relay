@@ -49,7 +49,7 @@ func TestHTTPGatewayActor(t *testing.T) {
 	}
 
 	// We can check for a part of the error message
-	expectedBodyPart := "Timeout waiting for child actor creation"
+	expectedBodyPart := "Timeout waiting for eval result"
 	if !strings.Contains(rr.Body.String(), expectedBodyPart) {
 		t.Errorf("handler returned unexpected body: got %v wanted to contain %v",
 			rr.Body.String(), expectedBodyPart)

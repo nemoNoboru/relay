@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
 	"time"
 
 	"relay/pkg/actor"
@@ -27,69 +28,105 @@ import (
 )
 
 var (
-	version = "0.3.0-dev"
-	commit  = "none"
-	date    = "unknown"
+	version    = "0.3.0-dev"
+	commit     = "none"
+	date       = "unknown"
+	httpAddr   = flag.String("http-addr", "", "HTTP address for the HTTP gateway")
+	cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 )
 
 func main() {
-	var (
-		versionFlag = flag.Bool("version", false, "Show version")
-		helpFlag    = flag.Bool("help", false, "Show help")
-		runFlag     = flag.String("run", "", "Run a .relay/.rl file")
-		buildFlag   = flag.String("build", "", "Build a .relay/.rl file to binary")
-		replFlag    = flag.Bool("repl", false, "Start interactive REPL")
-		serverFlag  = flag.Bool("server", false, "Start HTTP server with JSON-RPC 2.0 endpoints")
-		portFlag    = flag.Int("port", 8080, "Port to run server on")
-		hostFlag    = flag.String("host", "0.0.0.0", "Host to bind server to")
-		// New P2P flags
-		nodeIDFlag     = flag.String("node-id", "", "Node ID for peer-to-peer networking (auto-generated if not provided)")
-		addPeerFlag    = flag.String("add-peer", "", "Add a peer node (format: http://host:port)")
-		disableRegFlag = flag.Bool("disable-registry", false, "Disable server registry for peer-to-peer functionality")
-	)
 	flag.Parse()
 
-	if *versionFlag {
-		fmt.Printf("Relay v%s - Cloudpunks Edition\n", version)
-		return
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatalf("Could not create CPU profile: %v", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("Could not start CPU profile: %v", err)
+		}
+		defer pprof.StopCPUProfile()
 	}
 
-	if *helpFlag || (flag.NArg() == 0 && *runFlag == "" && *buildFlag == "" && !*replFlag && !*serverFlag) {
-		showHelp()
-		return
+	router := actor.NewRouter()
+	defer router.StopAll()
+
+	log.Println("Starting root supervisor...")
+	supervisor := actor.NewSupervisorActor("root-supervisor", router)
+	supervisor.Start()
+
+	// Mode 1: Run as HTTP Gateway
+	if *httpAddr != "" {
+		runGatewayMode(router, supervisor)
+		// Keep the process alive
+		select {}
 	}
 
-	// Determine the main action based on flags
-	action := determineAction(runFlag, buildFlag, replFlag, serverFlag)
+	// Mode 2: Run script or REPL
+	runCliMode(router, supervisor)
+}
 
-	// Execute the action
-	switch action {
-	case "run_with_server":
-		if err := runRelayFileWithServer(*runFlag, *hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
-			log.Fatalf("Error starting server with %s: %v", *runFlag, err)
+func runGatewayMode(router *actor.Router, supervisor *actor.SupervisorActor) {
+	log.Println("Creating persistent Relay Server Actor for HTTP Gateway...")
+	workerName := createWorker(router, supervisor, "http-worker")
+	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
+
+	log.Println("Starting HTTP Gateway...")
+	gateway := actor.NewHTTPGatewayActor("http-gateway", *httpAddr, workerName, router)
+	gateway.Start()
+}
+
+func runCliMode(router *actor.Router, supervisor *actor.SupervisorActor) {
+	workerName := createWorker(router, supervisor, "cli-worker")
+	log.Printf("CLI worker actor '%s' created.", workerName)
+
+	args := flag.Args()
+	if len(args) > 0 {
+		// Execute script
+		filename := args[0]
+		content, err := os.ReadFile(filename)
+		if err != nil {
+			log.Fatalf("Failed to read file %s: %v", filename, err)
 		}
-	case "server":
-		if err := startHTTPServer(*hostFlag, *portFlag, *nodeIDFlag, *addPeerFlag, *disableRegFlag); err != nil {
-			log.Fatalf("Error starting HTTP server: %v", err)
-		}
-	case "repl":
-		if err := startREPL(""); err != nil {
-			log.Fatalf("Error starting REPL: %v", err)
-		}
-	case "run":
-		if err := runRelayFile(*runFlag, *portFlag, false); err != nil {
-			log.Fatalf("Error running %s: %v", *runFlag, err)
-		}
-	case "build":
-		if err := buildRelayFile(*buildFlag); err != nil {
-			log.Fatalf("Error building %s: %v", *buildFlag, err)
-		}
-	default:
-		// Default to REPL if no specific action is determined
-		if err := startREPL(""); err != nil {
-			log.Fatalf("Error starting REPL: %v", err)
-		}
+		evalMsg := actor.ActorMsg{To: workerName, From: "main", Type: "eval", Data: string(content)}
+		router.Send(evalMsg)
+		// Give it a moment to process before exiting
+		time.Sleep(2 * time.Second)
+		log.Printf("Script %s sent to worker.", filename)
+	} else {
+		// Start REPL
+		fmt.Println("Relay REPL")
+		fmt.Println("Type ':help' for a list of commands.")
+		r := repl.New(os.Stdin, os.Stdout, router, workerName)
+		r.Start()
 	}
+}
+
+func createWorker(router *actor.Router, supervisor *actor.SupervisorActor, nameHint string) string {
+	replyChan := make(chan actor.ActorMsg, 1)
+	createMsg := actor.ActorMsg{
+		To:        supervisor.Actor.Name,
+		From:      "main",
+		Type:      "create_child",
+		Data:      "RelayServerActor",
+		ReplyChan: replyChan,
+	}
+	router.Send(createMsg)
+
+	var workerName string
+	select {
+	case reply := <-replyChan:
+		var ok bool
+		workerName, ok = reply.Data.(string)
+		if !ok || workerName == "" {
+			log.Fatalf("Failed to create a persistent worker actor (hint: %s)", nameHint)
+		}
+	case <-time.After(2 * time.Second):
+		log.Fatalf("Timeout waiting for persistent worker actor creation (hint: %s)", nameHint)
+	}
+	return workerName
 }
 
 func determineAction(runFlag, buildFlag *string, replFlag, serverFlag *bool) string {
@@ -147,40 +184,58 @@ func showHelp() {
 func startREPL(preloadFile string) error {
 	// Setup the main actor system components
 	router := actor.NewRouter()
+	defer router.StopAll()
 
-	supervisor := actor.NewSupervisorActor("supervisor", router)
-	router.Register(supervisor.Actor.Name, supervisor.Actor)
-	go supervisor.Start()
+	log.Println("Starting root supervisor...")
+	supervisor := actor.NewSupervisorActor("root-supervisor", router)
+	supervisor.Start()
 
-	// Create a primary RelayServerActor for the REPL session
-	// by sending a message to the supervisor and waiting for a reply.
+	// Create a single, long-running RelayServerActor for the HTTP gateway.
+	log.Println("Creating persistent Relay Server Actor for HTTP Gateway...")
 	replyChan := make(chan actor.ActorMsg, 1)
-	router.Send(actor.ActorMsg{
-		To:        "supervisor",
+	createMsg := actor.ActorMsg{
+		To:        "root-supervisor",
 		From:      "main",
 		Type:      "create_child",
 		Data:      "RelayServerActor",
 		ReplyChan: replyChan,
-	})
+	}
+	router.Send(createMsg)
 
-	// Wait for the supervisor's reply
-	var replActorName string
+	var workerName string
 	select {
 	case reply := <-replyChan:
-		if name, ok := reply.Data.(string); ok {
-			replActorName = name
-		} else {
-			return fmt.Errorf("failed to get REPL actor name from supervisor")
+		var ok bool
+		workerName, ok = reply.Data.(string)
+		if !ok || workerName == "" {
+			log.Fatalf("Failed to create a persistent worker actor")
 		}
-	case <-time.After(5 * time.Second):
-		return fmt.Errorf("timeout waiting for REPL actor to be created")
+	case <-time.After(2 * time.Second):
+		log.Fatalf("Timeout waiting for persistent worker actor creation")
+	}
+	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
+
+	log.Println("Starting HTTP Gateway...")
+	gateway := actor.NewHTTPGatewayActor("http-gateway", *httpAddr, workerName, router)
+	gateway.Start()
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatalf("Could not create CPU profile: %v", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("Could not start CPU profile: %v", err)
+		}
+		defer pprof.StopCPUProfile()
 	}
 
-	fmt.Printf("Successfully created REPL actor: %s\n", replActorName)
+	fmt.Printf("Successfully created REPL actor: %s\n", workerName)
 	fmt.Println("Type ':help' for a list of commands.")
 
 	// Start the new actor-based REPL
-	r := repl.New(os.Stdin, os.Stdout, router, replActorName)
+	r := repl.New(os.Stdin, os.Stdout, router, workerName)
 
 	// If a file was specified, load it first
 	if preloadFile != "" {
@@ -205,32 +260,40 @@ func startHTTPServer(host string, port int, nodeID, addPeer string, disableRegis
 func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 	// Setup the main actor system components
 	router := actor.NewRouter()
+	defer router.StopAll()
 
-	supervisor := actor.NewSupervisorActor("supervisor", router)
-	router.Register(supervisor.Actor.Name, supervisor.Actor)
-	go supervisor.Start()
+	log.Println("Starting root supervisor...")
+	supervisor := actor.NewSupervisorActor("root-supervisor", router)
+	supervisor.Start()
 
-	// Create a primary RelayServerActor for the script and wait for the reply.
+	// Create a single, long-running RelayServerActor for the HTTP gateway.
+	log.Println("Creating persistent Relay Server Actor for HTTP Gateway...")
 	replyChan := make(chan actor.ActorMsg, 1)
-	router.Send(actor.ActorMsg{
-		To:        "supervisor",
+	createMsg := actor.ActorMsg{
+		To:        "root-supervisor",
 		From:      "main",
 		Type:      "create_child",
 		Data:      "RelayServerActor",
 		ReplyChan: replyChan,
-	})
+	}
+	router.Send(createMsg)
 
-	var scriptActorName string
+	var workerName string
 	select {
 	case reply := <-replyChan:
-		if name, ok := reply.Data.(string); ok {
-			scriptActorName = name
-		} else {
-			return fmt.Errorf("failed to get script actor name from supervisor")
+		var ok bool
+		workerName, ok = reply.Data.(string)
+		if !ok || workerName == "" {
+			log.Fatalf("Failed to create a persistent worker actor")
 		}
-	case <-time.After(5 * time.Second):
-		return fmt.Errorf("timeout waiting for script actor to be created")
+	case <-time.After(2 * time.Second):
+		log.Fatalf("Timeout waiting for persistent worker actor creation")
 	}
+	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
+
+	log.Println("Starting HTTP Gateway...")
+	gateway := actor.NewHTTPGatewayActor("http-gateway", *httpAddr, workerName, router)
+	gateway.Start()
 
 	// Read the file
 	content, err := os.ReadFile(filename)
@@ -239,9 +302,9 @@ func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 	}
 
 	// Send the script content to the newly created actor for evaluation.
-	fmt.Printf("Executing %s via actor %s...\n", filename, scriptActorName)
+	fmt.Printf("Executing %s via actor %s...\n", filename, workerName)
 	router.Send(actor.ActorMsg{
-		To:   scriptActorName,
+		To:   workerName,
 		From: "main",
 		Type: "eval",
 		Data: string(content),
@@ -280,3 +343,6 @@ func runRelayFileWithServer(filename string, host string, port int, nodeID, addP
 	// The new implementation will use actors and a different startup mechanism.
 	return nil
 }
+
+// 	log.Fatal(err)
+// }
