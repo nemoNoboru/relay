@@ -79,13 +79,21 @@ func (s *SupervisorActor) Receive(msg ActorMsg) {
 		s.mu.Unlock()
 		log.Printf("Supervisor %s created child %s", s.Actor.Name, childName)
 
-		// Reply to the requester with the name of the created child
-		s.Actor.router.Send(ActorMsg{
-			To:   msg.From,
-			From: s.Actor.Name,
-			Type: "child_created",
-			Data: childName,
-		})
+		// Reply to the requester with the name of the created child if a reply
+		// channel was provided.
+		if msg.ReplyChan != nil {
+			reply := ActorMsg{
+				To:   msg.From,
+				From: s.Actor.Name,
+				Type: "child_created",
+				Data: childName,
+			}
+			select {
+			case msg.ReplyChan <- reply:
+			case <-time.After(2 * time.Second):
+				log.Printf("Supervisor %s: timeout sending reply for 'create_child' to %s", s.Actor.Name, msg.From)
+			}
+		}
 
 	case "stop_child":
 		childName, ok := msg.Data.(string)

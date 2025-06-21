@@ -38,22 +38,14 @@ func TestSupervisorCreatesAndManagesActors(t *testing.T) {
 	supervisor := NewSupervisorActor("supervisor", router)
 	supervisor.Start()
 
-	// Use a probe actor to receive the reply from the supervisor
+	// 1. Send a message to the supervisor to create a new actor, with a reply channel
 	replyChan := make(chan ActorMsg, 1)
-	probe := NewActor("test-probe", router, func(msg ActorMsg) {
-		if msg.Type == "child_created" {
-			replyChan <- msg
-		}
-	})
-	probe.Start()
-	defer probe.Stop()
-
-	// 1. Send a message to the supervisor to create a new actor
 	createMsg := ActorMsg{
-		To:   "supervisor",
-		From: "test-probe",
-		Type: "create_child",
-		Data: "RelayServerActor",
+		To:        "supervisor",
+		From:      "test",
+		Type:      "create_child",
+		Data:      "RelayServerActor",
+		ReplyChan: replyChan,
 	}
 	router.Send(createMsg)
 
@@ -85,7 +77,7 @@ func TestSupervisorCreatesAndManagesActors(t *testing.T) {
 	// 3. Tell the supervisor to stop the child
 	stopMsg := ActorMsg{
 		To:   "supervisor",
-		From: "test-probe",
+		From: "test",
 		Type: "stop_child",
 		Data: childName,
 	}

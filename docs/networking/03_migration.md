@@ -1,507 +1,152 @@
-# Relay Federation Architecture - Hub-and-Spoke Implementation
+# Relay Federation Architecture - Hub-and-Spoke with Actors
 
 ## Overview
 
-The Relay federation system has evolved from a peer-to-peer mesh architecture to a practical **hub-and-spoke model** optimized for real-world deployment scenarios. This architecture enables federation between Main Relays (cloud-hosted) and Home Relays (behind NAT), providing a robust foundation for distributed Relay applications.
+The Relay federation system uses a **hub-and-spoke model** optimized for real-world deployment. This architecture, built upon the Actor Model, enables federation between **Main Relays** (cloud-hosted hubs) and **Home Relays** (edge nodes, often behind NAT), providing a robust foundation for distributed Relay applications.
 
-## Architecture Transformation
+## Architecture
 
 ### From P2P Mesh to Hub-and-Spoke
 
-**Previous P2P Architecture (Deprecated):**
-```
-Node A ---- Node B
-  |    \   /    |
-  |     \ /     |
-  |      X      |
-  |     / \     |
-  |    /   \    |
-Node D ---- Node C
-```
+The previous peer-to-peer mesh architecture has been deprecated in favor of a more practical hub-and-spoke model.
 
-**New Hub-and-Spoke Architecture:**
-```
-┌─────────────────┐    ┌─────────────────┐
-│   Main Relay A  │◄──►│   Main Relay B  │
-│  (Public Cloud) │    │  (Public Cloud) │
-└─────────────────┘    └─────────────────┘
-         ▲                       ▲
-         │                       │
-    ┌────┴─────┐             ┌───┴────┐
-    │          │             │        │
-    ▼          ▼             ▼        ▼
-┌────────┐ ┌────────┐   ┌────────┐ ┌────────┐
-│Home    │ │Home    │   │Home    │ │Home    │
-│Relay 1 │ │Relay 2 │   │Relay 3 │ │Relay 4 │
-│(NAT)   │ │(NAT)   │   │(NAT)   │ │(NAT)   │
-└────────┘ └────────┘   └────────┘ └────────┘
+*   **Main Relays (Hubs)**: Publicly accessible nodes that act as routers and registries for the network. They are aware of other Main Relays.
+*   **Home Relays (Spokes)**: Edge nodes that connect to a Main Relay. They do not need a public IP address and can operate from behind a firewall, as they only make outbound connections.
+
+```mermaid
+graph TD
+    subgraph "Public Cloud"
+        MR_A[Main Relay A] <--> MR_B[Main Relay B]
+    end
+
+    subgraph "Home/Edge Networks (Behind NAT)"
+        HR_1[Home Relay 1]
+        HR_2[Home Relay 2]
+        HR_3[Home Relay 3]
+        HR_4[Home Relay 4]
+    end
+
+    HR_1 --> MR_A
+    HR_2 --> MR_A
+    HR_3 --> MR_B
+    HR_4 --> MR_B
 ```
 
-### Key Architectural Changes
+### Actor-Based Implementation
 
-1. **Node Types**: Clear distinction between Main Relays and Home Relays
-2. **Connection Patterns**: Home Relays only make outbound connections
-3. **NAT Traversal**: Built-in support for NAT/firewall environments
-4. **Service Discovery**: Hierarchical registry system
-5. **Message Routing**: Simplified 2-3 hop maximum routing
+The federation system is implemented using a set of specialized actors that manage connections and message routing between nodes.
 
-## Core Components (Adapted)
+*   **`FederationGatewayActor`**: A crucial actor that runs on each node.
+    *   On a **Home Relay**, it establishes and maintains a persistent WebSocket connection to its designated Main Relay.
+    *   On a **Main Relay**, it listens for incoming WebSocket connections from Home Relays and other Main Relays.
+    *   It is responsible for serializing actor messages and sending them over the WebSocket, as well as deserializing incoming messages and forwarding them to the local `Router`.
 
-### 1. Federation Message Router (`FederationRouter`)
+*   **`Router` (Updated Role)**: The router's role is expanded for federation.
+    *   When an actor sends a message (e.g., `router.Send(msg)`), the router first checks if the recipient actor exists locally.
+    *   If the recipient is **not local**, the router forwards the message to the `FederationGatewayActor`. The name of the target actor is expected to be a fully qualified address (e.g., `alice.home@relay.example.com`).
 
-**Replaces**: `WebSocketP2P` class
-**Purpose**: Manages federation communication with role-specific logic
+*   **`FederationRegistryActor`**: An actor that runs on Main Relays.
+    *   It maintains a mapping of all known actors in the federation to the node they reside on.
+    *   When a Home Relay connects, it sends a list of its public-facing actors to the registry.
+    *   This allows any node in the federation to discover and send messages to any other federated actor without knowing its physical location beforehand.
 
-```go
-type FederationRouter struct {
-    nodeType         NodeType                    // main or home
-    nodeID           string
-    mainRelayURL     string                      // for home relays
-    registry         *FederationServiceRegistry
-    
-    // Connection management
-    homeConnections  map[string]*HomeConnection  // main relays only
-    mainConnections  map[string]*MainConnection  // main relays only
-    mainRelayConn    *MainRelayConnection        // home relays only
-    
-    // Message handling
-    messageQueue     chan *FederationMessage
-    handlers         map[string]FederationMessageHandler
-    responseChannels map[string]chan *FederationResponse
-    
-    // Control
-    running          bool
-    shutdownChan     chan bool
-}
+### Federated Message Flow (Example)
+
+Here is the sequence of events when an actor on `Home Relay 1` sends a message to an actor on `Home Relay 3`:
+
+```mermaid
+sequenceDiagram
+    participant A as Actor on HR1
+    participant R1 as Router on HR1
+    participant FG1 as FedGateway on HR1
+    participant MRA as Main Relay A
+    participant MRB as Main Relay B
+    participant FG3 as FedGateway on HR3
+    participant R3 as Router on HR3
+    participant B as Actor on HR3
+
+    A->>R1: Send("actor-b@hr3", msg)
+    R1->>FG1: Forward non-local message
+    FG1->>MRA: Send msg via WebSocket
+    MRA->>MRB: Route message to peer hub
+    MRB->>FG3: Send msg via WebSocket
+    FG3->>R3: Forward to local router
+    R3->>B: Deliver message
 ```
 
-### 2. Node Type Definitions
+This flow demonstrates how the actor model seamlessly extends across the network, abstracting the underlying complexity of NAT traversal and service discovery.
 
-```go
-type NodeType string
+### Design Rationale: Specialized Actors
 
-const (
-    NodeTypeMain NodeType = "main"
-    NodeTypeHome NodeType = "home"
-)
+A natural question is whether to reuse existing actors like `WebSocketGatewayActor` and `SupervisorActor` for federation. While reusing code is often a good practice, in this case, specialized actors are necessary for a clean and maintainable architecture.
 
-type NodeAddress struct {
-    Type     NodeType `json:"type"`
-    ID       string   `json:"id"`
-    MainRelay string  `json:"main_relay,omitempty"` // for home nodes
-}
-```
+*   **`FederationGatewayActor` vs. `WebSocketGatewayActor`**:
+    *   The `WebSocketGatewayActor` is a **client-facing gateway**. It translates a specific application protocol (like JSON-RPC) from untrusted clients (e.g., a web browser) into internal actor messages.
+    *   The `FederationGatewayActor` is a **server-to-server gateway**. It manages persistent, trusted connections to other Relay nodes and is only responsible for serializing and deserializing internal `ActorMsg` structs.
+    *   Combining these different responsibilities would violate the Single Responsibility Principle and lead to a complex, insecure implementation.
 
-### 3. Federation Message Protocol (Adapted)
+*   **`FederationRegistryActor` vs. `SupervisorActor`**:
+    *   The `SupervisorActor` is a **local process manager**. Its sole job is managing the lifecycle of actors on its own node.
+    *   The `FederationRegistryActor` is a **global service discovery mechanism**. It maps public actor names to the nodes where they reside across the entire federation.
+    *   Merging global service discovery with local lifecycle management would overload the supervisor's responsibilities and create tight coupling between local and distributed concerns.
 
-**Replaces**: `P2PMessage` with federation-specific routing
+Therefore, creating new, specialized actors for these distinct roles is the most robust and maintainable approach.
 
-```go
-type FederationMessage struct {
-    // Standard fields
-    Type         string                 `json:"type"`
-    MessageID    string                 `json:"message_id"`
-    CorrelationID string                `json:"correlation_id,omitempty"`
-    Timestamp    time.Time              `json:"timestamp"`
-    
-    // Federation routing
-    SourceNode   NodeAddress            `json:"source_node"`
-    DestinationNode NodeAddress         `json:"destination_node"`
-    RoutingPath  []string               `json:"routing_path"`
-    TTL          int                    `json:"ttl"`
-    
-    // Relay-specific payload
-    ServerName   string                 `json:"server_name,omitempty"`
-    Method       string                 `json:"method,omitempty"`
-    JSONRPCRequest interface{}          `json:"jsonrpc_request,omitempty"`
-    
-    // Data and metadata
-    Data         map[string]interface{} `json:"data"`
-    Priority     int                    `json:"priority,omitempty"`
-    Timeout      int                    `json:"timeout_seconds,omitempty"`
-}
-```
+### HTTP API Endpoints
 
-**Message Types (Updated):**
-- `registration` - Home Relay service registration
-- `heartbeat` - Connection health monitoring
-- `request` - Cross-federation server calls
-- `response` - Response to federated requests
-- `service_discovery` - Service lookup and propagation
-- `error` - Error reporting and handling
+The API is simplified to focus on peer management and federation health.
 
-## Connection Management (Adapted)
+**Main Relays:**
+- `GET /federation/peers`: List of connected peer Main Relays.
+- `POST /federation/peers/add`: Add a new Main Relay peer.
+- `GET /federation/registry`: View all federated actors and their locations.
+- `GET /federation/health`: Check the health of the federation links.
 
-### 1. Home Relay Connection Management
+**Home Relays:**
+- `GET /health`: Local health check.
+- `GET /status`: Connection status to the Main Relay.
 
-**Replaces**: Peer connection with Main Relay client connection
+## CLI Integration (Updated)
 
-```go
-type MainRelayConnection struct {
-    URL              string
-    Connection       *websocket.Conn
-    NodeID           string
-    LastSeen         time.Time
-    IsHealthy        bool
-    ReconnectDelay   time.Duration
-    MaxReconnectAttempts int
-    SendQueue        chan *FederationMessage
-    ReceiveQueue     chan *FederationMessage
-    ShutdownChan     chan bool
-}
+The command-line interface is updated to reflect the new node types and connection methods.
 
-func (hrc *HomeRelayConnectionManager) Connect() error {
-    // Outbound WebSocket connection to Main Relay
-    headers := http.Header{
-        "X-Relay-Node-ID":   []string{hrc.nodeID},
-        "X-Relay-Node-Type": []string{"home"},
-    }
-    
-    conn, _, err := websocket.DefaultDialer.Dial(hrc.mainRelayURL, headers)
-    if err != nil {
-        return err
-    }
-    
-    // Send registration message
-    regMsg := &FederationMessage{
-        Type: "registration",
-        SourceNode: NodeAddress{
-            Type: NodeTypeHome,
-            ID:   hrc.nodeID,
-        },
-        Data: map[string]interface{}{
-            "services": hrc.getLocalServices(),
-        },
-        Timestamp: time.Now(),
-    }
-    
-    return conn.WriteJSON(regMsg)
-}
-```
+### Main Relay
+To start a node as a Main Relay, you run it in server mode. To connect it to other hubs, you provide a list of peer URLs.
 
-### 2. Main Relay Connection Management
-
-**Replaces**: Peer connection with client management + peer connections
-
-```go
-type MainRelayConnectionManager struct {
-    nodeID          string
-    
-    // Home Relay connections
-    homeConnections map[string]*HomeConnection
-    homeMutex       sync.RWMutex
-    
-    // Peer Main Relay connections
-    peerConnections map[string]*PeerMainConnection
-    peerMutex       sync.RWMutex
-    
-    // Service registry
-    serviceRegistry *FederationServiceRegistry
-}
-
-func (mrcm *MainRelayConnectionManager) HandleHomeConnection(conn *websocket.Conn, nodeID string) {
-    mrcm.homeMutex.Lock()
-    mrcm.homeConnections[nodeID] = &HomeConnection{
-        NodeID:     nodeID,
-        Connection: conn,
-        LastSeen:   time.Now(),
-        Services:   []string{},
-    }
-    mrcm.homeMutex.Unlock()
-    
-    // Start message handling
-    go mrcm.handleHomeMessages(nodeID, conn)
-    
-    // Update service registry
-    mrcm.serviceRegistry.RegisterHomeNode(nodeID, "local")
-}
-```
-
-## Service Discovery (Adapted)
-
-### 1. Federation Service Registry
-
-**Replaces**: `ExposableServerRegistry` with federation-aware registry
-
-```go
-type FederationServiceRegistry struct {
-    // Local services (from connected Home Relays)
-    localServices   map[string]*ServiceInfo
-    localMutex      sync.RWMutex
-    
-    // Federated services (from peer Main Relays)
-    federatedServices map[string]*ServiceInfo
-    federatedMutex    sync.RWMutex
-    
-    // Service metadata
-    serviceMetadata map[string]*ServiceMetadata
-    metadataMutex   sync.RWMutex
-}
-
-type ServiceInfo struct {
-    ServiceName  string      `json:"service_name"`
-    NodeAddress  NodeAddress `json:"node_address"`
-    Methods      []string    `json:"methods"`
-    LastSeen     time.Time   `json:"last_seen"`
-    IsHealthy    bool        `json:"is_healthy"`
-    LoadMetrics  *LoadInfo   `json:"load_metrics,omitempty"`
-}
-```
-
-### 2. Service Discovery Flow
-
-**For Main Relays:**
-1. **Local Discovery**: Check services from connected Home Relays
-2. **Federation Query**: Query peer Main Relays for services
-3. **Cache Management**: Cache federated service information with TTL
-4. **Load Balancing**: Select best instance when multiple exist
-
-**For Home Relays:**
-1. **Local Only**: Home Relays only know their own services
-2. **Main Relay Dependency**: All discovery goes through Main Relay
-3. **Service Advertisement**: Advertise services to Main Relay on connect
-4. **Health Reporting**: Report service health in heartbeat messages
-
-## Remote Server Invocation (Adapted)
-
-### 1. JSON-RPC Remote Call (Updated)
-
-**Enhanced for Federation Context:**
-```json
-{
-    "jsonrpc": "2.0",
-    "method": "remote_call",
-    "params": {
-        "node_id": "alice.home@relay.example.com",
-        "server_name": "blog_service",
-        "method": "create_post",
-        "args": {
-            "title": "Federation Test",
-            "content": "Testing cross-federation calls"
-        },
-        "timeout": 60
-    },
-    "id": 1
-}
-```
-
-### 2. Routing Logic (Simplified)
-
-**Home Relay Routing:**
-```go
-func (hr *HomeRelayRouter) RouteMessage(msg *FederationMessage) error {
-    // Check if message is for us
-    if msg.DestinationNode.ID == hr.nodeID {
-        return hr.deliverToLocalServer(msg)
-    }
-    
-    // All remote messages go to Main Relay
-    msg.RoutingPath = append(msg.RoutingPath, hr.nodeID)
-    return hr.sendToMainRelay(msg)
-}
-```
-
-**Main Relay Routing:**
-```go
-func (mr *MainRelayRouter) RouteMessage(msg *FederationMessage) error {
-    switch msg.DestinationNode.Type {
-    case NodeTypeMain:
-        return mr.routeToMainRelay(msg)
-    case NodeTypeHome:
-        return mr.routeToHomeRelay(msg)
-    default:
-        return fmt.Errorf("unknown destination type")
-    }
-}
-
-func (mr *MainRelayRouter) routeToHomeRelay(msg *FederationMessage) error {
-    targetID := msg.DestinationNode.ID
-    targetMainRelay := msg.DestinationNode.MainRelay
-    
-    // Check if the home relay is connected to us
-    if conn, exists := mr.homeConnections[targetID]; exists {
-        return conn.SendMessage(msg)
-    }
-    
-    // Route to the main relay that serves this home relay
-    if targetMainRelay != "" && targetMainRelay != mr.nodeID {
-        return mr.routeToMainRelay(msg, targetMainRelay)
-    }
-    
-    return fmt.Errorf("home relay %s not found", targetID)
-}
-```
-
-## HTTP Server Integration (Adapted)
-
-### 1. Enhanced HTTP Server
-
-**Federation-Aware Configuration:**
-```go
-type HTTPServerConfig struct {
-    // Standard HTTP config
-    Host         string
-    Port         int
-    EnableCORS   bool
-    ReadTimeout  time.Duration
-    WriteTimeout time.Duration
-    
-    // Federation config
-    NodeType     NodeType
-    NodeID       string
-    MainRelayURL string        // for home relays
-    PeerRelays   []string      // for main relays
-    EnableFederation bool
-}
-```
-
-### 2. WebSocket Endpoints (Adapted)
-
-**Main Relay Endpoints:**
-- `ws://host:port/ws/federation` - Accept Home Relay connections
-- `ws://host:port/ws/peers` - Accept peer Main Relay connections
-
-**Home Relay Endpoints:**
-- No incoming WebSocket endpoints (outbound only)
-
-### 3. HTTP API Endpoints (Updated)
-
-**Registry Endpoints (Main Relays):**
-- `GET /registry` - Local services from connected Home Relays
-- `GET /federation/registry` - All federated services
-- `GET /federation/peers` - Connected peer Main Relays
-- `POST /federation/peers/add` - Add peer Main Relay
-- `GET /federation/health` - Federation health status
-
-**Registry Endpoints (Home Relays):**
-- `GET /health` - Local health check only
-- `GET /services` - Local services only
-
-## CLI Integration (Adapted)
-
-### Updated Command-Line Options
-
-**Main Relay:**
 ```bash
-# Start Main Relay
-./relay -server -node-type main -node-id relay.example.com -port 8080
+# Start Main Relay A
+./relay -server -node-id relay-a.com -port 8080
 
-# Start Main Relay with peers
-./relay -server -node-type main -node-id relay-a.com -port 8080 \
-  -peers ws://relay-b.com:8081/ws/peers,ws://relay-c.com:8082/ws/peers
+# Start Main Relay B and peer it with A
+./relay -server -node-id relay-b.com -port 8081 -peers ws://relay-a.com:8080/federate
 ```
 
-**Home Relay:**
+### Home Relay
+To start a node as a Home Relay, you run a script and tell it which Main Relay to connect to.
+
 ```bash
-# Start Home Relay
-./relay blog.rl -node-type home -node-id alice.home \
-  -connect ws://relay.example.com:8080/ws/federation
-
-# Start with fallback Main Relays
-./relay blog.rl -node-type home -node-id alice.home \
-  -connect ws://relay-a.com:8080/ws/federation \
-  -fallback ws://relay-b.com:8081/ws/federation,ws://relay-c.com:8082/ws/federation
+# Start a Home Relay and connect it to Main Relay A
+./relay my_app.rl -connect ws://relay-a.com:8080/federate -node-id my-home-relay
 ```
 
-**Auto-Detection:**
-```bash
-# Auto-detect as Main Relay
-./relay -server
+## Security Model
 
-# Auto-detect as Home Relay
-./relay blog.rl -connect ws://relay.example.com:8080/ws/federation
-```
+The security model remains focused on securing the connections between nodes.
 
-## Performance Characteristics (Updated)
+- **Transport Security**: All federation traffic between gateways **must** be over TLS (WSS).
+- **Authentication**:
+    - Home Relays authenticate to Main Relays using a pre-shared key or token.
+    - Main Relays authenticate with each other using mutual TLS (mTLS).
+- **Authorization**:
+    - Main Relays can maintain an access control list (ACL) of which Home Relays are allowed to connect.
+    - An actor can decide whether it is "public" (federated) or "private" (local only). Only public actors are registered with the federation.
 
-### Latency Expectations
-- **Local calls**: 1-5ms (unchanged)
-- **Same-Main federation**: 10-20ms (Home → Main → Home)
-- **Cross-Main federation**: 20-50ms (Home → Main → Main → Home)
+## Migration and Implementation Steps
 
-### Throughput Expectations
-- **Main Relay capacity**: 1,000+ concurrent Home Relay connections
-- **Cross-federation RPC**: 500-1000 calls/sec per Main Relay
-- **Service discovery**: Sub-second federation-wide service lookup
+1.  **Implement `FederationGatewayActor`**: Create the new actor responsible for managing WebSocket connections.
+2.  **Update `Router`**: Add the logic to the existing `Router` to forward non-local messages to the gateway.
+3.  **Implement `FederationRegistryActor`**: Create the actor for service discovery on the Main Relays.
+4.  **Update CLI**: Adapt `cmd/relay/main.go` to support the new `-peers` and `-connect` flags for configuring federation.
+5.  **Write E2E Tests**: Create a comprehensive test suite that spins up a multi-node topology (e.g., two hubs and a spoke) and verifies that messages are routed correctly between them.
 
-### Scalability Characteristics
-- **Home Relays per Main**: 1,000+ (limited by WebSocket connections)
-- **Main Relay mesh**: 10-50 peers (limited by management complexity)
-- **Total federation size**: 10,000+ Home Relays across multiple Main Relays
-
-## Security Model (Updated)
-
-### Authentication
-- **Home to Main**: Node ID verification during WebSocket handshake
-- **Main to Main**: Mutual authentication with shared secrets or certificates
-- **Service Calls**: Optional method-level authentication
-
-### Authorization
-- **Service Access**: Home Relays can restrict which services are federated
-- **Main Relay Policies**: Main Relays can control which Home Relays connect
-- **Cross-Main Policies**: Main Relays can restrict peer federation
-
-### Network Security
-- **Transport Security**: TLS for all WebSocket connections
-- **NAT Traversal**: Secure outbound-only connections from Home Relays
-- **Firewall Friendly**: No incoming connections required for Home Relays
-
-## Migration Guide
-
-### From P2P Mesh to Hub-and-Spoke
-
-**Code Changes Required:**
-1. **Replace** `WebSocketP2P` with `FederationRouter`
-2. **Update** message handlers for new message types
-3. **Modify** CLI flags for node type specification
-4. **Adapt** service discovery to federation model
-
-**Configuration Changes:**
-1. **Specify node type** explicitly (`main` or `home`)
-2. **Configure Main Relay URL** for Home Relays
-3. **Setup peer relationships** for Main Relays
-4. **Update service advertisement** for federation context
-
-**Deployment Changes:**
-1. **Main Relays**: Deploy on cloud infrastructure with public IPs
-2. **Home Relays**: Deploy behind NAT with outbound connections only
-3. **Network Configuration**: No port forwarding required for Home Relays
-4. **Service Discovery**: Use federation registry instead of P2P discovery
-
-## Future Enhancements
-
-### Phase 1 (Immediate)
-1. **Load Balancing**: Distribute calls across multiple service instances
-2. **Health Monitoring**: Enhanced health checking and automatic failover
-3. **Service Versioning**: Support for multiple versions of the same service
-4. **Rate Limiting**: Protect Main Relays from overload
-
-### Phase 2 (Medium-term)
-1. **Service Mesh Integration**: Integration with Istio/Linkerd
-2. **Advanced Routing**: Geographic routing and latency optimization
-3. **Monitoring Integration**: Prometheus/Grafana metrics
-4. **Security Enhancement**: Fine-grained authorization and audit logging
-
-### Phase 3 (Long-term)
-1. **Multi-Region Federation**: Global Main Relay networks
-2. **Edge Computing**: Edge Main Relays for low-latency access
-3. **AI/ML Integration**: Intelligent routing and load balancing
-4. **Blockchain Integration**: Decentralized service registry
-
-## Conclusion
-
-The evolution from P2P mesh to hub-and-spoke architecture represents a significant improvement in practical deployability while maintaining the core benefits of federation:
-
-**Key Advantages:**
-1. **NAT Friendly**: Works in real-world networking environments
-2. **Scalable**: Clear scaling path for large federations
-3. **Manageable**: Simplified configuration and deployment
-4. **Resilient**: Built-in redundancy and failover capabilities
-
-**Production Readiness:**
-- Suitable for immediate deployment in hobby and enterprise environments
-- Clear separation of concerns between Main and Home Relays
-- Robust error handling and automatic recovery
-- Comprehensive monitoring and observability
-
-This architecture provides the foundation for building truly federated Relay applications that can scale from individual hobbyist deployments to enterprise-grade distributed systems while maintaining Relay's simplicity and ease of use.
+This updated plan provides a clear path forward for building a robust and scalable federation system using the new actor-based architecture.

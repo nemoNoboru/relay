@@ -153,29 +153,38 @@ func startREPL(preloadFile string) error {
 	go supervisor.Start()
 
 	// Create a primary RelayServerActor for the REPL session
-	// by sending a message to the supervisor.
+	// by sending a message to the supervisor and waiting for a reply.
+	replyChan := make(chan actor.ActorMsg, 1)
 	router.Send(actor.ActorMsg{
-		To:   "supervisor",
-		From: "main",
-		Type: "create_child",
-		Data: "RelayServerActor",
+		To:        "supervisor",
+		From:      "main",
+		Type:      "create_child",
+		Data:      "RelayServerActor",
+		ReplyChan: replyChan,
 	})
 
-	// TODO: We need a way to get the name of the created actor back
-	// to interact with it. This is a placeholder for now.
-	time.Sleep(100 * time.Millisecond) // Give time for actor to be created
+	// Wait for the supervisor's reply
+	var replActorName string
+	select {
+	case reply := <-replyChan:
+		if name, ok := reply.Data.(string); ok {
+			replActorName = name
+		} else {
+			return fmt.Errorf("failed to get REPL actor name from supervisor")
+		}
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("timeout waiting for REPL actor to be created")
+	}
 
-	fmt.Println("Actor-based REPL started. All evaluations are now handled by a dedicated RelayServerActor.")
+	fmt.Printf("Successfully created REPL actor: %s\n", replActorName)
 	fmt.Println("Type ':help' for a list of commands.")
 
-	// The REPL now needs to be reworked to send messages to the actor
-	// instead of using a direct evaluator.
-	r := repl.New(os.Stdin, os.Stdout)
+	// Start the new actor-based REPL
+	r := repl.New(os.Stdin, os.Stdout, router, replActorName)
 
 	// If a file was specified, load it first
 	if preloadFile != "" {
 		fmt.Printf("Loading %s...\n", preloadFile)
-		// This will need to be adapted to send messages to the actor
 		if err := r.LoadFile(preloadFile); err != nil {
 			return fmt.Errorf("failed to load %s: %v", preloadFile, err)
 		}
@@ -193,7 +202,7 @@ func startHTTPServer(host string, port int, nodeID, addPeer string, disableRegis
 	return nil
 }
 
-func runRelayFile(filename string, port int, startREPL bool) error {
+func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 	// Setup the main actor system components
 	router := actor.NewRouter()
 
@@ -201,24 +210,46 @@ func runRelayFile(filename string, port int, startREPL bool) error {
 	router.Register(supervisor.Actor.Name, supervisor.Actor)
 	go supervisor.Start()
 
-	// Create a primary RelayServerActor for the script
-	// This is a simplified approach. In a real scenario, we'd wait for a
-	// confirmation message from the supervisor with the new actor's name.
+	// Create a primary RelayServerActor for the script and wait for the reply.
+	replyChan := make(chan actor.ActorMsg, 1)
 	router.Send(actor.ActorMsg{
-		To:   "supervisor",
-		From: "main",
-		Type: "create_child",
-		Data: "RelayServerActor",
+		To:        "supervisor",
+		From:      "main",
+		Type:      "create_child",
+		Data:      "RelayServerActor",
+		ReplyChan: replyChan,
 	})
-	// This is a temporary solution until we implement a proper message-and-reply mechanism.
-	time.Sleep(100 * time.Millisecond)
 
-	// We don't know the exact name of the created actor, which is a problem.
-	// The supervisor creates a unique name. For this temporary refactoring,
-	// we are unable to send the script to it. This highlights the need for
-	// a proper synchronous-style call or a message-and-reply pattern.
-	fmt.Printf("Executing %s via actor...\n", filename)
-	fmt.Println("NOTE: Sending script to actor is disabled pending a reply mechanism from the supervisor.")
+	var scriptActorName string
+	select {
+	case reply := <-replyChan:
+		if name, ok := reply.Data.(string); ok {
+			scriptActorName = name
+		} else {
+			return fmt.Errorf("failed to get script actor name from supervisor")
+		}
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("timeout waiting for script actor to be created")
+	}
+
+	// Read the file
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %v", err)
+	}
+
+	// Send the script content to the newly created actor for evaluation.
+	fmt.Printf("Executing %s via actor %s...\n", filename, scriptActorName)
+	router.Send(actor.ActorMsg{
+		To:   scriptActorName,
+		From: "main",
+		Type: "eval",
+		Data: string(content),
+	})
+
+	// NOTE: This is now asynchronous. We need a way to wait for the result
+	// if we want to print it or start a REPL with the resulting state.
+	time.Sleep(500 * time.Millisecond) // Simple wait for evaluation to complete.
 
 	// Check file extension
 	ext := filepath.Ext(filename)
@@ -226,16 +257,13 @@ func runRelayFile(filename string, port int, startREPL bool) error {
 		return fmt.Errorf("unsupported file extension %s (expected .relay or .rl)", ext)
 	}
 
-	// The old synchronous evaluation logic is now replaced by the actor model.
-	// We keep the REPL starting logic here, but it will need to be
-	// connected to the actor's state.
-
-	if startREPL {
+	if shouldStartREPL {
 		fmt.Println("\nStarting REPL. The script's context is not yet connected.")
-		// This REPL will start with a fresh context, not the one from the script.
-		// A new mechanism is needed to pass the actor's state to the REPL.
-		r := repl.New(os.Stdin, os.Stdout)
-		r.Start()
+		// The logic to connect a REPL to an existing actor's state needs to be implemented.
+		// For now, we will start a fresh REPL.
+		if err := startREPL(""); err != nil {
+			log.Fatalf("Error starting REPL after script execution: %v", err)
+		}
 	} else {
 		fmt.Printf("Execution request sent to actor for %s.\n", filename)
 	}

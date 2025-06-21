@@ -6,7 +6,9 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
+	"relay/pkg/actor"
 	"relay/pkg/parser"
 	"relay/pkg/runtime"
 )
@@ -16,29 +18,21 @@ const MULTILINE_PROMPT = "    | "
 
 // REPL represents the Read-Eval-Print Loop
 type REPL struct {
-	scanner   *bufio.Scanner
-	output    io.Writer
-	evaluator *runtime.Evaluator
-	showAST   bool // Toggle between AST mode and execution mode
+	scanner       *bufio.Scanner
+	output        io.Writer
+	router        *actor.Router
+	replActorName string
+	showAST       bool // Toggle between AST mode and execution mode
 }
 
-// New creates a new REPL instance
-func New(input io.Reader, output io.Writer) *REPL {
+// New creates a new REPL instance connected to the actor system.
+func New(input io.Reader, output io.Writer, router *actor.Router, replActorName string) *REPL {
 	return &REPL{
-		scanner:   bufio.NewScanner(input),
-		output:    output,
-		evaluator: runtime.NewEvaluator(),
-		showAST:   false, // Default to execution mode
-	}
-}
-
-// NewWithEvaluator creates a new REPL with a pre-configured evaluator
-func NewWithEvaluator(input io.Reader, output io.Writer, evaluator *runtime.Evaluator) *REPL {
-	return &REPL{
-		scanner:   bufio.NewScanner(input),
-		output:    output,
-		evaluator: evaluator,
-		showAST:   false,
+		scanner:       bufio.NewScanner(input),
+		output:        output,
+		router:        router,
+		replActorName: replActorName,
+		showAST:       false, // Default to execution mode
 	}
 }
 
@@ -102,47 +96,45 @@ func (r *REPL) needsMoreInput(input string) bool {
 	return openBraces > closeBraces || openParens > closeParens || openBrackets > closeBrackets
 }
 
-// evaluate parses and evaluates the input
+// evaluate parses and evaluates the input by sending it to the REPL's actor
 func (r *REPL) evaluate(input string) {
-	// Parse the input
-	program, err := parser.Parse("repl", strings.NewReader(input))
-	if err != nil {
-		fmt.Fprintf(r.output, "Parse error: %v\n", err)
-		return
-	}
-
-	if len(program.Expressions) == 0 {
-		fmt.Fprintln(r.output, "Empty program")
-		return
-	}
-
-	// Show AST if in AST mode
 	if r.showAST {
+		program, err := parser.Parse("repl", strings.NewReader(input))
+		if err != nil {
+			fmt.Fprintf(r.output, "Parse error: %v\n", err)
+			return
+		}
 		r.printAST(program)
 		return
 	}
 
-	// Execute the expressions
-	for _, expr := range program.Expressions {
-		result, err := r.evaluator.Evaluate(expr)
-		if err != nil {
-			fmt.Fprintf(r.output, "Runtime error: %v\n", err)
-			continue
-		}
+	// Send the input to the actor and wait for a result.
+	replyChan := make(chan actor.ActorMsg, 1)
+	r.router.Send(actor.ActorMsg{
+		To:        r.replActorName,
+		From:      "repl_client",
+		Type:      "eval",
+		Data:      input,
+		ReplyChan: replyChan,
+	})
 
-		// Only print results for expressions that aren't assignments
-		// (assignments already show their value)
-		if expr.SetExpr == nil {
+	// Wait for the result from the actor
+	select {
+	case reply := <-replyChan:
+		if result, ok := reply.Data.(*runtime.Value); ok {
 			// Show the result with some formatting
 			if result.Type == runtime.ValueTypeNil {
 				fmt.Fprintln(r.output, "nil")
 			} else {
 				fmt.Fprintln(r.output, result.String())
 			}
+		} else if err, ok := reply.Data.(error); ok {
+			fmt.Fprintf(r.output, "Runtime error: %v\n", err)
 		} else {
-			// For set expressions, show: variable = value
-			fmt.Fprintf(r.output, "%s = %s\n", expr.SetExpr.Variable, result.String())
+			fmt.Fprintf(r.output, "Received unexpected reply from actor: %v\n", reply.Data)
 		}
+	case <-time.After(10 * time.Second):
+		fmt.Fprintln(r.output, "Timeout: No response from REPL actor.")
 	}
 }
 
@@ -796,44 +788,14 @@ func (r *REPL) showVersion() {
 // welcome returns the welcome message
 func welcome() string {
 	return `
-╔═══════════════════════════════════════╗
-║        Welcome to Relay REPL!        ║
-║   Federated Web Programming Language  ║
-║                                       ║
-║  🚀 Now with Runtime Execution!      ║
-╚═══════════════════════════════════════╝
-
-Mode: EXECUTION (evaluates code)
-Type :help for available commands
-Type :mode to toggle between execution and AST viewing
-Type :examples to see sample code
-Press Ctrl+C or :quit to exit
-
+Welcome to the Relay REPL!
+This is an interactive environment for the Relay programming language.
+All code is executed by a dedicated actor.
+--------------------------------------------------
 `
 }
 
-// LoadFile loads and executes a Relay file in the current REPL context
+// LoadFile is temporarily disabled as it requires actor-based evaluation.
 func (r *REPL) LoadFile(filename string) error {
-	// Read the file
-	file, err := os.Open(filename)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %v", err)
-	}
-	defer file.Close()
-
-	// Parse the file
-	program, err := parser.Parse(filename, file)
-	if err != nil {
-		return fmt.Errorf("parse error: %v", err)
-	}
-
-	// Execute each expression in the current evaluator context
-	for i, expr := range program.Expressions {
-		_, err := r.evaluator.Evaluate(expr)
-		if err != nil {
-			return fmt.Errorf("runtime error at expression %d: %v", i+1, err)
-		}
-	}
-
-	return nil
+	return fmt.Errorf("file loading is temporarily disabled and needs to be adapted for the actor model")
 }

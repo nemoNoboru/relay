@@ -66,7 +66,6 @@ func (g *HTTPGatewayActor) Receive(msg ActorMsg) {}
 
 // ServeHTTP makes HTTPGatewayActor an http.Handler.
 func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// We are only handling /eval for this integration
 	if r.URL.Path != "/eval" {
 		http.NotFound(w, r)
 		return
@@ -79,33 +78,23 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	code := string(body)
 
-	// This is a blocking request-reply, which requires a temporary listener.
+	// 1. Ask supervisor to create a child, waiting for a direct reply.
 	replyChan := make(chan ActorMsg, 1)
-	tempActorName := g.actor.Name + "-reply-proxy"
-
-	// A temporary actor to receive the reply from the RelayServerActor
-	replyProxy := NewActor(tempActorName, g.actor.router, func(msg ActorMsg) {
-		replyChan <- msg
-	})
-	replyProxy.Start()
-	defer replyProxy.Stop()
-
-	// 1. Ask supervisor to create a child
 	createMsg := ActorMsg{
-		To:   g.supervisorName,
-		From: tempActorName,
-		Type: "create_child",
-		Data: "RelayServerActor",
+		To:        g.supervisorName,
+		From:      g.actor.Name,
+		Type:      "create_child",
+		Data:      "RelayServerActor",
+		ReplyChan: replyChan,
 	}
 	g.actor.router.Send(createMsg)
 
-	// Wait for the supervisor's reply with the new child's name
 	var childName string
 	select {
 	case reply := <-replyChan:
-		if reply.Type == "child_created" {
-			childName, _ = reply.Data.(string)
-		} else {
+		var ok bool
+		childName, ok = reply.Data.(string)
+		if !ok || childName == "" {
 			http.Error(w, "Failed to create child actor", http.StatusInternalServerError)
 			return
 		}
@@ -113,44 +102,42 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Timeout waiting for child actor creation", http.StatusInternalServerError)
 		return
 	}
+	defer func() {
+		// 4. Tell supervisor to stop the child once we're done.
+		stopMsg := ActorMsg{
+			To:   g.supervisorName,
+			From: g.actor.Name,
+			Type: "stop_child",
+			Data: childName,
+		}
+		g.actor.router.Send(stopMsg)
+	}()
 
-	// 2. Send code to child for evaluation
+	// 2. Send code to the new child for evaluation, waiting for a direct reply.
+	evalReplyChan := make(chan ActorMsg, 1)
 	evalMsg := ActorMsg{
-		To:   childName,
-		From: tempActorName,
-		Type: "eval",
-		Data: code,
+		To:        childName,
+		From:      g.actor.Name,
+		Type:      "eval",
+		Data:      code,
+		ReplyChan: evalReplyChan,
 	}
 	g.actor.router.Send(evalMsg)
 
-	// 3. Wait for the result
+	// 3. Wait for the result and write it to the response.
 	select {
-	case resultMsg := <-replyChan:
-		if resultMsg.Type == "eval_result" {
-			result, ok := resultMsg.Data.(*runtime.Value)
-			if !ok {
-				http.Error(w, "Invalid eval result from actor", http.StatusInternalServerError)
-				return
-			}
-			// Write result to HTTP response
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(result.String()))
-		} else {
-			http.Error(w, "Received unexpected message from actor", http.StatusInternalServerError)
+	case resultMsg := <-evalReplyChan:
+		result, ok := resultMsg.Data.(*runtime.Value)
+		if !ok {
+			http.Error(w, "Invalid eval result from actor", http.StatusInternalServerError)
 			return
 		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(result.String()))
+
 	case <-time.After(2 * time.Second):
 		http.Error(w, "Timeout waiting for eval result", http.StatusInternalServerError)
 		return
 	}
-
-	// 4. Tell supervisor to stop the child
-	stopMsg := ActorMsg{
-		To:   g.supervisorName,
-		From: g.actor.Name,
-		Type: "stop_child",
-		Data: childName,
-	}
-	g.actor.router.Send(stopMsg)
 }
