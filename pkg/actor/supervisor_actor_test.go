@@ -62,12 +62,9 @@ func TestSupervisorCreatesAndManagesActors(t *testing.T) {
 			t.Fatal("Supervisor returned an empty name for the child")
 		}
 
-		// Check that the actor exists in the supervisor's map
-		supervisor.mu.RLock()
-		_, exists := supervisor.actors[childName]
-		supervisor.mu.RUnlock()
-		if !exists {
-			t.Errorf("Supervisor claims to have created '%s', but it's not in its map", childName)
+		// Check that the actor exists in the router
+		if !router.HasActor(childName) {
+			t.Errorf("Supervisor claims to have created '%s', but it's not registered with the router", childName)
 		}
 
 	case <-time.After(1 * time.Second):
@@ -86,10 +83,7 @@ func TestSupervisorCreatesAndManagesActors(t *testing.T) {
 	time.Sleep(50 * time.Millisecond) // Allow time for stop message to be processed
 
 	// 4. Assert the child was removed
-	supervisor.mu.RLock()
-	_, exists := supervisor.actors[childName]
-	supervisor.mu.RUnlock()
-	if exists {
-		t.Errorf("Supervisor did not remove stopped child '%s' from its map", childName)
+	if router.HasActor(childName) {
+		t.Errorf("Supervisor did not unregister stopped child '%s' from the router", childName)
 	}
 }

@@ -69,12 +69,8 @@ func main() {
 }
 
 func runGatewayMode(router *actor.Router, supervisor *actor.SupervisorActor) {
-	log.Println("Creating persistent Relay Server Actor for HTTP Gateway...")
-	workerName := createWorker(router, supervisor, "http-worker")
-	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
-
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", *httpAddr, workerName, router)
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
 	gateway.Start()
 }
 
@@ -126,6 +122,12 @@ func createWorker(router *actor.Router, supervisor *actor.SupervisorActor, nameH
 	case <-time.After(2 * time.Second):
 		log.Fatalf("Timeout waiting for persistent worker actor creation (hint: %s)", nameHint)
 	}
+	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
+
+	log.Println("Starting HTTP Gateway...")
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
+	gateway.Start()
+
 	return workerName
 }
 
@@ -216,7 +218,7 @@ func startREPL(preloadFile string) error {
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", *httpAddr, workerName, router)
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
 	gateway.Start()
 
 	if *cpuprofile != "" {
@@ -292,7 +294,7 @@ func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", *httpAddr, workerName, router)
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
 	gateway.Start()
 
 	// Read the file

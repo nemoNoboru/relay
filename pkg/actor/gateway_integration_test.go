@@ -14,37 +14,16 @@ func TestHTTPGatewaySpawnsAndEvaluates(t *testing.T) {
 	router := NewRouter()
 	defer router.StopAll()
 
-	supervisor := NewSupervisorActor("supervisor", router)
+	supervisor := NewSupervisorActor("test-supervisor", router)
 	supervisor.Start()
 
-	// 1a. Ask the supervisor to create a RelayServerActor
-	createReplyChan := make(chan ActorMsg)
-	createMsg := ActorMsg{
-		To:        "test-supervisor",
-		From:      "test",
-		Type:      "create_child:RelayServerActor",
-		Data:      "", // No gateway in this test
-		ReplyChan: createReplyChan,
-	}
-	router.Send(createMsg)
-
-	var relayServerName string
-	select {
-	case reply := <-createReplyChan:
-		relayServerName = reply.Data.(string)
-	case <-time.After(1 * time.Second):
-		t.Fatal("Timeout waiting for worker actor to be created")
-	}
-
-	// 1b. The gateway now gets the worker's name.
-	httpGateway := NewHTTPGatewayActor("http-gateway", "test-supervisor", relayServerName, router)
+	httpGateway := NewHTTPGatewayActor("http-gateway", "test-supervisor", router)
 	httpGateway.Start()
 
 	// Allow the server to start
 	time.Sleep(50 * time.Millisecond)
 
 	// 2. Create a test HTTP server from our gateway's handler
-	// The gateway itself is an http.Handler.
 	testServer := httptest.NewServer(httpGateway)
 	defer testServer.Close()
 

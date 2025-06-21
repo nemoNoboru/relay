@@ -11,7 +11,7 @@ func TestRelayServerActorEvaluatesCode(t *testing.T) {
 	defer router.StopAll()
 
 	// 1. Create the actor under test
-	relayServer := NewRelayServerActor("relay-server", router)
+	relayServer := NewRelayServerActor("relay-server", "", "", router, nil)
 	relayServer.Start()
 
 	// 2. Send the message to evaluate code with a reply channel

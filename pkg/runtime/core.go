@@ -524,3 +524,40 @@ func (e *Evaluator) evaluateFieldAccess(object *Value, access *parser.FieldAcces
 		return nil, fmt.Errorf("cannot access field '%s' on %s", access.Field, object.Type)
 	}
 }
+
+func FromNative(v interface{}) (*Value, error) {
+	switch val := v.(type) {
+	case nil:
+		return NewNil(), nil
+	case bool:
+		return NewBool(val), nil
+	case int:
+		return NewNumber(float64(val)), nil
+	case int8:
+		return NewNumber(float64(val)), nil
+	case int16:
+		return NewNumber(float64(val)), nil
+	case int32:
+		return NewNumber(float64(val)), nil
+	case int64:
+		return NewNumber(float64(val)), nil
+	case uint:
+		return NewNumber(float64(val)), nil
+	case uint8:
+		return NewNumber(float64(val)), nil
+	case uint16:
+		return NewNumber(float64(val)), nil
+	case uint32:
+		return NewNumber(float64(val)), nil
+	case uint64:
+		return NewNumber(float64(val)), nil
+	case float32:
+		return NewNumber(float64(val)), nil
+	case float64:
+		return NewNumber(val), nil
+	case string:
+		return NewString(val), nil
+	default:
+		return nil, fmt.Errorf("unsupported native type: %T", v)
+	}
+}

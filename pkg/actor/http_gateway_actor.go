@@ -25,44 +25,34 @@ type JSONRPCResponse struct {
 }
 
 // HTTPGatewayActor is an actor that acts as an HTTP gateway to the actor system.
+// It is an http.Handler that creates a temporary RelayServerActor for each request.
 type HTTPGatewayActor struct {
-	actor           *Actor
-	server          *http.Server
-	workerActorName string
+	actor        *Actor
+	supervisorID string
 }
 
 // NewHTTPGatewayActor creates a new HTTPGatewayActor.
-func NewHTTPGatewayActor(name, addr, workerActorName string, router *Router) *HTTPGatewayActor {
+func NewHTTPGatewayActor(name, supervisorID string, router *Router) *HTTPGatewayActor {
 	g := &HTTPGatewayActor{
-		workerActorName: workerActorName,
+		supervisorID: supervisorID,
 	}
 	g.actor = NewActor(name, router, g.Receive)
-	g.server = &http.Server{Addr: addr, Handler: g}
 	return g
 }
 
 func (g *HTTPGatewayActor) Start() {
 	g.actor.Start()
-	go func() {
-		log.Printf("HTTP Gateway %s starting on %s", g.actor.Name, g.server.Addr)
-		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("HTTP Gateway %s failed: %v", g.actor.Name, err)
-		}
-	}()
 }
 
 func (g *HTTPGatewayActor) Stop() {
-	log.Printf("HTTP Gateway %s stopping", g.actor.Name)
-	if err := g.server.Shutdown(nil); err != nil {
-		log.Printf("HTTP Gateway %s shutdown error: %v", g.actor.Name, err)
-	}
 	g.actor.Stop()
-	log.Printf("HTTP Gateway %s stopped", g.actor.Name)
 }
 
 // Receive handles messages for the gateway actor.
-// For now, it doesn't need to do anything.
-func (g *HTTPGatewayActor) Receive(msg ActorMsg) {}
+func (g *HTTPGatewayActor) Receive(msg ActorMsg) {
+	// The gateway itself doesn't handle incoming actor messages directly for now.
+	log.Printf("HTTPGatewayActor %s received unhandled message: %+v", g.actor.Name, msg)
+}
 
 // ServeHTTP makes HTTPGatewayActor an http.Handler.
 func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -78,10 +68,39 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	code := string(body)
 
-	// 1. Send code to the dedicated worker for evaluation, waiting for a direct reply.
+	// 1. Ask the supervisor to create a temporary worker actor for this request.
+	createReplyChan := make(chan ActorMsg, 1)
+	createMsg := ActorMsg{
+		To:        g.supervisorID,
+		From:      g.actor.Name,
+		Type:      "create_child:RelayServerActor",
+		ReplyChan: createReplyChan,
+	}
+	g.actor.router.Send(createMsg)
+
+	var workerName string
+	select {
+	case reply := <-createReplyChan:
+		workerName = reply.Data.(string)
+	case <-time.After(2 * time.Second):
+		http.Error(w, "Timeout creating worker actor", http.StatusInternalServerError)
+		return
+	}
+	defer func() {
+		// 5. Tell the supervisor to stop the temporary worker.
+		stopMsg := ActorMsg{
+			To:   g.supervisorID,
+			From: g.actor.Name,
+			Type: "stop_child",
+			Data: workerName,
+		}
+		g.actor.router.Send(stopMsg)
+	}()
+
+	// 2. Send code to the new worker for evaluation.
 	evalReplyChan := make(chan ActorMsg, 1)
 	evalMsg := ActorMsg{
-		To:        g.workerActorName,
+		To:        workerName,
 		From:      g.actor.Name,
 		Type:      "eval",
 		Data:      code,
@@ -89,7 +108,7 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	g.actor.router.Send(evalMsg)
 
-	// 2. Wait for the result and write it to the response.
+	// 3. Wait for the result and write it to the response.
 	select {
 	case resultMsg := <-evalReplyChan:
 		result, ok := resultMsg.Data.(*runtime.Value)
@@ -97,12 +116,12 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid eval result from actor", http.StatusInternalServerError)
 			return
 		}
+		// 4. Write the successful response.
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(result.String()))
 
 	case <-time.After(2 * time.Second):
 		http.Error(w, "Timeout waiting for eval result", http.StatusInternalServerError)
-		return
 	}
 }

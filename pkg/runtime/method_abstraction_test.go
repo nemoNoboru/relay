@@ -254,7 +254,7 @@ func TestDesiredMethodDispatcherAPI(t *testing.T) {
 func TestEvaluatorMethodIntegration(t *testing.T) {
 	t.Run("Evaluator should have method dispatcher integrated", func(t *testing.T) {
 		// Create an evaluator with integrated method dispatcher
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		// Test that we can call methods directly through the evaluator's dispatcher
 		array := NewArray([]*Value{NewNumber(1), NewNumber(2), NewNumber(3)})

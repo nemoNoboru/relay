@@ -11,7 +11,7 @@ import (
 
 func TestFullMethodAbstractionIntegration(t *testing.T) {
 	t.Run("Evaluator should use method dispatcher for all method calls", func(t *testing.T) {
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		// Test array methods work through normal evaluation
 		program := parseCode(t, `set arr = [1, 2, 3]
@@ -39,7 +39,7 @@ func TestFullMethodAbstractionIntegration(t *testing.T) {
 	})
 
 	t.Run("Object methods should work through abstraction", func(t *testing.T) {
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		program := parseCode(t, `set obj = {name: "test", age: 25}
 		set name = obj.get("name")
@@ -70,7 +70,7 @@ func TestFullMethodAbstractionIntegration(t *testing.T) {
 	})
 
 	t.Run("Struct methods should work through abstraction", func(t *testing.T) {
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		program := parseCode(t, `struct Person {
 			name: String
@@ -93,7 +93,7 @@ func TestFullMethodAbstractionIntegration(t *testing.T) {
 	})
 
 	t.Run("String methods should work through abstraction", func(t *testing.T) {
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		program := parseCode(t, `set str = "hello"
 		set len = str.length()`)
@@ -112,7 +112,7 @@ func TestFullMethodAbstractionIntegration(t *testing.T) {
 	})
 
 	t.Run("Higher-order array methods should work", func(t *testing.T) {
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		program := parseCode(t, `set arr = [1, 2, 3]
 		set doubled = arr.map(fn(x) { x * 2 })
@@ -146,7 +146,7 @@ func TestFullMethodAbstractionIntegration(t *testing.T) {
 
 func TestMethodAbstractionErrorHandling(t *testing.T) {
 	t.Run("Should give clear errors for unsupported methods", func(t *testing.T) {
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		program := parseCode(t, `set arr = [1, 2, 3]
 		set result = arr.nonexistent()`)
@@ -170,7 +170,7 @@ func TestMethodAbstractionErrorHandling(t *testing.T) {
 	})
 
 	t.Run("Should handle method call on wrong type", func(t *testing.T) {
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		program := parseCode(t, `set num = 42
 		set result = num.length()`)
@@ -192,7 +192,7 @@ func TestMethodAbstractionErrorHandling(t *testing.T) {
 func TestNoOldMethodSystemDependencies(t *testing.T) {
 	t.Run("All method calls should go through dispatcher", func(t *testing.T) {
 		// This test ensures we've removed the old evaluateMethodCall paths
-		evaluator := NewEvaluator()
+		evaluator := NewEvaluator(nil)
 
 		// Test all the major types that had method calls before
 		testCases := []string{
