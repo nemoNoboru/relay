@@ -36,9 +36,6 @@ func (s *SupervisorActor) Start() {
 func (s *SupervisorActor) Stop() {
 	s.Actor.Stop() // This will wait until the actor's loop is done.
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	var wg sync.WaitGroup
 	for _, a := range s.children {
 		wg.Add(1)
@@ -85,9 +82,7 @@ func (s *SupervisorActor) Receive(msg ActorMsg) {
 			return
 		}
 
-		s.mu.Lock()
 		s.children[childName] = newChild
-		s.mu.Unlock()
 		log.Printf("Supervisor %s created child %s", s.Name, childName)
 
 		if newChild != nil && msg.ReplyChan != nil {
@@ -106,7 +101,6 @@ func (s *SupervisorActor) Receive(msg ActorMsg) {
 			log.Printf("Supervisor %s: invalid data for 'stop_child', expected string", s.Name)
 			return
 		}
-		s.mu.Lock()
 		child, exists := s.children[childName]
 		if exists {
 			child.Stop()
@@ -115,7 +109,6 @@ func (s *SupervisorActor) Receive(msg ActorMsg) {
 		} else {
 			log.Printf("Supervisor %s: child %s not found to stop", s.Name, childName)
 		}
-		s.mu.Unlock()
 
 	case msg.Type == "stop":
 		s.Stop()

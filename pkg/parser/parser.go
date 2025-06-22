@@ -19,7 +19,7 @@ var relayLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Bool", `\b(true|false)\b`},
 	{"Nil", `\bnil\b`},
 	{"DateTime", `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?`},
-	{"Symbol", `:[a-zA-Z_][a-zA-Z0-9_]*`},
+	{"Symbol", `:([a-zA-Z_][a-zA-Z0-9_]*)`},
 
 	// Keywords (must come before Ident)
 	{"For", `\bfor\b`},
