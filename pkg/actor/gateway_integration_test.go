@@ -17,7 +17,7 @@ func TestHTTPGatewaySpawnsAndEvaluates(t *testing.T) {
 	supervisor := NewSupervisorActor("test-supervisor", router)
 	supervisor.Start()
 
-	httpGateway := NewHTTPGatewayActor("http-gateway", "test-supervisor", router)
+	httpGateway := NewHTTPGatewayActor("http-gateway", "test-supervisor", router, 8080)
 	httpGateway.Start()
 
 	// Allow the server to start

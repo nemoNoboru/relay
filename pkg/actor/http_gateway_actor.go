@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -29,23 +31,35 @@ type JSONRPCResponse struct {
 type HTTPGatewayActor struct {
 	actor        *Actor
 	supervisorID string
+	server       *http.Server
 }
 
 // NewHTTPGatewayActor creates a new HTTPGatewayActor.
-func NewHTTPGatewayActor(name, supervisorID string, router *Router) *HTTPGatewayActor {
+func NewHTTPGatewayActor(name, supervisorID string, router *Router, port int) *HTTPGatewayActor {
 	g := &HTTPGatewayActor{
 		supervisorID: supervisorID,
 	}
 	g.actor = NewActor(name, router, g.Receive)
+	g.server = &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: g,
+	}
 	return g
 }
 
 func (g *HTTPGatewayActor) Start() {
 	g.actor.Start()
+	go func() {
+		if err := g.server.ListenAndServe(); err != nil {
+			log.Fatalf("HTTP server failed: %v", err)
+		}
+	}()
+	log.Printf("HTTP gateway actor %s started on port %d", g.actor.Name, g.server.Addr)
 }
 
 func (g *HTTPGatewayActor) Stop() {
 	g.actor.Stop()
+	g.server.Shutdown(context.Background())
 }
 
 // Receive handles messages for the gateway actor.
@@ -73,7 +87,7 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	createMsg := ActorMsg{
 		To:        g.supervisorID,
 		From:      g.actor.Name,
-		Type:      "create_child:RelayServerActor",
+		Type:      "create_child: RelayServerActor",
 		ReplyChan: createReplyChan,
 	}
 	g.actor.router.Send(createMsg)

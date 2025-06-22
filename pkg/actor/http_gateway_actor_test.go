@@ -15,7 +15,7 @@ func TestHTTPGatewayActor(t *testing.T) {
 	supervisor.Start()
 
 	// The gateway actor now requires a supervisor name.
-	gateway := NewHTTPGatewayActor("test-gateway", "test-supervisor", router)
+	gateway := NewHTTPGatewayActor("test-gateway", "test-supervisor", router, 8080)
 	gateway.Start()
 
 	// Create a test server from the gateway handler

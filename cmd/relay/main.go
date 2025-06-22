@@ -31,8 +31,9 @@ var (
 	version    = "0.3.0-dev"
 	commit     = "none"
 	date       = "unknown"
-	httpAddr   = flag.String("http-addr", "", "HTTP address for the HTTP gateway")
+	relayPeer  = flag.String("relay-peer", "", "Relay peer address")
 	cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
+	port       = flag.Int("port", 8080, "Port for the HTTP gateway")
 )
 
 func main() {
@@ -57,20 +58,20 @@ func main() {
 	supervisor := actor.NewSupervisorActor("root-supervisor", router)
 	supervisor.Start()
 
-	// Mode 1: Run as HTTP Gateway
-	if *httpAddr != "" {
-		runGatewayMode(router, supervisor)
+	// Mode 2: Run script or REPL
+	runCliMode(router, supervisor)
+
+	// Mode 1: Run as HTTP Gateway handling incoming requests
+	if *port != 0 {
+		// runGatewayMode(router, supervisor, *port)
 		// Keep the process alive
 		select {}
 	}
-
-	// Mode 2: Run script or REPL
-	runCliMode(router, supervisor)
 }
 
-func runGatewayMode(router *actor.Router, supervisor *actor.SupervisorActor) {
+func runGatewayMode(router *actor.Router, supervisor *actor.SupervisorActor, port int) {
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, port)
 	gateway.Start()
 }
 
@@ -129,7 +130,7 @@ func createWorker(router *actor.Router, supervisor *actor.SupervisorActor, nameH
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, *port)
 	gateway.Start()
 
 	return workerName
@@ -222,7 +223,7 @@ func startREPL(preloadFile string) error {
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, *port)
 	gateway.Start()
 
 	if *cpuprofile != "" {
@@ -298,7 +299,7 @@ func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
+	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, port)
 	gateway.Start()
 
 	// Read the file
