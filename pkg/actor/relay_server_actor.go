@@ -89,12 +89,14 @@ func (s *RelayServerActor) makeSendBuiltin() *runtime.Value {
 				}
 
 				to, fun := parts[0], parts[1]
+				replyChan := make(chan ActorMsg)
 
 				msg := ActorMsg{
-					To:   to,
-					From: s.Name,
-					Type: fun,
-					Data: messageData,
+					To:        to,
+					From:      s.Name,
+					Type:      fun,
+					Data:      messageData,
+					ReplyChan: replyChan,
 				}
 
 				if !s.router.HasActor(dest) && s.gatewayName != "" {
@@ -110,7 +112,11 @@ func (s *RelayServerActor) makeSendBuiltin() *runtime.Value {
 					s.router.Send(msg)
 				}
 
-				return runtime.NewNil(), nil
+				reply := <-replyChan
+				if reply.Type == "receive_result" {
+					return reply.Data.(*runtime.Value), nil
+				}
+				return nil, fmt.Errorf("received an unknown error from remote call: %v", reply)
 			},
 		},
 	}
@@ -200,34 +206,33 @@ func (s *RelayServerActor) handleReceive(msg ActorMsg) {
 
 	// Convert the message data into arguments for the Relay function.
 	// We expect the arguments to be in a map where the key is the parameter name.
-	args, ok := msg.Data.(*runtime.Value)
-	// if !ok {
-	// 	log.Printf("RelayServerActor %s: expected map data for receive function, got %T", s.Name, msg.Data)
-	// 	return
-	// }
+	argsObj, ok := msg.Data.(*runtime.Value)
+	if !ok {
+		log.Printf("RelayServerActor %s: expected object data for receive function, got %T", s.Name, msg.Data)
+		return
+	}
+
+	if argsObj.Type != runtime.ValueTypeObject {
+		log.Printf("RelayServerActor %s: expected object data for receive function, got %T", s.Name, argsObj.Type)
+		return
+	}
 
 	// Match the map values to the function's declared parameters by name.
-	// args := make([]*runtime.Value, len(receiveFn.Parameters))
+
+	args := make([]*runtime.Value, len(receiveFn.Parameters))
 	log.Printf("receiveFn.Parameters: %v", receiveFn.Parameters)
-	// for i, paramName := range receiveFn.Parameters {
-	// 	if val, exists := argsMap[paramName]; exists {
-	// 		relayVal, err := runtime.FromNative(val)
-	// 		if err != nil {
-	// 			log.Printf("RelayServerActor %s: error converting arg '%s': %v", s.Name, paramName, err)
-	// 			// Handle error, maybe send reply
-	// 			return
-	// 		}
-	// 		args[i] = relayVal
-	// 	} else {
-	// 		// If an argument is missing, it becomes nil in the Relay world.
-	// 		args[i] = runtime.NewNil()
-	// 	}
-	// }
+	for i, paramName := range receiveFn.Parameters {
+		if val, exists := argsObj.Object[paramName]; exists {
+			args[i] = val
+		} else {
+			args[i] = runtime.NewNil()
+		}
+	}
 
 	// Execute the Relay function.
 	result, err := s.eval.ExecuteFunction(
 		&runtime.Value{Type: runtime.ValueTypeFunction, Function: receiveFn},
-		[]*runtime.Value{args},
+		args,
 	)
 
 	if err != nil {

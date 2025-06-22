@@ -12,4 +12,12 @@ server aloha {
     receive fn add(n: number, a: number) {
         return n + a
     }
+
+    receive fn worker(lb) {
+        server worker {
+            receive work() {
+                return lb()
+            }
+        }
+    }
 }

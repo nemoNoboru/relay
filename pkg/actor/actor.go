@@ -73,7 +73,6 @@ func (a *Actor) Send(msg ActorMsg) {
 // Router is responsible for routing messages between actors.
 type Router struct {
 	actors map[string]*Actor
-	mu     sync.RWMutex
 }
 
 // NewRouter creates a new Router.
@@ -85,24 +84,18 @@ func NewRouter() *Router {
 
 // Register adds an actor to the router.
 func (r *Router) Register(name string, actor *Actor) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.actors[name] = actor
 	log.Printf("Actor %s registered with router", name)
 }
 
 // Unregister removes an actor from the router.
 func (r *Router) Unregister(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	delete(r.actors, name)
 	log.Printf("Actor %s unregistered from router", name)
 }
 
 // Send routes a message to the appropriate actor.
 func (r *Router) Send(msg ActorMsg) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	if actor, ok := r.actors[msg.To]; ok {
 		actor.Send(msg)
 	} else {
@@ -112,20 +105,16 @@ func (r *Router) Send(msg ActorMsg) {
 
 // HasActor checks if an actor with the given name is registered with the router.
 func (r *Router) HasActor(name string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	_, ok := r.actors[name]
 	return ok
 }
 
 // StopAll stops all actors registered with the router.
 func (r *Router) StopAll() {
-	r.mu.Lock()
 	actorsToStop := make([]*Actor, 0, len(r.actors))
 	for _, actor := range r.actors {
 		actorsToStop = append(actorsToStop, actor)
 	}
-	r.mu.Unlock()
 
 	var wg sync.WaitGroup
 	for _, actor := range actorsToStop {
