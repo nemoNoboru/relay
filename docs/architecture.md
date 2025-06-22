@@ -44,14 +44,14 @@ graph TD
     end
 
     Client -- "POST /eval '10 + 5'" --> HTTPGateway;
-    HTTPGateway -- "1. create_child(RelayServer)" --> Supervisor;
+    HTTPGateway -- "1- create_child(RelayServer)" --> Supervisor;
     Supervisor -- "creates" --> RelayServer;
-    HTTPGateway -- "2. eval('10 + 5')" --> RelayServer;
+    HTTPGateway -- "2- eval('10 + 5')" --> RelayServer;
     RelayServer -- "evaluates code" --> RelayServer;
-    RelayServer -- "3. eval_result(15)" --> HTTPGateway;
-    HTTPGateway -- "4. stop_child(RelayServer)" --> Supervisor;
+    RelayServer -- "3- eval_result(15)" --> HTTPGateway;
+    HTTPGateway -- "4- stop_child(RelayServer)" --> Supervisor;
     Supervisor -- "stops" --> RelayServer;
-    HTTPGateway -- "5. Responds '15'" --> Client;
+    HTTPGateway -- "5- Responds '15'" --> Client;
 ```
 
 ### 2. CLI (Script) Mode
@@ -81,12 +81,12 @@ graph TD
     end
 
     A --> B;
-    B -- "1. Creates" --> C;
-    B -- "2. Asks C to create" --> D;
-    B -- "3. Reads script.rl and sends<br/>'eval' message to" --> D;
+    B -- "1- Creates" --> C;
+    B -- "2- Asks C to create" --> D;
+    B -- "3- Reads script.rl and sends<br/>'eval' message to" --> D;
     D -- "Evaluates script.rl..." --> D;
     D -- "...finds 'server my-server {}'..." --> D;
-    D -- "4. Sends 'create_child' to" --> C;
-    C -- "5. Creates" --> E[my-server];
-    D -- "6. Can now send messages to 'my-server' via Router" --> E;
+    D -- "4- Sends 'create_child' to" --> C;
+    C -- "5- Creates" --> E[my-server];
+    D -- "6- Can now send messages to 'my-server' via Router" --> E;
 ``` 

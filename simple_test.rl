@@ -1,2 +1,15 @@
-fn double(x) { x * 2 }
-double(5) 
+server aloha {
+    state {}
+
+    receive fn hello() {
+        print(:hellord)
+    }
+
+    receive fn bo_dia(grupo: string) {
+        print(grupo)
+    }
+
+    receive fn add(n: number, a: number) {
+        return n + a
+    }
+}

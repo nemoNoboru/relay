@@ -55,14 +55,17 @@ func (s *SupervisorActor) Stop() {
 func (s *SupervisorActor) Receive(msg ActorMsg) {
 	switch {
 	case strings.HasPrefix(msg.Type, "create_child:"):
-		childTypeName := strings.TrimPrefix(msg.Type, "create_child:")
+		childTypeName := strings.TrimPrefix(msg.Type, "create_child: ")
 
 		// Generate a unique name for the child actor
 		baseName := s.Name + "-" + childTypeName
 		childName := baseName + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
+		log.Printf("ChildType: %s", childTypeName)
+
 		var newChild *Actor
 		if childTypeName == "RelayServerActor" {
+			log.Printf("Creating RelayServerActor")
 			// The data can be a gateway name (string) or ServerInitData.
 			var gatewayName string
 			var initData *runtime.ServerInitData

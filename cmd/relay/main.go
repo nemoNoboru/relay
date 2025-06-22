@@ -91,6 +91,10 @@ func runCliMode(router *actor.Router, supervisor *actor.SupervisorActor) {
 		// Give it a moment to process before exiting
 		time.Sleep(2 * time.Second)
 		log.Printf("Script %s sent to worker.", filename)
+		fmt.Println("Relay REPL")
+		fmt.Println("Type ':help' for a list of commands.")
+		r := repl.New(os.Stdin, os.Stdout, router, workerName)
+		r.Start()
 	} else {
 		// Start REPL
 		fmt.Println("Relay REPL")
@@ -105,8 +109,8 @@ func createWorker(router *actor.Router, supervisor *actor.SupervisorActor, nameH
 	createMsg := actor.ActorMsg{
 		To:        supervisor.Actor.Name,
 		From:      "main",
-		Type:      "create_child",
-		Data:      "RelayServerActor",
+		Type:      "create_child: RelayServerActor",
+		Data:      "",
 		ReplyChan: replyChan,
 	}
 	router.Send(createMsg)

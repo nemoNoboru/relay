@@ -19,7 +19,7 @@ func TestCompleteProgram(t *testing.T) {
 		create_post(title: string, content: string) -> Post
 	}
 	
-	server blog_service {
+	server blog_services {
 		state {
 			posts: [Post] = [],
 			next_id: number = 1

@@ -28,6 +28,7 @@ func (e *Evaluator) EvaluateExpression(expr *parser.Expression, env *Environment
 	}
 
 	// Handle top-level expression types
+	// log.Printf("Evaluating expression: %v", expr)
 	switch {
 	case expr.StructExpr != nil:
 		return e.evaluateStructExpr(expr.StructExpr, env)
