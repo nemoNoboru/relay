@@ -24,11 +24,7 @@ func TestFederationGatewayActorLifecycle(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Send a dummy message to ensure it doesn't crash
-	router.Send(actor.ActorMsg{
-		To:   "test-gateway",
-		From: "test",
-		Type: "ping",
-	})
+	router.Send(actor.NewPingMsg("test-gateway", "test"))
 
 	// Give it a moment to process the message
 	time.Sleep(10 * time.Millisecond)
@@ -62,12 +58,7 @@ func TestFederationGatewayActor_ConnectToPeer(t *testing.T) {
 	// The URL needs to be converted from http to ws
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
 
-	connectMsg := actor.ActorMsg{
-		To:   "home-gateway",
-		From: "test",
-		Type: "connect_to_peer",
-		Data: wsURL,
-	}
+	connectMsg := actor.NewConnectToPeerMsg("home-gateway", "test", wsURL)
 	router.Send(connectMsg)
 
 	// 4. Assert that the gateway has established the connection
@@ -102,12 +93,7 @@ func TestFederationGatewayActor_AcceptsPeerConnection(t *testing.T) {
 	homeGateway.Start()
 
 	// 3. Send a message to the home gateway telling it to connect.
-	connectMsg := actor.ActorMsg{
-		To:   "home-gateway",
-		From: "test",
-		Type: "connect_to_peer",
-		Data: mainGateway.GetListenURL(), // This method will also need to be created.
-	}
+	connectMsg := actor.NewConnectToPeerMsg("main-gateway", "test", mainGateway.GetListenURL())
 	router.Send(connectMsg)
 
 	// 4. Assert that the main gateway has registered the incoming connection.
@@ -146,29 +132,14 @@ func TestFederationGatewayActor_ForwardsMessagesBetweenPeers(t *testing.T) {
 	homeGateway := NewFederationGatewayActor("home-gateway", router)
 	homeGateway.Start()
 
-	connectMsg := actor.ActorMsg{
-		To:   "home-gateway",
-		From: "test",
-		Type: "connect_to_peer",
-		Data: mainGateway.GetListenURL(),
-	}
+	connectMsg := actor.NewConnectToPeerMsg("home-gateway", "test", mainGateway.GetListenURL())
 	router.Send(connectMsg)
 	time.Sleep(100 * time.Millisecond) // allow for connection
 
 	// 2. Action: Send a message from the 'home' side to be forwarded to the 'listener' on the 'main' side.
-	msgToSend := actor.ActorMsg{
-		To:   "listener",
-		From: "home-test",
-		Type: "test_message",
-		Data: "hello world",
-	}
+	msgToSend := actor.NewTestMessageMsg("listener", "home-test", "hello world")
 
-	forwardMsg := actor.ActorMsg{
-		To:   "home-gateway",
-		From: "test",
-		Type: "forward_message", // This is a new type we'll have to handle
-		Data: msgToSend,
-	}
+	forwardMsg := actor.NewForwardMessageMsg("home-gateway", "test", msgToSend)
 	router.Send(forwardMsg)
 
 	// 3. Assert: The listener actor on the 'main' side should have received the message.

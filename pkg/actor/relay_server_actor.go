@@ -29,13 +29,7 @@ func NewRelayServerActor(name, gatewayName, supervisorName string, router *Route
 	// The serverCreator callback allows the evaluator to ask us (the actor)
 	// to create a new server, which we do by messaging our supervisor.
 	serverCreator := func(data runtime.ServerInitData) {
-		createMsg := ActorMsg{
-			To:        s.supervisorName,
-			From:      s.Name,
-			Type:      "create_child: RelayServerActor",
-			Data:      data, // Pass the init data to the supervisor
-			ReplyChan: make(chan ActorMsg),
-		}
+		createMsg := NewCreateChildMsg(s.supervisorName, s.Name, "RelayServerActor", data, make(chan ActorMsg))
 		s.router.Send(createMsg)
 		// We could wait for the reply here if needed
 	}
@@ -91,22 +85,12 @@ func (s *RelayServerActor) makeSendBuiltin() *runtime.Value {
 				to, fun := parts[0], parts[1]
 				replyChan := make(chan ActorMsg)
 
-				msg := ActorMsg{
-					To:        to,
-					From:      s.Name,
-					Type:      fun,
-					Data:      messageData,
-					ReplyChan: replyChan,
-				}
+				msg := NewEvalMsg(to, s.Name, fun, replyChan)
+				msg.Data = messageData
 
 				if !s.router.HasActor(dest) && s.gatewayName != "" {
 					log.Printf("[%s] Forwarding message to remote actor '%s' via gateway '%s'", s.Name, dest, s.gatewayName)
-					forwardMsg := ActorMsg{
-						To:   s.gatewayName,
-						From: s.Name,
-						Type: "forward_message",
-						Data: msg,
-					}
+					forwardMsg := NewForwardMessageMsg(s.gatewayName, s.Name, msg)
 					s.router.Send(forwardMsg)
 				} else {
 					s.router.Send(msg)
@@ -141,12 +125,7 @@ func (s *RelayServerActor) handleEval(msg ActorMsg) {
 	if !ok {
 		log.Printf("RelayServerActor %s: invalid data for 'eval', expected string", s.Name)
 		if msg.ReplyChan != nil {
-			reply := ActorMsg{
-				To:   msg.From,
-				From: s.Name,
-				Type: "eval_error",
-				Data: "Invalid eval data type",
-			}
+			reply := NewEvalErrorMsg(msg.From, s.Name, "Invalid eval data type")
 			msg.ReplyChan <- reply
 		}
 		return
@@ -156,12 +135,7 @@ func (s *RelayServerActor) handleEval(msg ActorMsg) {
 	if err != nil {
 		log.Printf("RelayServerActor %s: parse error: %v", s.Name, err)
 		if msg.ReplyChan != nil {
-			reply := ActorMsg{
-				To:   msg.From,
-				From: s.Name,
-				Type: "eval_error",
-				Data: err.Error(),
-			}
+			reply := NewEvalErrorMsg(msg.From, s.Name, err.Error())
 			msg.ReplyChan <- reply
 		}
 		return
@@ -174,12 +148,7 @@ func (s *RelayServerActor) handleEval(msg ActorMsg) {
 		if err != nil {
 			log.Printf("RelayServerActor %s: evaluation error: %v", s.Name, err)
 			if msg.ReplyChan != nil {
-				reply := ActorMsg{
-					To:   msg.From,
-					From: s.Name,
-					Type: "eval_error",
-					Data: err.Error(),
-				}
+				reply := NewEvalErrorMsg(msg.From, s.Name, err.Error())
 				msg.ReplyChan <- reply
 			}
 			return // Stop on the first error
@@ -187,12 +156,7 @@ func (s *RelayServerActor) handleEval(msg ActorMsg) {
 	}
 
 	if msg.ReplyChan != nil {
-		reply := ActorMsg{
-			To:   msg.From,
-			From: s.Name,
-			Type: "eval_result",
-			Data: lastResult,
-		}
+		reply := NewEvalResultMsg(msg.From, s.Name, lastResult)
 		msg.ReplyChan <- reply
 	}
 }
@@ -239,12 +203,7 @@ func (s *RelayServerActor) handleReceive(msg ActorMsg) {
 		log.Printf("RelayServerActor %s error executing receive function '%s': %v", s.Name, msg.Type, err)
 		// Optionally, send an error reply
 		if msg.ReplyChan != nil {
-			reply := ActorMsg{
-				To:   msg.From,
-				From: s.Name,
-				Type: "receive_error",
-				Data: err.Error(),
-			}
+			reply := NewReceiveErrorMsg(msg.From, s.Name, err.Error())
 			msg.ReplyChan <- reply
 		}
 		return
@@ -253,12 +212,7 @@ func (s *RelayServerActor) handleReceive(msg ActorMsg) {
 	// If the Relay code returned a value and there's a reply channel, send it back.
 	if msg.ReplyChan != nil {
 		// The result of the receive function is the reply.
-		reply := ActorMsg{
-			To:   msg.From,
-			From: s.Name,
-			Type: "receive_result", // A new message type for this
-			Data: result,
-		}
+		reply := NewReceiveResultMsg(msg.From, s.Name, result)
 		msg.ReplyChan <- reply
 	}
 }

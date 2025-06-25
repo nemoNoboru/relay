@@ -63,12 +63,7 @@ func (fga *FederationGatewayActor) Receive(msg actor.ActorMsg) {
 				log.Printf("[%s] invalid data for 'forward_message', expected ActorMsg or map", fga.Name)
 				return
 			}
-			innerMsg = actor.ActorMsg{
-				To:   msgMap["To"].(string),
-				From: msgMap["From"].(string),
-				Type: msgMap["Type"].(string),
-				Data: msgMap["Data"],
-			}
+			innerMsg = actor.NewForwardMessageMsg(msgMap["To"].(string), msgMap["From"].(string), msg)
 		}
 		fga.broadcast(innerMsg)
 	default:

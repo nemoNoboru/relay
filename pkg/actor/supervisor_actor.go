@@ -86,12 +86,7 @@ func (s *SupervisorActor) Receive(msg ActorMsg) {
 		log.Printf("Supervisor %s created child %s", s.Name, childName)
 
 		if newChild != nil && msg.ReplyChan != nil {
-			reply := ActorMsg{
-				To:   msg.From,
-				From: s.Name,
-				Type: "child_created",
-				Data: newChild.Name,
-			}
+			reply := NewChildCreatedMsg(msg.From, s.Name, newChild.Name)
 			msg.ReplyChan <- reply
 		}
 

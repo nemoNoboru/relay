@@ -16,13 +16,8 @@ func TestRelayServerActorEvaluatesCode(t *testing.T) {
 
 	// 2. Send the message to evaluate code with a reply channel
 	replyChan := make(chan ActorMsg, 1)
-	evalMsg := ActorMsg{
-		To:        "relay-server",
-		From:      "test",
-		Type:      "eval",
-		Data:      "10 + 5",
-		ReplyChan: replyChan,
-	}
+	code := "10 + 5"
+	evalMsg := NewEvalMsg("relay-server", "test", code, replyChan)
 	router.Send(evalMsg)
 
 	// 3. Wait for the result and assert

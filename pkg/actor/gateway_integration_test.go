@@ -17,7 +17,7 @@ func TestHTTPGatewaySpawnsAndEvaluates(t *testing.T) {
 	supervisor := NewSupervisorActor("test-supervisor", router)
 	supervisor.Start()
 
-	httpGateway := NewHTTPGatewayActor("http-gateway", "test-supervisor", router, 8080)
+	httpGateway := NewHTTPGatewayActor("http-gateway", "test-supervisor", router)
 	httpGateway.Start()
 
 	// Allow the server to start
@@ -28,7 +28,7 @@ func TestHTTPGatewaySpawnsAndEvaluates(t *testing.T) {
 	defer testServer.Close()
 
 	// 3. Make a POST request to the /eval endpoint
-	evalEndpoint := testServer.URL + "/eval"
+	evalEndpoint := testServer.URL + "/jsonrpc"
 	reqBody := "10 + 5"
 	resp, err := http.Post(evalEndpoint, "text/plain", strings.NewReader(reqBody))
 	if err != nil {

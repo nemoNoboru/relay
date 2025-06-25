@@ -5,15 +5,6 @@ import (
 	"sync"
 )
 
-// ActorMsg is the message format for all actor communication.
-type ActorMsg struct {
-	To        string
-	From      string
-	Type      string
-	Data      interface{}
-	ReplyChan chan ActorMsg `json:"-"`
-}
-
 // ReceiveFunc is the function signature for an actor's message handler.
 type ReceiveFunc func(msg ActorMsg)
 

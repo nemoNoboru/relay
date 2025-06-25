@@ -16,12 +16,7 @@ func TestSupervisorActor(t *testing.T) {
 	// We'll add more sophisticated tests for message routing and actor creation next.
 
 	// Send a message and check for a log, for example
-	testMsg := ActorMsg{
-		To:   "supervisor",
-		From: "test",
-		Type: "test_message",
-		Data: "hello",
-	}
+	testMsg := NewTestMessageMsg("supervisor", "test", "hello")
 	router.Send(testMsg)
 
 	// Allow some time for the message to be processed
@@ -40,13 +35,7 @@ func TestSupervisorCreatesAndManagesActors(t *testing.T) {
 
 	// 1. Send a message to the supervisor to create a new actor, with a reply channel
 	replyChan := make(chan ActorMsg, 1)
-	createMsg := ActorMsg{
-		To:        "supervisor",
-		From:      "test",
-		Type:      "create_child:RelayServerActor",
-		Data:      "",
-		ReplyChan: replyChan,
-	}
+	createMsg := NewCreateChildMsg("supervisor", "test", "RelayServerActor", "", replyChan)
 	router.Send(createMsg)
 
 	// 2. Wait for the reply and assert
@@ -72,12 +61,7 @@ func TestSupervisorCreatesAndManagesActors(t *testing.T) {
 	}
 
 	// 3. Tell the supervisor to stop the child
-	stopMsg := ActorMsg{
-		To:   "supervisor",
-		From: "test",
-		Type: "stop_child",
-		Data: childName,
-	}
+	stopMsg := NewStopChildMsg("supervisor", "test", childName)
 	router.Send(stopMsg)
 
 	time.Sleep(50 * time.Millisecond) // Allow time for stop message to be processed

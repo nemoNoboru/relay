@@ -11,11 +11,10 @@ import (
 type WebSocketGatewayActor struct {
 	actor    *Actor
 	upgrader websocket.Upgrader
-	server   *http.Server
 }
 
 // NewWebSocketGatewayActor creates a new WebSocketGatewayActor.
-func NewWebSocketGatewayActor(name string, addr string, router *Router) *WebSocketGatewayActor {
+func NewWebSocketGatewayActor(name string, router *Router) *WebSocketGatewayActor {
 	g := &WebSocketGatewayActor{
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -24,27 +23,7 @@ func NewWebSocketGatewayActor(name string, addr string, router *Router) *WebSock
 		},
 	}
 	g.actor = NewActor(name, router, g.Receive)
-	g.server = &http.Server{Addr: addr, Handler: g}
 	return g
-}
-
-func (g *WebSocketGatewayActor) Start() {
-	g.actor.Start()
-	go func() {
-		log.Printf("WebSocket Gateway %s starting on %s", g.actor.Name, g.server.Addr)
-		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("WebSocket Gateway %s failed: %v", g.actor.Name, err)
-		}
-	}()
-}
-
-func (g *WebSocketGatewayActor) Stop() {
-	log.Printf("WebSocket Gateway %s stopping", g.actor.Name)
-	if err := g.server.Shutdown(nil); err != nil {
-		log.Printf("WebSocket Gateway %s shutdown error: %v", g.actor.Name, err)
-	}
-	g.actor.Stop()
-	log.Printf("WebSocket Gateway %s stopped", g.actor.Name)
 }
 
 // Receive handles messages for the gateway actor.
@@ -52,6 +31,11 @@ func (g *WebSocketGatewayActor) Receive(msg ActorMsg) {}
 
 // ServeHTTP handles incoming HTTP requests and upgrades them to WebSockets.
 func (g *WebSocketGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/ws" {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	conn, err := g.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade WebSocket connection: %v", err)
@@ -74,12 +58,7 @@ func (g *WebSocketGatewayActor) handleConnection(conn *websocket.Conn) {
 		}
 
 		targetActorName := request.Method
-		msg := ActorMsg{
-			To:   targetActorName,
-			From: g.actor.Name,
-			Type: "websocket_request",
-			Data: request,
-		}
+		msg := NewWebSocketRequestMsg(targetActorName, g.actor.Name, request)
 		g.actor.router.Send(msg)
 
 		// Dummy response

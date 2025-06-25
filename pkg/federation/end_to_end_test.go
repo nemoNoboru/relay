@@ -27,14 +27,9 @@ func TestTwoNodeCommunication(t *testing.T) {
 	responder := actor.NewActor("responder", routerA, func(msg actor.ActorMsg) {
 		if msg.Type == "ping" {
 			log.Printf("[Responder A] Received ping from %s. Sending pong.", msg.From)
-			reply := actor.ActorMsg{
-				To:   msg.From, // Send back to the original sender
-				From: "responder",
-				Type: "pong",
-				Data: "hello from node A",
-			}
+			reply := actor.NewPongMsg("gateway-b", "responder")
 			// To send it back, it must go through the gateway
-			forwardMsg := actor.ActorMsg{To: "gateway-a", From: "responder", Type: "forward_message", Data: reply}
+			forwardMsg := actor.NewForwardMessageMsg("gateway-a", "responder", reply)
 			routerA.Send(forwardMsg)
 		}
 	})
@@ -66,24 +61,14 @@ func TestTwoNodeCommunication(t *testing.T) {
 	// CONNECTION & COMMUNICATION
 	// =========================================================================
 	// 1. Tell Node B's gateway to connect to Node A's gateway.
-	connectMsg := actor.ActorMsg{
-		To:   "gateway-b",
-		From: "test",
-		Type: "connect_to_peer",
-		Data: gatewayA.GetListenURL(),
-	}
+	connectMsg := actor.NewConnectToPeerMsg("gateway-a", "requester", "ws://127.0.0.1:8080")
 	routerB.Send(connectMsg)
 	time.Sleep(100 * time.Millisecond) // Allow time for WebSocket handshake
 
 	// 2. The requester sends the first message, addressed to the responder.
-	pingMsg := actor.ActorMsg{
-		To:   "responder",
-		From: "requester",
-		Type: "ping",
-		Data: "hello from node B",
-	}
+	pingMsg := actor.NewPingMsg("gateway-b", "requester")
 	// It sends this message via its local gateway.
-	forwardPing := actor.ActorMsg{To: "gateway-b", From: "requester", Type: "forward_message", Data: pingMsg}
+	forwardPing := actor.NewForwardMessageMsg("gateway-b", "requester", pingMsg)
 	routerB.Send(forwardPing)
 
 	// ASSERTION

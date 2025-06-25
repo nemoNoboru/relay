@@ -1,8 +1,6 @@
 package actor
 
 import (
-	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -31,35 +29,20 @@ type JSONRPCResponse struct {
 type HTTPGatewayActor struct {
 	actor        *Actor
 	supervisorID string
-	server       *http.Server
 }
 
 // NewHTTPGatewayActor creates a new HTTPGatewayActor.
-func NewHTTPGatewayActor(name, supervisorID string, router *Router, port int) *HTTPGatewayActor {
+func NewHTTPGatewayActor(name, supervisorID string, router *Router) *HTTPGatewayActor {
 	g := &HTTPGatewayActor{
 		supervisorID: supervisorID,
 	}
 	g.actor = NewActor(name, router, g.Receive)
-	g.server = &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: g,
-	}
 	return g
+
 }
 
 func (g *HTTPGatewayActor) Start() {
 	g.actor.Start()
-	go func() {
-		if err := g.server.ListenAndServe(); err != nil {
-			log.Fatalf("HTTP server failed: %v", err)
-		}
-	}()
-	log.Printf("HTTP gateway actor %s started on port %d", g.actor.Name, g.server.Addr)
-}
-
-func (g *HTTPGatewayActor) Stop() {
-	g.actor.Stop()
-	g.server.Shutdown(context.Background())
 }
 
 // Receive handles messages for the gateway actor.
@@ -70,7 +53,7 @@ func (g *HTTPGatewayActor) Receive(msg ActorMsg) {
 
 // ServeHTTP makes HTTPGatewayActor an http.Handler.
 func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/eval" {
+	if r.URL.Path != "/jsonrpc" {
 		http.NotFound(w, r)
 		return
 	}
@@ -84,12 +67,7 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Ask the supervisor to create a temporary worker actor for this request.
 	createReplyChan := make(chan ActorMsg, 1)
-	createMsg := ActorMsg{
-		To:        g.supervisorID,
-		From:      g.actor.Name,
-		Type:      "create_child: RelayServerActor",
-		ReplyChan: createReplyChan,
-	}
+	createMsg := NewCreateChildMsg(g.supervisorID, g.actor.Name, "RelayServerActor", nil, createReplyChan)
 	g.actor.router.Send(createMsg)
 
 	var workerName string
@@ -102,24 +80,13 @@ func (g *HTTPGatewayActor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		// 5. Tell the supervisor to stop the temporary worker.
-		stopMsg := ActorMsg{
-			To:   g.supervisorID,
-			From: g.actor.Name,
-			Type: "stop_child",
-			Data: workerName,
-		}
+		stopMsg := NewStopChildMsg(g.supervisorID, g.actor.Name, workerName)
 		g.actor.router.Send(stopMsg)
 	}()
 
 	// 2. Send code to the new worker for evaluation.
 	evalReplyChan := make(chan ActorMsg, 1)
-	evalMsg := ActorMsg{
-		To:        workerName,
-		From:      g.actor.Name,
-		Type:      "eval",
-		Data:      code,
-		ReplyChan: evalReplyChan,
-	}
+	evalMsg := NewEvalMsg(workerName, g.actor.Name, code, evalReplyChan)
 	g.actor.router.Send(evalMsg)
 
 	// 3. Wait for the result and write it to the response.

@@ -12,13 +12,13 @@ func TestWebSocketGatewayActor(t *testing.T) {
 	router := NewRouter()
 	defer router.StopAll()
 
-	gateway := NewWebSocketGatewayActor("ws-gateway", "", router) // Use httptest.Server URL
+	gateway := NewWebSocketGatewayActor("ws-gateway", router) // Use httptest.Server URL
 
 	server := httptest.NewServer(gateway)
 	defer server.Close()
 
 	// Convert http:// to ws://
-	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	wsURL := "ws" + strings.TrimPrefix(server.URL+"/ws", "http")
 
 	// Create a mock receiver actor
 	receiver := NewActor("test-receiver", router, func(msg ActorMsg) {

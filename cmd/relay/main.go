@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
@@ -63,16 +64,23 @@ func main() {
 
 	// Mode 1: Run as HTTP Gateway handling incoming requests
 	if *port != 0 {
-		// runGatewayMode(router, supervisor, *port)
-		// Keep the process alive
+		mux := http.NewServeMux()
+		httpGateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router)
+		wsGateway := actor.NewWebSocketGatewayActor("ws-gateway", router)
+		mux.Handle("/jsonrpc", httpGateway)
+		mux.Handle("/ws", wsGateway)
+		server := &http.Server{
+			Addr:    fmt.Sprintf(":%d", *port),
+			Handler: mux,
+		}
+		go func() {
+			log.Printf("HTTP+WebSocket server listening on port %d", *port)
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("HTTP server failed: %v", err)
+			}
+		}()
 		select {}
 	}
-}
-
-func runGatewayMode(router *actor.Router, supervisor *actor.SupervisorActor, port int) {
-	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, port)
-	gateway.Start()
 }
 
 func runCliMode(router *actor.Router, supervisor *actor.SupervisorActor) {
@@ -87,7 +95,7 @@ func runCliMode(router *actor.Router, supervisor *actor.SupervisorActor) {
 		if err != nil {
 			log.Fatalf("Failed to read file %s: %v", filename, err)
 		}
-		evalMsg := actor.ActorMsg{To: workerName, From: "main", Type: "eval", Data: string(content)}
+		evalMsg := actor.NewEvalMsg(workerName, "main", string(content), nil)
 		router.Send(evalMsg)
 		// Give it a moment to process before exiting
 		time.Sleep(2 * time.Second)
@@ -107,13 +115,7 @@ func runCliMode(router *actor.Router, supervisor *actor.SupervisorActor) {
 
 func createWorker(router *actor.Router, supervisor *actor.SupervisorActor, nameHint string) string {
 	replyChan := make(chan actor.ActorMsg, 1)
-	createMsg := actor.ActorMsg{
-		To:        supervisor.Actor.Name,
-		From:      "main",
-		Type:      "create_child: RelayServerActor",
-		Data:      "",
-		ReplyChan: replyChan,
-	}
+	createMsg := actor.NewCreateChildMsg(supervisor.Actor.Name, "main", "RelayServerActor", "", replyChan)
 	router.Send(createMsg)
 
 	var workerName string
@@ -130,8 +132,6 @@ func createWorker(router *actor.Router, supervisor *actor.SupervisorActor, nameH
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, *port)
-	gateway.Start()
 
 	return workerName
 }
@@ -200,13 +200,7 @@ func startREPL(preloadFile string) error {
 	// Create a single, long-running RelayServerActor for the HTTP gateway.
 	log.Println("Creating persistent Relay Server Actor for HTTP Gateway...")
 	replyChan := make(chan actor.ActorMsg, 1)
-	createMsg := actor.ActorMsg{
-		To:        "root-supervisor",
-		From:      "main",
-		Type:      "create_child",
-		Data:      "RelayServerActor",
-		ReplyChan: replyChan,
-	}
+	createMsg := actor.NewCreateChildMsg(supervisor.Actor.Name, "main", "RelayServerActor", "", replyChan)
 	router.Send(createMsg)
 
 	var workerName string
@@ -223,8 +217,6 @@ func startREPL(preloadFile string) error {
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, *port)
-	gateway.Start()
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -276,13 +268,7 @@ func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 	// Create a single, long-running RelayServerActor for the HTTP gateway.
 	log.Println("Creating persistent Relay Server Actor for HTTP Gateway...")
 	replyChan := make(chan actor.ActorMsg, 1)
-	createMsg := actor.ActorMsg{
-		To:        "root-supervisor",
-		From:      "main",
-		Type:      "create_child",
-		Data:      "RelayServerActor",
-		ReplyChan: replyChan,
-	}
+	createMsg := actor.NewCreateChildMsg(supervisor.Actor.Name, "main", "RelayServerActor", "", replyChan)
 	router.Send(createMsg)
 
 	var workerName string
@@ -299,8 +285,6 @@ func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 	log.Printf("Persistent Relay Server Actor '%s' created.", workerName)
 
 	log.Println("Starting HTTP Gateway...")
-	gateway := actor.NewHTTPGatewayActor("http-gateway", "root-supervisor", router, port)
-	gateway.Start()
 
 	// Read the file
 	content, err := os.ReadFile(filename)
@@ -310,12 +294,7 @@ func runRelayFile(filename string, port int, shouldStartREPL bool) error {
 
 	// Send the script content to the newly created actor for evaluation.
 	fmt.Printf("Executing %s via actor %s...\n", filename, workerName)
-	router.Send(actor.ActorMsg{
-		To:   workerName,
-		From: "main",
-		Type: "eval",
-		Data: string(content),
-	})
+	router.Send(actor.NewEvalMsg(workerName, "main", string(content), nil))
 
 	// NOTE: This is now asynchronous. We need a way to wait for the result
 	// if we want to print it or start a REPL with the resulting state.

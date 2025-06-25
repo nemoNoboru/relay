@@ -15,15 +15,15 @@ func TestHTTPGatewayActor(t *testing.T) {
 	supervisor.Start()
 
 	// The gateway actor now requires a supervisor name.
-	gateway := NewHTTPGatewayActor("test-gateway", "test-supervisor", router, 8080)
+	gateway := NewHTTPGatewayActor("test-gateway", "test-supervisor", router)
 	gateway.Start()
 
 	// Create a test server from the gateway handler
 	server := httptest.NewServer(gateway)
 	defer server.Close()
 
-	// The test now needs to use the /eval endpoint
-	req, err := http.NewRequest("POST", server.URL+"/eval", strings.NewReader("1 + 1"))
+	// The test now needs to use the /jsonrpc endpoint
+	req, err := http.NewRequest("POST", server.URL+"/jsonrpc", strings.NewReader("1 + 1"))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
