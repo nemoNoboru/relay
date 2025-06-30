@@ -1,285 +1,158 @@
-# Relay - Federated Web Programming Language
+# Relay Desktop
 
-> **Version 0.3.0-dev "Cloudpunks Edition"**
+**Web Development for Everyone**
 
-A federated, minimal programming language designed to build modern distributed web services with the simplicity of early PHP, but with built-in federation capabilities.
+Relay Desktop is an innovative development environment that makes building dynamic websites accessible to everyone. Write in simple, English-like syntax and see your changes live as you type.
 
-## Overview
+## Features
 
-Relay is designed to democratize web development by moving away from centralized cloud oligarchies (AWS, Azure, Google Cloud) toward community-owned infrastructure. It combines the simplicity of the original LAMP stack with modern federation capabilities.
-
-### Key Features
-
-- **Federation-native**: Services automatically discover and communicate with each other
-- **JSON-RPC 2.0 by default**: Every `.relay` file becomes a web server
-- **Community hosting**: Deploy to community-owned infrastructure
-- **Language interoperability**: Call from any programming language
-- **Zero-config deployment**: Single binary distribution
-- **Built-in state management**: Automatic persistence with embedded database
-- **Template system**: Server-side rendering with simple syntax
+- 🚀 **Simple Syntax** - English-like commands that anyone can understand
+- 🔥 **Live Preview** - See your changes instantly as you type
+- 🎨 **Built-in Components** - Rich library of UI components ready to use
+- 📁 **Project Management** - Organized file structure with pages, functions, and data
+- 🎯 **Monaco Editor** - Professional code editor with syntax highlighting
+- ⚡ **Fast Development** - Built with Vite for lightning-fast development
 
 ## Quick Start
 
-### Install
+### Prerequisites
 
+- [Bun](https://bun.sh/) - Fast JavaScript runtime and package manager
+
+### Installation
+
+1. Clone the repository:
 ```bash
-go install github.com/cloudpunks/relay/cmd/relay@latest
+git clone <repository-url>
+cd relay
 ```
 
-### Hello World
-
-Create `hello.relay`:
-
-```relay
-protocol HelloService {
-  greet(name: string) -> string
-}
-
-server implements HelloService {
-  receive greet {name: string} -> string {
-    return `Hello, ${name}!`
-  }
-}
-```
-
-Run it:
-
+2. Install dependencies with Bun:
 ```bash
-relay hello.relay
+bun install
 ```
 
-Your service is now running on `http://localhost:8080` with a JSON-RPC 2.0 API!
-
-Test it:
-
+3. Start the development server:
 ```bash
-curl -X POST http://localhost:8080 \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"greet","params":{"name":"World"},"id":1}'
+bun run electron:dev
 ```
 
-## Language Features
+## Development Scripts
 
-### Immutable Data Operations
-
-Relay is immutable-by-default, making it safer and more predictable:
-
-```relay
-// Object updates - always create new instances
-set user = User{name: "John", age: 25}
-set updated_user = user.set("age", 26)                    // Single field
-set full_user = user.merge({email: "john@test.com", active: true})  // Multiple fields
-
-// Array operations - always return new arrays  
-set users = [user1, user2]
-set more_users = users.add(user3)                         // Add to end
-set ordered_users = users.sort_by(u => u.name)           // Sort
-set active_users = users.filter(u => u.active)          // Filter
-```
-
-### Structs and Protocols
-
-```relay
-struct User {
-  name: string.min(1).max(50),
-  email: string.email(),
-  age: number
-}
-
-protocol UserService {
-  create_user(user: User) -> User
-  get_user(id: string) -> User
-}
-```
-
-### Servers with State
-
-```relay
-server user_service implements UserService {
-  state {
-    users: [User] = [],
-    next_id: number = 1
-  }
-  
-  receive create_user {user: User} -> User {
-    set new_user = user.set("id", state.next_id.toString())
-                       .set("created_at", now())
-                       .set("active", true)
-    
-    state.users = state.users.add(new_user)
-    state.next_id = state.next_id + 1
-    return new_user
-  }
-  
-  receive update_user {id: string, updates: UserUpdates} -> User {
-    set user = state.users.find(u => u.id == id)
-    set updated_user = user.merge(updates).set("updated_at", now())
-    
-    state.users = state.users.replace(user, updated_user)
-    return updated_user
-  }
-}
-```
-
-### Federation
-
-```relay
-server {
-  receive get_all_blogs {} {
-    // Automatically discover all services implementing BlogService
-    set blog_services = discover(BlogService)
-    set all_posts = []
-    
-    for service in blog_services {
-      set posts = send service get_posts {}
-      all_posts = all_posts.append(posts)
-    }
-    
-    return all_posts
-  }
-}
-```
-
-### Web Templates
-
-```relay
-// Auto-create web routes
-template "index.html" from get_posts {}
-template "api/posts.json" from get_posts {}
-```
+- `bun run dev` - Start Vite development server
+- `bun run electron:dev` - Start Electron app in development mode
+- `bun run build` - Build the application for production
+- `bun run electron` - Run the built Electron app
+- `bun run preview` - Preview the built application
 
 ## Project Structure
 
 ```
-relay/
-├── cmd/relay/           # Main CLI application
-├── pkg/
-│   ├── lexer/          # Tokenizer
-│   ├── parser/         # Syntax parser
-│   ├── ast/            # Abstract Syntax Tree
-│   ├── typechecker/    # Type checking
-│   ├── compiler/       # Code generation
-│   ├── runtime/        # Runtime engine
-│   ├── server/         # JSON-RPC server
-│   ├── federation/     # Service discovery
-│   ├── templates/      # Template engine
-│   └── state/          # State management
-├── internal/
-│   ├── config/         # Configuration
-│   └── utils/          # Utilities
-├── examples/           # Example programs
-├── spec.md            # Language specification
-├── vision.md          # Project vision
-└── quickstart.md      # Quick start guide
+src/
+├── app/                 # Relay desktop application
+│   ├── components/      # React components
+│   ├── types.ts         # TypeScript definitions
+│   └── App.tsx          # Main application component
+├── core/                # Relay language core
+│   ├── parser.ts        # PEG.js parser for Relay syntax
+│   └── renderer.ts      # Renders parsed AST to React
+├── main.tsx             # React entry point
+└── index.css            # Global styles with Tailwind
+
+electron/
+├── main.ts              # Electron main process
+└── preload.ts           # Electron preload script
+
+public/
+└── relay-icon.svg       # Application icon
 ```
 
-## Development
+## Relay Language Syntax
 
-### Building
+### Basic Structure
 
-```bash
-go build -o relay cmd/relay/main.go
+```relay
+relay {
+  show heading "Welcome to Relay"
+  show paragraph "This is a simple example"
+}
 ```
 
-### Testing
+### Variables and Data
 
-```bash
-go test ./...
+```relay
+relay {
+  set greeting "Hello, World!"
+  show heading (get greeting)
+}
 ```
 
-### Running Examples
+### Components
 
-```bash
-./relay examples/simple_blog.relay
+```relay
+relay {
+  show card
+    show heading "My Card"
+    show paragraph "Card content goes here"
+    show button "Click me"
+}
 ```
 
-## Developer Documentation
+### Loops and Logic
 
-For detailed technical information about the Relay runtime and language implementation:
-
-- **[Runtime Internals](RUNTIME_INTERNALS.md)** - Comprehensive guide to expression evaluation, environments, and debugging
-- **[Quick Reference](RUNTIME_QUICK_REFERENCE.md)** - Fast debugging guide for common runtime issues
-- **[Debugging Guide](DEBUGGING_GUIDE.md)** - Step-by-step troubleshooting procedures
-- **[Language Specification](spec.md)** - Complete language specification and examples
-
-## Architecture
-
-The Relay language implementation consists of several key components:
-
-1. **Lexer**: Tokenizes Relay source code
-2. **Parser**: Builds Abstract Syntax Tree (AST)
-3. **Type Checker**: Validates types and structures
-4. **Compiler**: Generates Go code or bytecode
-5. **Runtime**: 
-   - JSON-RPC 2.0 HTTP server
-   - State management with embedded database
-   - Federation client for service discovery
-   - Template rendering engine
-
-## Deployment Options
-
-### Development
-```bash
-relay run app.relay --port 3000
+```relay
+relay {
+  set items ["Item 1", "Item 2", "Item 3"]
+  
+  for item in items
+    show list-item (get item)
+}
 ```
 
-### Production Build
-```bash
-relay build app.relay --output my-app
-./my-app --port 8080
-```
+## Built-in Components
 
-### Community Hosting
-```bash
-relay deploy app.relay --community my-neighborhood.relay
-```
+- **Layout**: `container`, `grid`, `column`, `card`
+- **Typography**: `heading`, `paragraph`
+- **Forms**: `input-text`, `button`, `select`, `checkbox`
+- **Data**: `list-item`, `table-row`
+- **Media**: `image`
 
-### Global Network
-```bash
-relay deploy app.relay --global
-```
+## Technology Stack
+
+- **Electron** - Desktop application framework
+- **React** - UI library
+- **TypeScript** - Type-safe JavaScript
+- **Vite** - Build tool and development server
+- **Tailwind CSS** - Utility-first CSS framework
+- **Monaco Editor** - Code editor (VS Code's editor)
+- **Bun** - JavaScript runtime and package manager
 
 ## Contributing
 
-We welcome contributions! This is an ambitious project to reshape web development.
-
-### Getting Started
-
 1. Fork the repository
-2. Create a feature branch
-3. Implement your changes
-4. Add tests
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Areas for Contribution
+## Roadmap
 
-- [ ] Lexer improvements
-- [ ] Parser implementation
-- [ ] Type checker
-- [ ] Code generation
-- [ ] Runtime features
-- [ ] Federation protocol
-- [ ] Template engine
-- [ ] State management
-- [ ] Documentation
-- [ ] Examples
+See [roadmap.md](roadmap.md) for detailed development plans and milestones.
 
 ## Vision
 
-Our goal is to recreate the golden age of web development (LAMP stack era) with modern federation capabilities. We want to make building distributed web applications as simple as PHP was in 1995, while enabling communities to own their own infrastructure.
-
-This is a **"cloudpunk"** project - fighting against the centralization of the internet and giving power back to communities and individual developers.
+Read our [vision.md](vision.md) to understand the mission behind Relay and why we're building it.
 
 ## License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Community
 
-- **Discord**: [Join our community](https://discord.gg/relay-lang)
-- **GitHub Discussions**: [Participate in discussions](https://github.com/cloudpunks/relay/discussions)
-- **Twitter**: [@RelayLang](https://twitter.com/RelayLang)
+- [Discord Community](https://discord.gg/relay) - Join our community
+- [GitHub Discussions](https://github.com/relay/relay/discussions) - Ask questions and share ideas
+- [Twitter](https://twitter.com/relayapp) - Follow for updates
 
 ---
 
-*Built with ❤️ by the Cloudpunks community* 
+**Made with ❤️ for everyone who wants to build for the web** 
