@@ -32,7 +32,8 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     icon: path.join(process.env.VITE_PUBLIC, 'relay-icon.png'),
-    titleBarStyle: 'default', // Changed from 'hiddenInset' to allow window movement
+    titleBarStyle: 'hidden',
+    ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
