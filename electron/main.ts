@@ -32,32 +32,39 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     icon: path.join(process.env.VITE_PUBLIC, 'relay-icon.png'),
-    titleBarStyle: 'hiddenInset',
+    titleBarStyle: 'default', // Changed from 'hiddenInset' to allow window movement
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Allow loading local files for development
+      webSecurity: true, // Re-enabled web security
     },
-    show: false, // Don't show until ready-to-show
+    show: true, // Show immediately for debugging
   })
 
-  // Show window when ready to prevent visual flash
-  win.once('ready-to-show', () => {
-    win?.show()
+  // Add error handling for loading failures
+  win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Failed to load:', validatedURL, 'Error:', errorDescription)
   })
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
+    console.log('Page loaded successfully')
     win?.webContents.send('main-process-message', new Date().toLocaleString())
   })
 
+  // Add debugging for URL loading
+  console.log('VITE_DEV_SERVER_URL:', VITE_DEV_SERVER_URL)
+
   if (VITE_DEV_SERVER_URL) {
+    console.log('Loading from Vite dev server:', VITE_DEV_SERVER_URL)
     win.loadURL(VITE_DEV_SERVER_URL)
-    // Open devtools in development
-    // win.webContents.openDevTools()
+    // Open devtools in development for debugging
+    win.webContents.openDevTools()
   } else {
-    win.loadFile(path.join(process.env.DIST, 'index.html'))
+    const htmlPath = path.join(process.env.DIST, 'index.html')
+    console.log('Loading from file:', htmlPath)
+    win.loadFile(htmlPath)
   }
 
   // Make all links open with the browser, not with the application
