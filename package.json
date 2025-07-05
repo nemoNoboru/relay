@@ -2,6 +2,7 @@
   "name": "relay-desktop",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "description": "Relay Desktop - Web Development for Everyone",
   "main": "dist-electron/main.js",
   "homepage": "./",
