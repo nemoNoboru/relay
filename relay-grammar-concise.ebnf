@@ -1,0 +1,75 @@
+# Relay Language Grammar - Concise
+
+# Everything is an expression that returns a value
+# Indented blocks are syntactic sugar for sequence expressions
+
+program = expression*
+
+expression = funcall | atom | lambda | sequence | comment
+
+# Function calls - three forms
+funcall = identifier argument_list
+
+argument_list = inline_args | sequence_arg | parenthesized_args
+
+inline_args = expression*
+sequence_arg = sequence  
+parenthesized_args = "(" expression* ")"
+
+# Sequences - syntactic sugar for parentheses
+# Sequences evaluate all expressions and return the last value
+sequence = indent expression+ dedent
+
+# Lambda expressions - two forms
+lambda = brace_lambda | block_lambda
+
+brace_lambda = "{" parameters ":" expression "}"
+block_lambda = parameters ":" (expression | sequence)
+
+parameters = identifier ("," identifier)*
+
+# Atoms (literals)
+atom = string | number | boolean | null | json_literal | identifier
+
+# JSON support
+json_literal = json_array | json_object
+json_array = "[" (expression ("," expression)*)? "]"
+json_object = "{" (json_pair ("," json_pair)*)? "}"
+json_pair = (string | identifier) ":" expression
+
+# Comments
+comment = "#" comment_char* newline
+
+# Lexical
+identifier = identifier_start identifier_part* "?"?
+string = '"' string_char* '"'
+number = integer | float
+boolean = "true" | "false"
+null = "null"
+
+# Helper terminals
+integer = "-"? digit+
+float = "-"? digit+ "." digit+
+identifier_start = letter | "_"
+identifier_part = letter | digit | "_" | "-"
+letter = "a".."z" | "A".."Z"
+digit = "0".."9"
+string_char = any_char_except_quote | '\"'
+comment_char = any_char_except_newline
+newline = "\n" | "\r\n" | "\r"
+indent = ? increase_indentation_level ?
+dedent = ? decrease_indentation_level ?
+
+# Examples:
+# 1. set working true                     → funcall("set", [atom("working"), atom(true)])
+# 2. if user                              → funcall("if", [atom("user"), sequence([...])])
+#        show card user                   
+#        show heading "welcome!"
+# 3. map users {user: get user name}      → funcall("map", [atom("users"), lambda(["user"], ...)])
+# 4. def is_even? n                       → funcall("def", [atom("is_even?"), atom("n"), sequence([...])])
+#        equal (% n 2) 0
+# 5. set numbers [1, 2, 3]               → funcall("set", [atom("numbers"), json_array([...])])
+# 6. filter numbers {n: is_even? n}       → funcall("filter", [atom("numbers"), lambda(["n"], ...)])
+
+# Key insight: Indented blocks are syntactic sugar for sequence expressions
+# The runtime only sees expressions - sequences, function calls, atoms, and lambdas

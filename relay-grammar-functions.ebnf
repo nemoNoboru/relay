@@ -1,0 +1,205 @@
+(* Relay Language Grammar - Expression-Based EBNF Specification *)
+(* In Relay, EVERYTHING is an expression that returns a value *)
+(* There are no statements - only expressions *)
+
+(* === Top Level Structure === *)
+program = expression_list ;
+
+expression_list = { expression } ;
+
+(* === Core: Everything is an Expression === *)
+expression = function_call_expression
+           | lambda_expression
+           | infix_expression
+           | primary_expression
+           | comment ;
+
+comment = "#" { any_character - newline } newline ;
+
+(* === Function Call Expressions === *)
+(* Function calls are expressions that return values *)
+function_call_expression = identifier argument_list ;
+
+argument_list = inline_arguments
+              | indented_arguments ;
+
+(* Inline arguments *)
+inline_arguments = { expression } ;
+
+(* Indented arguments - preferred style for readability *)
+indented_arguments = newline indent argument_expression_list dedent ;
+
+argument_expression_list = { argument_expression } ;
+
+argument_expression = lambda_expression_block
+                    | expression ;
+
+(* === Lambda Expressions === *)
+(* Lambda expressions can be written in braces or as indented blocks *)
+lambda_expression = lambda_brace_form
+                  | lambda_block_form ;
+
+lambda_brace_form = "{" lambda_parameters ":" lambda_body "}" ;
+
+lambda_block_form = lambda_parameters ":" lambda_body ;
+
+lambda_parameters = [ identifier { "," identifier } ] ;
+
+lambda_body = expression
+            | newline expression_block ;
+
+(* Lambda expressions that appear in indented argument lists *)
+lambda_expression_block = identifier ":" ( expression | newline expression_block ) ;
+
+(* === Primary Expressions === *)
+primary_expression = parenthesized_expression
+                   | literal
+                   | identifier
+                   | json_literal ;
+
+(* Parenthesized expressions - only used when needed for disambiguation *)
+parenthesized_expression = "(" expression_list ")" ;
+
+(* === Infix Expressions === *)
+(* These are syntactic sugar that gets converted to function call expressions *)
+infix_expression = expression infix_operator expression ;
+
+infix_operator = "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||" ;
+
+(* === Expression Blocks === *)
+(* Indented blocks are expressions that return the value of the last expression *)
+expression_block = indent expression_list dedent ;
+
+(* === Literals === *)
+literal = string_literal
+        | number_literal
+        | boolean_literal
+        | null_literal ;
+
+string_literal = '"' { string_character } '"' ;
+
+string_character = any_character - '"' - newline
+                 | '\"' ;
+
+number_literal = integer_literal
+               | float_literal ;
+
+integer_literal = [ "-" ] digit { digit } ;
+
+float_literal = [ "-" ] digit { digit } "." digit { digit } ;
+
+boolean_literal = "true" | "false" ;
+
+null_literal = "null" ;
+
+(* === JSON Literals === *)
+json_literal = json_array
+             | json_object ;
+
+json_array = "[" [ json_value { "," json_value } ] "]" ;
+
+json_object = "{" [ json_pair { "," json_pair } ] "}" ;
+
+json_pair = ( string_literal | identifier ) ":" json_value ;
+
+json_value = json_literal
+           | literal
+           | identifier ;
+
+(* === Identifiers === *)
+identifier = identifier_start { identifier_part } [ "?" ] ;
+
+identifier_start = letter | "_" ;
+
+identifier_part = letter | digit | "_" | "-" ;
+
+(* === Lexical Elements === *)
+letter = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" 
+       | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+       | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M"
+       | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" ;
+
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+newline = "\n" | "\r\n" | "\r" ;
+
+whitespace = " " | "\t" ;
+
+any_character = ? any Unicode character ? ;
+
+(* === Indentation Handling === *)
+indent = ? increase in indentation level ? ;
+dedent = ? decrease in indentation level ? ;
+
+(* === Everything is an Expression === *)
+(* 
+   In Relay, there are no statements - only expressions that return values:
+   
+   set working true              -> returns true
+   if working (show "hello")     -> returns result of show or null
+   def is_even? n (equal n 2)    -> returns the function
+   map users {user: get user name} -> returns list of names
+   
+   Even blocks are expressions that return the value of the last expression:
+   
+   if working
+       set result "active"
+       show message result
+       result                    -> this block returns "active"
+   
+   This makes the language consistent and composable.
+*)
+
+(* === Expression Examples === *)
+(* 
+   1. Simple expression:
+   set working true
+   -> function_call_expression { name: "set", args: ["working", true] }
+   -> returns: true
+   
+   2. Nested expressions:
+   set name (get user name)
+   -> function_call_expression { 
+        name: "set", 
+        args: ["name", function_call_expression { name: "get", args: ["user", "name"] }] 
+      }
+   -> returns: the user's name
+   
+   3. Lambda expression:
+   map users {user: get user name}
+   -> function_call_expression { 
+        name: "map", 
+        args: ["users", lambda_expression { params: ["user"], body: get_expr }] 
+      }
+   -> returns: list of user names
+   
+   4. If expression:
+   if working "active" "inactive"
+   -> function_call_expression { name: "if", args: ["working", "active", "inactive"] }
+   -> returns: either "active" or "inactive"
+   
+   5. Block expression:
+   if working
+       set status "active"
+       show notification status
+       status
+   -> function_call_expression { 
+        name: "if", 
+        args: ["working", expression_block { expressions: [set_expr, show_expr, "status"] }] 
+      }
+   -> returns: "active" (the value of the last expression in the block)
+   
+   6. Function definition expression:
+   def greet name
+       concat "Hello, " name "!"
+   -> function_call_expression { 
+        name: "def", 
+        args: ["greet", "name", expression_block { expressions: [concat_expr] }] 
+      }
+   -> returns: the greet function
+   
+   7. Complex composition:
+   set greeting (greet (get user name))
+   -> All nested expressions return values that feed into the outer expression
+   -> returns: the greeting string
+*) 

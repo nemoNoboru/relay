@@ -1,0 +1,257 @@
+(* Relay Language Grammar - Final Version *)
+(* Everything is an expression that returns a value *)
+(* Indented blocks are syntactic sugar for sequence expressions *)
+
+(* === Program Structure === *)
+program = expression* ;
+
+(* === Core Expression Types === *)
+expression = funcall
+           | atom
+           | lambda
+           | sequence
+           | comment ;
+
+(* === Function Calls === *)
+(* Three forms: inline, with sequence, or parenthesized *)
+funcall = identifier argument_list ;
+
+argument_list = inline_args
+              | sequence_arg
+              | parenthesized_args ;
+
+inline_args = expression* ;
+sequence_arg = sequence ;
+parenthesized_args = "(" expression* ")" ;
+
+(* === Sequence Expressions === *)
+(* Indented blocks become sequence expressions *)
+(* Sequences evaluate all expressions and return the last value *)
+sequence = indent expression+ dedent ;
+
+(* === Lambda Expressions === *)
+lambda = brace_lambda
+       | block_lambda ;
+
+brace_lambda = "{" parameters ":" expression "}" ;
+block_lambda = parameters ":" ( expression | sequence ) ;
+
+parameters = identifier ( "," identifier )* ;
+
+(* === Atoms (Literals) === *)
+atom = string
+     | number
+     | boolean
+     | null
+     | json_literal
+     | identifier ;
+
+(* === Literals === *)
+string = '"' string_char* '"' ;
+number = integer | float ;
+boolean = "true" | "false" ;
+null = "null" ;
+identifier = identifier_start identifier_part* "?"? ;
+
+integer = "-"? digit+ ;
+float = "-"? digit+ "." digit+ ;
+
+(* === JSON Literals === *)
+json_literal = json_array | json_object ;
+json_array = "[" ( expression ( "," expression )* )? "]" ;
+json_object = "{" ( json_pair ( "," json_pair )* )? "}" ;
+json_pair = ( string | identifier ) ":" expression ;
+
+(* === Comments === *)
+comment = "#" comment_char* newline ;
+
+(* === Lexical Elements === *)
+identifier_start = letter | "_" ;
+identifier_part = letter | digit | "_" | "-" ;
+letter = "a".."z" | "A".."Z" ;
+digit = "0".."9" ;
+string_char = any_char_except_quote | '\"' ;
+comment_char = any_char_except_newline ;
+newline = "\n" | "\r\n" | "\r" ;
+indent = ? increase_indentation_level ? ;
+dedent = ? decrease_indentation_level ? ;
+
+(* === Grammar Examples === *)
+(*
+1. Simple function call:
+   set working true
+   
+   Parses to:
+   funcall {
+     name: "set",
+     args: [atom("working"), atom(true)]
+   }
+
+2. Function with sequence (preferred style):
+   if user
+       show card user
+       show heading "welcome!"
+   
+   Parses to:
+   funcall {
+     name: "if", 
+     args: [
+       atom("user"),
+       sequence([
+         funcall("show", [atom("card"), atom("user")]),
+         funcall("show", [atom("heading"), atom("welcome!")])
+       ])
+     ]
+   }
+
+3. Equivalent with parentheses (when needed):
+   if user ((show card user) (show heading "welcome!"))
+   
+   Parses to same AST as above.
+
+4. Function definition:
+   def greet name
+       concat "Hello, " name "!"
+   
+   Parses to:
+   funcall {
+     name: "def",
+     args: [
+       atom("greet"),
+       atom("name"), 
+       sequence([
+         funcall("concat", [atom("Hello, "), atom("name"), atom("!")])
+       ])
+     ]
+   }
+
+5. Lambda expressions:
+   map users {user: get user name}
+   
+   Parses to:
+   funcall {
+     name: "map",
+     args: [
+       atom("users"),
+       lambda {
+         params: ["user"],
+         body: funcall("get", [atom("user"), atom("name")])
+       }
+     ]
+   }
+
+6. Lambda with sequence:
+   map users
+       user:
+           set name (get user name)
+           show card name
+   
+   Parses to:
+   funcall {
+     name: "map",
+     args: [
+       atom("users"),
+       sequence([
+         lambda {
+           params: ["user"],
+           body: sequence([
+             funcall("set", [atom("name"), funcall("get", [atom("user"), atom("name")])]),
+             funcall("show", [atom("card"), atom("name")])
+           ])
+         }
+       ])
+     ]
+   }
+
+7. JSON literals:
+   set users [{"name": "john", "age": 30}]
+   
+   Parses to:
+   funcall {
+     name: "set",
+     args: [
+       atom("users"),
+       json_array([
+         json_object([
+           {"name": atom("john")},
+           {"age": atom(30)}
+         ])
+       ])
+     ]
+   }
+*)
+
+(* === Runtime Implementation Notes === *)
+(*
+The runtime only deals with expressions. Key functions:
+
+builtins.eval = function(expr) {
+  switch (expr.type) {
+    case 'funcall':
+      const func = builtins[expr.name] || getVariable(expr.name);
+      const args = expr.args.map(arg => eval(arg));
+      return func(args);
+    
+    case 'sequence':
+      let result = null;
+      for (const subExpr of expr.expressions) {
+        result = eval(subExpr);
+      }
+      return result;  // Return value of last expression
+    
+    case 'lambda':
+      return createFunction(expr.params, expr.body);
+    
+    case 'atom':
+      return expr.value;
+    
+    case 'json_array':
+      return expr.elements.map(elem => eval(elem));
+    
+    case 'json_object':
+      const obj = {};
+      for (const pair of expr.pairs) {
+        obj[pair.key] = eval(pair.value);
+      }
+      return obj;
+  }
+}
+
+builtins.if = function(args) {
+  const [condition, positive, negative] = args;
+  if (eval(condition)) {
+    return eval(positive);
+  }
+  return eval(negative);
+}
+
+builtins.def = function(args) {
+  const [name, ...params] = args.slice(0, -1);
+  const body = args[args.length - 1];
+  
+  const func = function(callArgs) {
+    pushScope();
+    params.forEach((param, i) => setVariable(param, callArgs[i]));
+    const result = eval(body);
+    popScope();
+    return result;
+  };
+  
+  setVariable(name, func);
+  return func;
+}
+*)
+
+(* === Key Design Principles === *)
+(*
+1. Everything is an expression that returns a value
+2. Indented blocks are syntactic sugar for sequence expressions
+3. Parentheses are optional and used only for disambiguation
+4. The runtime is uniform - it only evaluates expressions
+5. Functions receive evaluated arguments and return values
+6. Sequences evaluate all sub-expressions and return the last value
+7. Lambda expressions create closures that capture scope
+8. JSON literals are first-class expressions
+9. Comments are treated as expressions but ignored during evaluation
+10. The grammar is minimal but expressive
+*) 
