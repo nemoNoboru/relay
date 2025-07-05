@@ -63,6 +63,39 @@ runtimes handle the platform-specific parts:
 
 the beauty is that relay doesn't care. it says "show a button" and the runtime figures out how.
 
+## extending runtimes with def-js
+
+relay includes `def-js` for defining custom JavaScript builtin functions at runtime. this lets you extend any runtime with custom functionality.
+
+```relay
+# define eager function (all args evaluated first)
+def-js max true "return Math.max(...args);"
+max 1 5 3  # returns 5
+
+# define lazy function (control evaluation yourself)
+def-js unless false "
+  const condition = evaluate(args[0], env);
+  if (!condition) {
+    return evaluate(args[1], env);
+  }
+  return null;
+"
+
+unless (> x 20) (show "x is not big enough")
+```
+
+**eager functions** get pre-evaluated arguments, perfect for:
+- math operations: `abs`, `sqrt`, `round`
+- string manipulation: `concat`, `length`, `trim`
+- data processing: `sort`, `filter`, `map`
+
+**lazy functions** control argument evaluation, perfect for:
+- control flow: `unless`, `while`, `repeat`
+- error handling: `try`, `safe`
+- short-circuiting: `and`, `or`
+
+this means communities can extend relay without waiting for core changes. need database functions? write them. want special UI components? add them. the runtime becomes exactly what you need.
+
 ## graceful degradation
 
 not every platform supports everything. that's fine.

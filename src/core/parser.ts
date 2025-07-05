@@ -479,17 +479,13 @@ export class RelayParser {
       return this.parseAtom();
     }
     
-    // Handle identifier references (parameters, variables)
-    if (this.isIdentifierRef() && !this.hasMoreInlineArgs() && this.peekNext() !== 'NEWLINE') {
-      return this.parseIdentifierRef();
-    }
-    
     // Check for infix operator pattern: identifier operator ...
     if (this.isInfixExpression()) {
       return this.parseInfixExpression();
     }
     
     // Default to function call for identifiers and operators
+    // In Relay, all identifiers are function calls (no bare identifier references)
     return this.parseFuncall();
   }
 
