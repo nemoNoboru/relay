@@ -734,15 +734,32 @@ export class RelayParser {
     
     const elements: ExpressionNode[] = [];
     
+    // Skip newlines and indentation after opening bracket
+    this.skipJsonWhitespace();
+    
     if (!this.check('RBRACKET')) {
       elements.push(this.parseExpression());
       
-      while (this.check('COMMA')) {
-        this.advance(); // consume ','
+      // Handle both comma-separated and newline-separated elements
+      while (this.check('COMMA') || this.check('NEWLINE') || this.check('INDENT')) {
+        if (this.check('COMMA')) {
+          this.advance(); // consume ','
+          this.skipJsonWhitespace(); // Skip whitespace after comma
+        } else {
+          this.skipJsonWhitespace(); // Skip newlines and indentation
+        }
+        
+        // Check if we've reached the end after skipping whitespace
+        if (this.check('RBRACKET')) {
+          break;
+        }
+        
         elements.push(this.parseExpression());
       }
     }
     
+    // Skip any trailing whitespace before closing bracket
+    this.skipJsonWhitespace();
     this.consume('RBRACKET');
     
     return {
@@ -757,21 +774,45 @@ export class RelayParser {
     
     const pairs: { key: string; value: ExpressionNode }[] = [];
     
+    // Skip newlines and indentation after opening brace
+    this.skipJsonWhitespace();
+    
     if (!this.check('RBRACE')) {
       pairs.push(this.parseJsonPair());
       
-      while (this.check('COMMA')) {
-        this.advance(); // consume ','
+      // Handle both comma-separated and newline-separated pairs
+      while (this.check('COMMA') || this.check('NEWLINE') || this.check('INDENT')) {
+        if (this.check('COMMA')) {
+          this.advance(); // consume ','
+          this.skipJsonWhitespace(); // Skip whitespace after comma
+        } else {
+          this.skipJsonWhitespace(); // Skip newlines and indentation
+        }
+        
+        // Check if we've reached the end after skipping whitespace
+        if (this.check('RBRACE')) {
+          break;
+        }
+        
         pairs.push(this.parseJsonPair());
       }
     }
     
+    // Skip any trailing whitespace before closing brace
+    this.skipJsonWhitespace();
     this.consume('RBRACE');
     
     return {
       type: 'json_object',
       pairs
     };
+  }
+
+  // Helper method to skip whitespace tokens inside JSON objects
+  private skipJsonWhitespace(): void {
+    while (this.check('NEWLINE') || this.check('INDENT') || this.check('DEDENT') || this.check('COMMENT')) {
+      this.advance();
+    }
   }
 
   // json_pair = (string | identifier) ":" expression

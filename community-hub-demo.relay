@@ -1,0 +1,196 @@
+# Community Resource Hub
+# A simple platform for neighbors to share resources and build community
+
+# Initialize community state
+state totalResources 4
+state totalMembers 12
+
+# Main header
+show "container"
+  show "heading" {"text": "🌱 Community Resource Hub", "class": "text-center text-green-600"}
+  show "paragraph" {"text": "Your neighborhood's digital commons", "class": "text-center text-gray-600"}
+
+# Quick stats
+show "container"
+  show "row"
+    show "col"
+      show "card" {"title": "Resources", "content": "4"}
+    show "col"
+      show "card" {"title": "Members", "content": "12"}
+    show "col"
+      show "card" {"title": "Community Owned", "content": "100%"}
+
+# Action buttons
+show "container"
+  show "row"
+    show "button" {"text": "Add Resource", "onClick": "add-resource", "class": "bg-green-500 hover:bg-green-600"}
+    show "button" {"text": "Browse All", "onClick": "browse-all", "class": "bg-blue-500 hover:bg-blue-600"}
+
+# Available resources
+show "container"
+  show "heading" {"text": "Available Resources", "class": "text-gray-800"}
+  show "grid"
+    show "card" {"title": "🔨 Power Tools", "content": "Drill, saw, sander available from Maria"}
+      show "button" {"text": "Request", "onClick": "request-tools", "class": "bg-green-500 text-white"}
+    show "card" {"title": "📚 Kids Books", "content": "Ages 5-12, excellent condition from Ahmed"}
+      show "button" {"text": "Browse", "onClick": "browse-books", "class": "bg-blue-500 text-white"}
+    show "card" {"title": "🌱 Garden Seeds", "content": "Tomatoes, herbs, flowers from Elena"}
+      show "button" {"text": "Get Seeds", "onClick": "get-seeds", "class": "bg-purple-500 text-white"}
+
+# Add resource form
+show "container"
+  show "heading" {"text": "Share a Resource", "class": "text-gray-800"}
+  show "form" {"name": "new-resource", "onSubmit": "submit-resource"}
+    show "input" {"label": "Resource Title", "name": "title", "placeholder": "e.g., Garden Tools"}
+    show "input" {"label": "Description", "name": "description", "placeholder": "What you're offering..."}
+    show "input" {"label": "Your Name", "name": "contact", "placeholder": "How neighbors can reach you"}
+    show "button" {"text": "Share Resource", "class": "bg-green-500 text-white"}
+
+# Community message
+show "container"
+  show "card" {"title": "Building Community Together"}
+    show "paragraph" {"text": "Join your neighbors in creating a more connected, sustainable community. Every shared resource makes our neighborhood stronger."}
+    show "row"
+      show "button" {"text": "Join Community", "onClick": "join-community", "class": "bg-blue-500 text-white"}
+      show "button" {"text": "Learn More", "onClick": "learn-more", "class": "bg-gray-500 text-white"}
+
+# Event handlers
+when "add-resource" data
+  set totalResources (+ totalResources 1)
+
+when "join-community" data
+  set totalMembers (+ totalMembers 1)
+
+when "submit-resource" data
+  set totalResources (+ totalResources 1)
+
+when "request-tools" data
+  set totalResources totalResources
+
+when "browse-books" data
+  set totalResources totalResources
+
+when "get-seeds" data
+  set totalResources totalResources
+
+when "browse-all" data
+  set totalResources totalResources
+
+when "learn-more" data
+  set totalResources totalResources
+
+when "test-click" data
+  # Just a simple event handler 
+
+# Relay Blog - A Medium-style publishing platform
+# Built with Relay for creators who value simplicity and focus
+
+# Initialize state for interactions
+state totalReads 847
+state totalClaps 23
+
+# Site header with branding
+show "container"
+  show "row" {"class": "items-center justify-between py-4 border-b"}
+    show "heading" {"text": "Relay Blog", "class": "text-2xl font-bold text-gray-900"}
+    show "row" {"class": "gap-4"}
+      show "button" {"text": "Write", "onClick": "start-writing", "class": "bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700"}
+      show "button" {"text": "Sign In", "onClick": "sign-in", "class": "text-gray-600 hover:text-gray-900"}
+
+# Featured article hero section
+show "container" {"class": "py-12"}
+  show "card" {"class": "border-none shadow-none p-0"}
+    show "heading" {"text": "The Future of Human-Centered Technology", "class": "text-4xl font-bold text-gray-900 mb-4 leading-tight"}
+    show "paragraph" {"text": "How simple, intuitive tools are reshaping the way we interact with computers and each other", "class": "text-xl text-gray-600 mb-6"}
+    show "row" {"class": "items-center gap-4 mb-8"}
+      show "paragraph" {"text": "by Elena Rodriguez", "class": "text-green-600 font-medium"}
+      show "paragraph" {"text": "•", "class": "text-gray-400"}
+      show "paragraph" {"text": "Dec 15, 2024", "class": "text-gray-500"}
+      show "paragraph" {"text": "•", "class": "text-gray-400"}
+      show "paragraph" {"text": "8 min read", "class": "text-gray-500"}
+    show "button" {"text": "Read Article", "onClick": "read-featured", "class": "bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800"}
+
+# Article grid section
+show "container" {"class": "py-12"}
+  show "heading" {"text": "Latest Stories", "class": "text-2xl font-bold text-gray-900 mb-8"}
+  show "grid" {"class": "gap-8"}
+    
+    # Article 1
+    show "card" {"class": "border-none shadow-none p-0"}
+      show "heading" {"text": "Building Digital Communities That Actually Work", "class": "text-xl font-bold text-gray-900 mb-3 hover:text-green-600"}
+      show "paragraph" {"text": "The key principles behind successful online communities and how to foster genuine connections in digital spaces.", "class": "text-gray-600 mb-4"}
+      show "row" {"class": "items-center gap-4 mb-4"}
+        show "paragraph" {"text": "by Marcus Chen", "class": "text-green-600 font-medium"}
+        show "paragraph" {"text": "•", "class": "text-gray-400"}
+        show "paragraph" {"text": "Dec 12, 2024", "class": "text-gray-500"}
+        show "paragraph" {"text": "•", "class": "text-gray-400"}
+        show "paragraph" {"text": "5 min read", "class": "text-gray-500"}
+      show "row" {"class": "gap-3"}
+        show "button" {"text": "👏 12", "onClick": "clap-article", "class": "text-gray-500 hover:text-green-600"}
+        show "button" {"text": "💬 3", "onClick": "view-comments", "class": "text-gray-500 hover:text-blue-600"}
+        show "button" {"text": "🔖", "onClick": "save-article", "class": "text-gray-500 hover:text-yellow-600"}
+    
+    # Article 2
+    show "card" {"class": "border-none shadow-none p-0"}
+      show "heading" {"text": "The Art of Minimalist Design in Web Development", "class": "text-xl font-bold text-gray-900 mb-3 hover:text-green-600"}
+      show "paragraph" {"text": "Why less is more when it comes to creating user interfaces that people actually want to use.", "class": "text-gray-600 mb-4"}
+      show "row" {"class": "items-center gap-4 mb-4"}
+        show "paragraph" {"text": "by Sarah Kim", "class": "text-green-600 font-medium"}
+        show "paragraph" {"text": "•", "class": "text-gray-400"}
+        show "paragraph" {"text": "Dec 10, 2024", "class": "text-gray-500"}
+        show "paragraph" {"text": "•", "class": "text-gray-400"}
+        show "paragraph" {"text": "7 min read", "class": "text-gray-500"}
+      show "row" {"class": "gap-3"}
+        show "button" {"text": "👏 28", "onClick": "clap-article", "class": "text-gray-500 hover:text-green-600"}
+        show "button" {"text": "💬 8", "onClick": "view-comments", "class": "text-gray-500 hover:text-blue-600"}
+        show "button" {"text": "🔖", "onClick": "save-article", "class": "text-gray-500 hover:text-yellow-600"}
+    
+    # Article 3
+    show "card" {"class": "border-none shadow-none p-0"}
+      show "heading" {"text": "From Idea to Impact: A Creator's Journey", "class": "text-xl font-bold text-gray-900 mb-3 hover:text-green-600"}
+      show "paragraph" {"text": "Personal reflections on building tools that matter and finding your voice as a independent creator.", "class": "text-gray-600 mb-4"}
+      show "row" {"class": "items-center gap-4 mb-4"}
+        show "paragraph" {"text": "by Alex Rivera", "class": "text-green-600 font-medium"}
+        show "paragraph" {"text": "•", "class": "text-gray-400"}
+        show "paragraph" {"text": "Dec 8, 2024", "class": "text-gray-500"}
+        show "paragraph" {"text": "•", "class": "text-gray-400"}
+        show "paragraph" {"text": "6 min read", "class": "text-gray-500"}
+      show "row" {"class": "gap-3"}
+        show "button" {"text": "👏 45", "onClick": "clap-article", "class": "text-gray-500 hover:text-green-600"}
+        show "button" {"text": "💬 15", "onClick": "view-comments", "class": "text-gray-500 hover:text-blue-600"}
+        show "button" {"text": "🔖", "onClick": "save-article", "class": "text-gray-500 hover:text-yellow-600"}
+
+# Newsletter signup section
+show "container" {"class": "py-12 bg-gray-50"}
+  show "card" {"class": "text-center max-w-md mx-auto border-none shadow-none bg-transparent"}
+    show "heading" {"text": "Stay Connected", "class": "text-2xl font-bold text-gray-900 mb-4"}
+    show "paragraph" {"text": "Get the best stories delivered to your inbox weekly", "class": "text-gray-600 mb-6"}
+    show "form" {"name": "newsletter", "onSubmit": "subscribe", "class": "space-y-4"}
+      show "input" {"name": "email", "placeholder": "Enter your email", "class": "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"}
+      show "button" {"text": "Subscribe", "class": "w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-medium"}
+
+# Footer with stats
+show "container" {"class": "py-8 border-t"}
+  show "row" {"class": "items-center justify-between"}
+    show "row" {"class": "gap-8"}
+      show "paragraph" {"text": "© 2024 Relay Blog", "class": "text-gray-500"}
+      show "button" {"text": "About", "onClick": "about", "class": "text-gray-500 hover:text-gray-900"}
+      show "button" {"text": "Terms", "onClick": "terms", "class": "text-gray-500 hover:text-gray-900"}
+      show "button" {"text": "Privacy", "onClick": "privacy", "class": "text-gray-500 hover:text-gray-900"}
+    show "row" {"class": "gap-4"}
+      show "paragraph" {"text": "847 total reads", "class": "text-gray-500"}
+      show "paragraph" {"text": "•", "class": "text-gray-400"}
+      show "paragraph" {"text": "23 active writers", "class": "text-gray-500"}
+
+# Event handlers for interactions
+when "start-writing" data
+  set totalReads totalReads
+
+when "read-featured" data
+  set totalReads (+ totalReads 1)
+
+when "clap-article" data
+  set totalClaps (+ totalClaps 1)
+
+when "subscribe" data
+  set totalReads (+ totalReads 1)

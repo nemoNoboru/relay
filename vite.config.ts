@@ -19,7 +19,10 @@ export default defineConfig({
             minify: false,
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron', 'chokidar', 'fsevents']
+              external: ['electron', 'chokidar', 'fsevents'],
+              output: {
+                format: 'es'
+              }
             }
           }
         }
@@ -35,7 +38,10 @@ export default defineConfig({
             minify: false,
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron', 'chokidar', 'fsevents']
+              external: ['electron', 'chokidar', 'fsevents'],
+              output: {
+                format: 'es'
+              }
             }
           }
         }

@@ -149,8 +149,8 @@ describe('RelayInterpreter', () => {
 
   describe('Lambda Functions', () => {
     test('creates and calls lambda functions', () => {
-      interpreter.evaluate(parse('set add {x: + x 1}'));
-      const result = interpreter.evaluate(parse('add 5'));
+      interpreter.evaluate(parse('set add_one {x: + x 1}'));
+      const result = interpreter.evaluate(parse('add_one 5'));
       expect(result).toBe(6);
     });
 
@@ -205,16 +205,23 @@ describe('RelayInterpreter', () => {
   });
 
   describe('Show Function', () => {
-    test('show function returns formatted output', () => {
+    test('show function returns component collection', () => {
       const program = parse('show "Hello" "World"');
       const result = interpreter.evaluate(program);
-      expect(result).toBe('Hello World');
+      expect(result.type).toBe('component_collection');
+      expect(result.components).toHaveLength(1);
+      expect(result.components[0].name).toBe('Hello');
+      expect(result.components[0].props.content).toBe('World');
     });
 
-    test('show function handles different types', () => {
-      const program = parse('show 42 true {"key": "value"}');
+    test('show function handles JSON props', () => {
+      const program = parse('show "card" {"title": "Test", "content": "Content"}');
       const result = interpreter.evaluate(program);
-      expect(result).toBe('42 true {"key":"value"}');
+      expect(result.type).toBe('component_collection');
+      expect(result.components).toHaveLength(1);
+      expect(result.components[0].name).toBe('card');
+      expect(result.components[0].props.title).toBe('Test');
+      expect(result.components[0].props.content).toBe('Content');
     });
   });
 });
