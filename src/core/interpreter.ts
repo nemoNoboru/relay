@@ -7,7 +7,6 @@ import {
   FuncallNode, 
   AtomNode, 
   SequenceNode, 
-  LambdaNode, 
   JsonArrayNode, 
   JsonObjectNode, 
   IdentifierNode 
@@ -28,8 +27,8 @@ export interface RelayFunction {
 }
 
 // Builtin function signatures
-export type EagerBuiltinFunction = (args: any[], env: Environment) => any;
-export type LazyBuiltinFunction = (args: ExpressionNode[], env: Environment, evaluate: (expr: ExpressionNode, env: Environment) => any) => any;
+export type EagerBuiltinFunction = (args: any[], env: Environment, children?: ExpressionNode[]) => any;
+export type LazyBuiltinFunction = (args: ExpressionNode[], env: Environment, evaluate: (expr: ExpressionNode, env: Environment) => any, children?: ExpressionNode[]) => any;
 
 export interface BuiltinSpec {
   fn: EagerBuiltinFunction | LazyBuiltinFunction;
@@ -204,10 +203,10 @@ export class RelayInterpreter {
       if (builtin.evaluateArgs) {
         // Eager evaluation: evaluate all arguments first
         const evaluatedArgs = funcall.args.map(arg => this.evaluateExpression(arg, env));
-        return (builtin.fn as EagerBuiltinFunction)(evaluatedArgs, env);
+        return (builtin.fn as EagerBuiltinFunction)(evaluatedArgs, env, funcall.children);
       } else {
         // Lazy evaluation: pass raw AST nodes and evaluator function
-        return (builtin.fn as LazyBuiltinFunction)(funcall.args, env, (expr, env) => this.evaluateExpression(expr, env));
+        return (builtin.fn as LazyBuiltinFunction)(funcall.args, env, (expr, env) => this.evaluateExpression(expr, env), funcall.children);
       }
     }
     
@@ -417,9 +416,17 @@ export class RelayInterpreter {
     });
 
     // Function definition: def name params body (LAZY - controls argument evaluation)
-    defineBuiltin("def", false, (args: ExpressionNode[], env: Environment, evaluate) => {
-      if (args.length !== 3) {
-        throw new Error("def expects exactly 3 arguments: name, params, body");
+    defineBuiltin("def", false, (args: ExpressionNode[], env: Environment, evaluate: (expr: ExpressionNode, env: Environment) => any, children?: ExpressionNode[]) => {
+      // Check if we have 2 args + children (block syntax) or 3 args (inline syntax)
+      let body: ExpressionNode;
+      if (args.length === 2 && children && children.length > 0) {
+        // Block syntax: def name params [block body]
+        body = children[0];
+      } else if (args.length === 3) {
+        // Inline syntax: def name params body
+        body = args[2];
+      } else {
+        throw new Error("def expects either 2 arguments with block body or 3 arguments: name, params, body");
       }
       
       // Don't evaluate the name - use it directly
@@ -430,9 +437,8 @@ export class RelayInterpreter {
       
       const name = (nameArg as IdentifierNode).name;
       
-      // Don't evaluate params or body - store them as AST nodes
+      // Don't evaluate params - store as AST nodes
       const params = args[1];
-      const body = args[2];
       
       // For now, simplified: assume params is a single identifier
       let paramNames: string[];
@@ -457,7 +463,7 @@ export class RelayInterpreter {
 
     // Output function for testing (LAZY) - bind to this interpreter instance
     const interpreterInstance = this;
-    defineBuiltin("show", false, (args: ExpressionNode[], env: Environment, evaluate) => {
+    defineBuiltin("show", false, (args: ExpressionNode[], env: Environment, evaluate, blockChildren?: ExpressionNode[]) => {
       if (args.length === 0) {
         throw new Error("show expects at least 1 argument: component name");
       }
@@ -473,12 +479,63 @@ export class RelayInterpreter {
       const props: Record<string, any> = {};
       let children: RenderableComponent[] = [];
       
+      // Handle block children from indented syntax
+      if (blockChildren && blockChildren.length > 0) {
+        const wasEvaluatingChildren = interpreterInstance.isEvaluatingChildren;
+        interpreterInstance.setChildEvaluationMode(true);
+        
+        for (const childExpr of blockChildren) {
+          const childResult = evaluate(childExpr, env);
+          
+          // Handle different types of results
+          if (childResult && typeof childResult === 'object') {
+            if (childResult.type === 'component') {
+              // Single component
+              children.push(childResult);
+            } else if (Array.isArray(childResult)) {
+              // Array of components (e.g., from 'for' function)
+              for (const item of childResult) {
+                if (item && typeof item === 'object' && item.type === 'component') {
+                  children.push(item);
+                }
+              }
+            } else if (childResult.type === 'component_collection' && Array.isArray(childResult.components)) {
+              // Component collection (alternative format)
+              for (const component of childResult.components) {
+                if (component && typeof component === 'object' && component.type === 'component') {
+                  children.push(component);
+                }
+              }
+            }
+          }
+        }
+        
+        interpreterInstance.setChildEvaluationMode(wasEvaluatingChildren);
+      }
+      
       // Handle different argument patterns
       if (args.length === 2) {
         const secondArg = args[1];
         
-        // Check if it's a sequence expression (block syntax)
-        if (secondArg.type === 'sequence') {
+        // If we have blockChildren, treat args[1] as props regardless of type
+        if (blockChildren && blockChildren.length > 0) {
+          // We already processed blockChildren above, now just handle props
+          const secondValue = evaluate(secondArg, env);
+          
+          if (typeof secondValue === 'string') {
+            // Simple case: show heading "Hello World"
+            if (componentName === 'heading' || componentName === 'paragraph' || componentName === 'button') {
+              props.text = secondValue;
+            } else {
+              props.content = secondValue;
+            }
+          } else if (typeof secondValue === 'object' && secondValue !== null) {
+            // Object case: show heading {"text": "Hello", "level": 1}
+            Object.assign(props, secondValue);
+          }
+        }
+        // Check if it's a sequence expression (old block syntax without block children)
+        else if (secondArg.type === 'sequence') {
           // Handle block syntax: show grid [NEWLINE + INDENT] ... [DEDENT]
           const sequenceNode = secondArg as SequenceNode;
           children = [];
@@ -516,7 +573,7 @@ export class RelayInterpreter {
           // Restore previous evaluation mode
           interpreterInstance.setChildEvaluationMode(wasEvaluatingChildren);
         } else {
-          // Evaluate the second argument normally
+          // Evaluate the second argument normally (no block children, no sequence)
           const secondValue = evaluate(secondArg, env);
           
           if (typeof secondValue === 'string') {
@@ -747,9 +804,9 @@ export class RelayInterpreter {
     });
 
     // When function for event handling (LAZY)
-    defineBuiltin("when", false, (args: ExpressionNode[], env: Environment, evaluate) => {
-      if (args.length < 2) {
-        throw new Error("when expects at least 2 arguments: event-name and handler-body");
+    defineBuiltin("when", false, (args: ExpressionNode[], env: Environment, evaluate, children?: ExpressionNode[]) => {
+      if (args.length < 1) {
+        throw new Error("when expects at least 1 argument: event-name");
       }
       
       // Get the event name - can be identifier or string literal
@@ -764,17 +821,26 @@ export class RelayInterpreter {
         throw new Error("when expects first argument to be an event name (identifier or string)");
       }
       
-      // Get the data parameter name (optional)
+      // Get the data parameter name (second argument, optional)
       let dataParamName = 'data';
-      if (args.length > 2) {
+      if (args.length >= 2) {
         const dataArg = args[1];
         if (dataArg.type === 'identifier') {
           dataParamName = (dataArg as IdentifierNode).name;
         }
       }
       
-      // Get the handler body (last argument)
-      const handlerBody = args[args.length - 1];
+      // Get the handler body from children (block syntax) or from args
+      let handlerBody: ExpressionNode;
+      if (children && children.length > 0) {
+        // Block syntax: handler is in children
+        handlerBody = children[0];
+      } else if (args.length > 2) {
+        // Inline syntax: handler is last argument
+        handlerBody = args[args.length - 1];
+      } else {
+        throw new Error("when expects a handler body (either as indented block or third argument)");
+      }
       
       // Create event handler function
       const eventHandler = {
