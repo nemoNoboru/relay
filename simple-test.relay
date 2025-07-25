@@ -1,0 +1,22 @@
+-- Simple Test
+-- This is a minimal test to isolate input and event issues
+
+-- Initialize state for form data
+local formData = relay.state("formData", "")
+
+-- Just show a simple input and button
+relay.show("input", {name = "test", placeholder = "Type here"})
+relay.show("button", {text = "Click Me", onClick = "test-click"})
+
+-- Show a card to display the submitted data
+relay.show("card", {title = "Submitted Data", content = formData or "Click the button to see the form data here"})
+
+-- Simple event handler
+relay.when("test-click", function(data)
+  print("Button clicked! Received data:", data)
+  
+  -- Update the state with the form data
+  relay.state("formData", "Form data: " .. (data.test or "No data"))
+  
+  return "clicked"
+end) 

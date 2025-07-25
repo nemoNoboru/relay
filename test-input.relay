@@ -1,0 +1,19 @@
+-- Simple Input Test
+-- This example tests input field functionality in the live preview
+
+-- Show a simple form with input fields
+relay.show("heading", {text = "Input Field Test", level = 1})
+
+relay.show("form", {name = "test-form", onSubmit = "submit-form"})
+  relay.show("input", {name = "username", placeholder = "Enter username"})
+  relay.show("input", {name = "email", placeholder = "Enter email", type = "email"})
+  relay.show("button", {text = "Submit", onClick = "submit-form"})
+
+-- Show current form values
+relay.show("card", {title = "Form Values", content = "Values will appear here when you type"})
+
+-- Event handler for form submission
+relay.when("submit-form", function(data)
+  print("Form submitted with data:", data)
+  return "submitted"
+end) 
