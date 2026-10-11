@@ -47,6 +47,22 @@ The two generated pages are rebuilt from their Markdown sources:
 ./tools/sync.sh --check   # exit 1 if either is out of date (CI / pre-commit)
 ```
 
+## Agent skills
+
+- The Go engineering standard lives in
+  [`.pi/skills/go-architecture`](.pi/skills/go-architecture/SKILL.md) — idiomatic Go,
+  clean code, SOLID, package layout, and the domain-driven vs data-driven rule for each
+  feature.
+- The frontend standard lives in
+  [`.pi/skills/frontend-architecture`](.pi/skills/frontend-architecture/SKILL.md) —
+  functional programming as a first-class paradigm, Effect-TS as the functional library
+  of choice, TypeScript, vanilla DOM, and the live-data patterns for the node UI and
+  site console.
+
+The [Pi harness](https://pi.dev) discovers both automatically from `.pi/skills/` and
+applies the matching one to each kind of work; force one with
+`/skill:go-architecture` or `/skill:frontend-architecture`.
+
 ## Status
 
 **Pre-development.** This repository is design documents and static UI mockups;
