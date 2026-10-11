@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay — The Web Belongs to All</title>
+<meta name="description" content="Relay is the last mile for independent websites: static hosting, an easy database, and reachability for machines behind NAT. Own your address. Keep your data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="mark">R</span> RELAY</a>
+    <nav class="main">
+      <a href="./manifesto.html">Manifesto</a>
+      <a href="./technicals.html">Technicals</a>
+      <a href="#primitives">Primitives</a>
+      <a href="#network">Network</a>
+      <a href="#deploy">Deploy</a>
+    </nav>
+    <span class="stamp">Open · Federated</span>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <span class="kicker">The hard part was never building it</span>
+        <h1>The web<br><span class="rev">belongs</span><br><span class="red">to all</span></h1>
+        <p class="lead"><b>Building a website is easy now. Putting one online is not.</b> The web has landlords now, and the deal is the old one: you make the thing, they keep it, and you pay to reach it. Relay is the last mile — static hosting, an easy database, reachability, and opt-in login and stats — so the thing you made can actually be seen.</p>
+        <div class="actions">
+          <a class="btn solid" href="#deploy">Host a site</a>
+          <a class="btn" href="#network">Run a node</a>
+          <a class="btn" href="./manifesto.html">Read the manifesto</a>
+        </div>
+        <p class="meta">No central accounts · No permission slips · Your files come with you</p>
+      </div>
+      <div class="art" aria-hidden="true">
+        <div class="frame"></div>
+        <div class="grid"></div>
+        <div class="circle"></div>
+        <div class="wedge"></div>
+        <div class="bar"></div>
+        <div class="word">RELAY</div>
+        <div class="tag">The last mile</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BAND -->
+  <div class="band" aria-hidden="true">
+    <div class="track">
+      <span>Static hosting</span><span>Easy database</span><span>Reachability</span><span>Site-level login</span><span>Private stats</span><span>Runs in Docker</span><span>Deploy in one step</span><span>Own your address</span><span>Keep your data</span>
+      <span>Static hosting</span><span>Easy database</span><span>Reachability</span><span>Site-level login</span><span>Private stats</span><span>Runs in Docker</span><span>Deploy in one step</span><span>Own your address</span><span>Keep your data</span>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section id="manifesto">
+    <div class="wrap">
+      <span class="kick">01 — The problem</span>
+      <h2>A graveyard<br>of localhosts</h2>
+      <div class="rule"></div>
+      <div class="cols">
+        <div>
+          <p>Let's say you made something. An afternoon's work, maybe less. And now it sits in a folder — untracked, unbacked-up, seen by no one. Loved, and effectively <b>indeployable by a normal person.</b></p>
+          <p>Even the ones served from home are invisible: behind a router, behind NAT, on a dynamic IP, on a machine nobody can reach.</p>
+        </div>
+        <div>
+          <p>The web has been captured. What began as a decentralized commons became five websites owned by five companies, all hosted on three clouds — the plague of landlords, now digital.</p>
+          <p>Making things got easy. <b>Shipping them never did.</b></p>
+        </div>
+      </div>
+      <p class="pull">A folder is not a website.<br>It's a draft. <em>Relay gives it an address.</em></p>
+    </div>
+  </section>
+
+  <!-- PRIMITIVES -->
+  <section id="primitives">
+    <div class="wrap">
+      <span class="kick">02 — The building blocks</span>
+      <h2>Three primitives.<br>No more.</h2>
+      <div class="rule"></div>
+      <div class="prims">
+        <article class="prim">
+          <span class="num">01</span>
+          <h3>Static hosting</h3>
+          <p>Point Relay at a folder and it gets an address. No build step, no server to babysit, no database to provision before page one. Files are light — which is why one cheap machine can hold thousands of them.</p>
+          <span class="foot">Thousands of sites · one machine</span>
+        </article>
+        <article class="prim">
+          <span class="num">02</span>
+          <h3>An easy database</h3>
+          <p>Your site remembers. One uniform store, on every server. Export the file and it travels: data that moves is data that lives.</p>
+          <span class="foot">Portable · yours to carry</span>
+        </article>
+        <article class="prim">
+          <span class="num">03</span>
+          <h3>Reachability</h3>
+          <p>An outbound connection to a public friend. No port forwarding, no static IP, no dynamic DNS. It fronts a folder you point it at — or the server you already run. The world comes in through the wire you opened.</p>
+          <span class="foot">NAT is not a wall</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPT-INS -->
+  <section id="optins">
+    <div class="wrap">
+      <span class="kick">03 — The opt-ins</span>
+      <h2>Login and stats.<br>Only if you ask.</h2>
+      <div class="rule"></div>
+      <div class="doors">
+        <div class="door">
+          <span class="tag">Opt-in login</span>
+          <h3>Accounts you host</h3>
+          <p>Turn it on and your site's users live in your site's own database — sign-up, sign-in, sessions — with no Relay account anywhere. Export the site and its people come with it.</p>
+        </div>
+        <div class="door">
+          <span class="tag">Private stats</span>
+          <h3>Numbers, not surveillance</h3>
+          <p>Your node already served every request. It can show you views, referrers, and top pages — first-party, cookieless, aggregate, and yours alone. No tracker follows your visitors.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NETWORK -->
+  <section class="network" id="network">
+    <div class="wrap">
+      <span class="kick">04 — The network</span>
+      <h2>Every node is the same.<br>Some are public.</h2>
+      <div class="rule"></div>
+      <div class="diagram">
+        <div class="flow">
+          <div class="net-row">
+            <div class="node"><b>Visitors</b>a browser asks for<small>relay.cloudpunk.org/raspberry/docs/</small></div>
+          </div>
+          <div class="flow-link"><span class="flow-label">HTTPS request</span><span class="wire"></span></div>
+          <div class="net-row">
+            <div class="node pub">
+              <b>Public node</b>relay.cloudpunk.org
+              <span class="friend-list">
+                <span><em>/raspberry/</em> &rarr; its outbound WebSocket</span>
+                <span><em>/bookshelf/</em> &rarr; its outbound WebSocket</span>
+              </span>
+            </div>
+          </div>
+          <div class="flow-link"><span class="flow-label">relayed down the matching tunnel</span><span class="wire"></span></div>
+          <div class="net-row">
+            <div class="node priv"><b>Raspberry Pi</b>behind NAT<small>/raspberry/</small></div>
+            <div class="node priv"><b>Laptop</b>behind NAT<small>/bookshelf/</small></div>
+          </div>
+        </div>
+        <p class="net-note">
+          The friend nodes dial <em>out</em> to the public node — one WebSocket each — so no port forwarding
+          is ever needed. The public node keeps the list, routes each request to the right friend by its path
+          prefix, and the answer travels back up the same wire. The same wire fronts a folder of files or an app
+          you already run — so it is also a tunnel service you own. A boring trick with a boring name; it is the
+          reason the computer under your desk can be a web server.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOORS -->
+  <section>
+    <div class="wrap">
+      <span class="kick">05 — The doors</span>
+      <h2>Open or private</h2>
+      <div class="rule"></div>
+      <div class="doors">
+        <div class="door">
+          <span class="tag">Open servers</span>
+          <h3>Free deployments</h3>
+          <p>Anyone can publish, within the server's published rules. Personal sites, community pages, and experiments live here.</p>
+        </div>
+        <div class="door">
+          <span class="tag">Private servers</span>
+          <h3>By invitation</h3>
+          <p>The owner issues a token; only sites bearing it can deploy. Families, clubs, and small businesses get a space gated by trust, not by somebody's account system.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY -->
+  <section class="keysec">
+    <div class="wrap">
+      <div class="keybig">KEY</div>
+      <div>
+        <span class="kick">06 — The deed</span>
+        <h2>One address,<br>one key</h2>
+        <div class="rule"></div>
+        <p style="margin-top:22px;font-weight:300;font-size:1.08rem">The first time you deploy a name, Relay hands you a <b>key</b> — a small text file. That key is the deed. Update, move, or leave: the name stays yours. No landlord can claim your domain, overwrite your files, or impersonate your site. There is no password reset and no support ticket. That's the deal, and it's a good one.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RULES / COMPUTE -->
+  <section style="padding-bottom:0">
+    <div class="split">
+      <div>
+        <span class="kick">07 — The rules</span>
+        <h2>Rules in the open</h2>
+        <p>What a server will and won't host is published, and checked by small local classifier models. Compliant sites deploy themselves. The rest wait for a human, not a platform.</p>
+        <ul>
+          <li>Read the rules</li>
+          <li>Argue with them</li>
+          <li>Fork the server</li>
+        </ul>
+      </div>
+      <div>
+        <span class="kick">08 — Next</span>
+        <h2>Compute, soon</h2>
+        <p>Backend functions, sandboxed in a tiny QuickJS engine and rate-limited per site. A few hundred nodes lending spare cycles become a backend nobody owns. We already built the wire — compute is the next thing we send down it.</p>
+        <ul>
+          <li>Functions beside your site</li>
+          <li>Memory &amp; time caps per call</li>
+          <li>One sandbox, a thousand tenants</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="deploy">
+    <div class="wrap" style="padding:0 26px">
+      <h2>Run a node.<br>Bring a friend.<br>Take the web back.</h2>
+      <div class="actions">
+        <a class="btn" href="./manifesto.html">Read the manifesto</a>
+        <a class="btn" href="./technicals.html">Technical docs</a>
+        <a class="btn solid" href="#top">Start hosting</a>
+      </div>
+      <p class="sub">Of the web · by the web · for the web</p>
+      <p class="meta" style="position:relative;margin-top:16px">Binary · Docker · Docker Swarm · Kubernetes</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="big">The web was built by people, <em>for people.</em> Let's take it back.</p>
+    <p class="fine">
+      Relay — an open, federated hosting network<br>
+      Deploy in one step · Own your address · Keep your data<br>
+      <a href="./manifesto.html">Read the manifesto</a> · <a href="./technicals.html">Technicals</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
