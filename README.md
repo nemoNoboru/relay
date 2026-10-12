@@ -27,6 +27,7 @@ platform's permission.
 | [`REVIEW.md`](REVIEW.md) | **The one to read.** Decisions, open questions, and the pre-build checklist |
 | [`docs/vision.md`](docs/vision.md) | The vision. Source of truth for `manifesto.html` |
 | [`docs/technicals.md`](docs/technicals.md) | Technical overview and deployment. Source of truth for `technicals.html` |
+| [`docs/keys.md`](docs/keys.md) | Ownership keys: the two halves, signatures, fingerprints, the key file format, and how to guard a key |
 
 Everything else was consolidated into `REVIEW.md` so there is a single document to
 review. The detailed specs (API contract, architecture, classifier, addressing,
@@ -70,6 +71,7 @@ pre-commit install   # once, per clone; needs a Go toolchain on PATH
 
 `relay key new` generates the Ed25519 ownership key — the deed to a Relay
 address. Guard key files like passwords; with `-o` they are written `0600`.
+The [ownership keys guide](docs/keys.md) explains how keys work.
 
 ## Agent skills
 
