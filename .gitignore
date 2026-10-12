@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# web/ frontend (built output and deps are not source)
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep

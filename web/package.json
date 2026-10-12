@@ -1,0 +1,31 @@
+{
+  "name": "relay-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Relay owner UI (node admin + site console). Built by Vite, embedded into the Go node binary.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node tools/smoke.mjs node error && node tools/smoke.mjs node ready && node tools/smoke.mjs site error && node tools/smoke.mjs site ready"
+  },
+  "dependencies": {
+    "effect": "^4.0.3"
+  },
+  "devDependencies": {
+    "@effect/vitest": "^4.0.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}
