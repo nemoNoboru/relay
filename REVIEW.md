@@ -134,7 +134,10 @@ passwords and a path-scoped session cookie; optional Ed25519 **key login**.
 **Tunnel:** authenticate by key, register **path prefixes**, then multiplex
 request/response frames over the one WebSocket.
 
-_Detailed contract to be re-expanded into a spec during development (see §8)._
+_Detailed contract drafted in [`docs/api-contract.md`](docs/api-contract.md)
+(tunnel wire protocol + control + runtime) and in
+[`docs/architecture.md`](docs/architecture.md) for the backend. Both await
+sign-off (see §8)._
 
 ---
 
@@ -247,10 +250,14 @@ tunnel worth starting.
       (`relay version`, `relay key new`), `internal/domain/{key,prefix}` with
       tests, CI, and pre-commit. **`LICENSE` is still missing** — pick one
       before the first release (§7.2).
-- [ ] **Specs to write:** `tunnel.md` (blocking Stage 1), `threat-model.md`,
-      `abuse.md`, `cli.md`, and the **rule schema**.
+- [x] **Specs to write:** `tunnel.md` — drafted as the tunnel section of
+      [`docs/api-contract.md`](docs/api-contract.md); Stage 1 unblocked pending
+      sign-off. Remaining: `threat-model.md`, `abuse.md`, `cli.md`, and the
+      **rule schema**.
 - [ ] **The calibration experiment** (ONNX → INT8 → ECE on Relay's questions).
-- [ ] **Caddy decision** (§7.1) — blocks the ingress code.
+- [ ] **Caddy decision** (§7.1) — the tunnel brief selects **embedded Caddy**
+      with two custom modules (`docs/architecture.md` §4); confirm to lift the
+      ingress block. Stdlib/autocert remains the cheaper path for Stage 0.
 - [ ] **Deploy manifests are drafts** (no binary to build yet).
 - [ ] **UI pages are static mockups** (`node-ui.html`, `metrics.html`), not code.
 - [ ] **Tunnel is unproven** — the riskiest primitive, still a sketch.

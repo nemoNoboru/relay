@@ -28,10 +28,13 @@ platform's permission.
 | [`docs/vision.md`](docs/vision.md) | The vision. Source of truth for `manifesto.html` |
 | [`docs/technicals.md`](docs/technicals.md) | Technical overview and deployment. Source of truth for `technicals.html` |
 | [`docs/keys.md`](docs/keys.md) | Ownership keys: the two halves, signatures, fingerprints, the key file format, and how to guard a key |
+| [`docs/api-contract.md`](docs/api-contract.md) | **Draft:** the wire contract — tunnel protocol (WebSocket + yamux), control API, runtime API |
+| [`docs/architecture.md`](docs/architecture.md) | **Draft:** backend code architecture — embedded Caddy, tunnel transport, package layout |
 
 Everything else was consolidated into `REVIEW.md` so there is a single document to
-review. The detailed specs (API contract, architecture, classifier, addressing,
-tunnel) can be re-expanded from there, section by section, as each stage begins.
+review. The detailed specs (classifier, addressing, threat model, CLI) can be
+re-expanded from there, section by section, as each stage begins; the API
+contract and the backend architecture are already drafted in `docs/`.
 
 ## Deployment
 
