@@ -1,19 +1,48 @@
-# Quality gates for the Relay Go module. The full gate runs in CI
-# (.github/workflows/test.yml); pre-commit runs a fast subset before
-# each commit (.pre-commit-config.yaml).
+# Relay — build and quality gates.
+#
+# The Go node binary embeds the built owner UI (web/dist, see web/embed.go),
+# so the frontend must be built before `go build`.
 #
 # Note: staticcheck v0.8.1 reads standard-library export data, so run it
 # with the Go toolchain pinned in go.mod (1.26), not a newer major.
 
 GO ?= go
 
-.PHONY: check test fmt vet staticcheck build clean
+.PHONY: check web build site-check web-check go-check test fmt vet staticcheck clean
 
-check: ## the full gate: gofmt + vet + staticcheck + test -race
+# Build the owner UI (web/) into web/dist/.
+# --include=dev: some environments set NODE_ENV=production, which would
+# otherwise make npm skip the dev dependencies (vite/tsc/vitest).
+web:
+	cd web && npm ci --include=dev && npm run build
+	# Vite's emptyOutDir removes it; restore the embed placeholder so the
+	# Go embed pattern stays satisfiable even from a bare checkout + build.
+	touch web/dist/.gitkeep
+
+# Full: frontend, then the Go binary.
+build: web
+	$(GO) build -o relay ./cmd/relay
+
+# Static root site: the generated pages are in sync with their Markdown.
+site-check:
+	python3 tools/build.py --check
+
+# Owner UI: typecheck (tsc + svelte-check), production build, unit + SSR
+# tests, and the bundle smoke test — all from a clean npm install.
+web-check:
+	cd web && npm ci --include=dev && npm run build && npm test && npm run smoke
+
+# Go gates: gofmt + vet + staticcheck + test -race. The full gate runs in
+# CI (.github/workflows/test.yml); pre-commit runs a fast subset before
+# each commit (.pre-commit-config.yaml).
+go-check:
 	@test -z "$$(gofmt -l .)" || { echo "gofmt: unformatted files:"; gofmt -l .; exit 1; }
 	$(GO) vet ./...
 	$(GO) run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
 	$(GO) test -race ./...
+
+# CI-style: everything that can be checked without a node binary.
+check: site-check web-check go-check
 
 test: ## go test -race ./...
 	$(GO) test -race ./...
@@ -26,9 +55,6 @@ vet: ## go vet ./...
 
 staticcheck: ## staticcheck ./...
 	$(GO) run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
-
-build: ## build the relay binary
-	$(GO) build -o relay ./cmd/relay
 
 clean:
 	rm -f relay

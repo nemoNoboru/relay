@@ -19,6 +19,7 @@ platform's permission.
 | [`technicals.html`](technicals.html) | How it works and how to deploy it. **Generated** from [`docs/technicals.md`](docs/technicals.md) |
 | [`node-ui.html`](node-ui.html) | Draft: the Relay node admin UI (static mockup) |
 | [`metrics.html`](metrics.html) | Draft: the per-site owner console (static mockup) |
+| [`web/`](web/README.md) | **The owner UI itself** (Svelte + Vite build, embedded in the node binary) — replaces the two mockups above |
 
 ## Design documents
 
@@ -51,6 +52,14 @@ The two generated pages are rebuilt from their Markdown sources:
 ./tools/sync.sh --check   # exit 1 if either is out of date (CI / pre-commit)
 ```
 
+The owner UI (`web/`) is built with Svelte + Vite and embedded into the node binary via
+`web/embed.go`; `make build` keeps the order right (frontend first, then
+`go build`). `make check` runs every gate that works without a node binary —
+the static site in sync, the frontend's typecheck, build, tests, and bundle
+smoke test, and the Go gates (gofmt, vet, staticcheck, test -race). See
+[`web/README.md`](web/README.md) for the frontend layout, scripts, and its
+draft wire contracts.
+
 ## Go development
 
 The Go side lives under `cmd/relay` and `internal/` (module
@@ -58,12 +67,12 @@ The Go side lives under `cmd/relay` and `internal/` (module
 [`.pi/skills/go-architecture`](.pi/skills/go-architecture/SKILL.md).
 
 ```sh
-make check        # gofmt, go vet, staticcheck, go test -race
+make check        # all gates that work without a node binary: site, web, Go
 make test         # go test -race ./...
-make build        # build the relay binary
+make build        # build the relay binary (builds the owner UI first)
 ```
 
-The same gates run in CI on every push to `main` and on pull requests
+The Go gates also run in CI on every push to `main` and on pull requests
 (`.github/workflows/test.yml`), and a fast subset runs locally before each
 commit via [pre-commit](https://pre-commit.com):
 
@@ -94,8 +103,9 @@ applies the matching one to each kind of work; force one with
 
 ## Status
 
-**Go scaffolding in place.** The repo is design documents, static UI mockups, and
-the first Go skeleton: `go.mod`, `cmd/relay` (`relay version`, `relay key new`),
-and the pure domain packages `internal/domain/key` and `internal/domain/prefix`
-with tests, CI, and pre-commit. No node runtime yet. Read
+**Pre-development.** The owner UI ([`web/`](web/README.md)) and the Go
+skeleton — `go.mod`, `cmd/relay` (`relay version`, `relay key new`), and the
+pure domain packages `internal/domain/{key,prefix}` with tests, CI, and
+pre-commit — are in place; the node runtime that serves the UI is not.
+Everything else is design documents and static UI mockups. Read
 [`REVIEW.md`](REVIEW.md) before writing code.
