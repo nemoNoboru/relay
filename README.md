@@ -47,6 +47,30 @@ The two generated pages are rebuilt from their Markdown sources:
 ./tools/sync.sh --check   # exit 1 if either is out of date (CI / pre-commit)
 ```
 
+## Go development
+
+The Go side lives under `cmd/relay` and `internal/` (module
+`github.com/nemoNoboru/relay`), built to the standard in
+[`.pi/skills/go-architecture`](.pi/skills/go-architecture/SKILL.md).
+
+```sh
+make check        # gofmt, go vet, staticcheck, go test -race
+make test         # go test -race ./...
+make build        # build the relay binary
+```
+
+The same gates run in CI on every push to `main` and on pull requests
+(`.github/workflows/test.yml`), and a fast subset runs locally before each
+commit via [pre-commit](https://pre-commit.com):
+
+```sh
+pip install pre-commit
+pre-commit install   # once, per clone; needs a Go toolchain on PATH
+```
+
+`relay key new` generates the Ed25519 ownership key — the deed to a Relay
+address. Guard key files like passwords; with `-o` they are written `0600`.
+
 ## Agent skills
 
 - The Go engineering standard lives in
@@ -65,5 +89,8 @@ applies the matching one to each kind of work; force one with
 
 ## Status
 
-**Pre-development.** This repository is design documents and static UI mockups;
-there is no implementation yet. Read [`REVIEW.md`](REVIEW.md) before writing code.
+**Go scaffolding in place.** The repo is design documents, static UI mockups, and
+the first Go skeleton: `go.mod`, `cmd/relay` (`relay version`, `relay key new`),
+and the pure domain packages `internal/domain/key` and `internal/domain/prefix`
+with tests, CI, and pre-commit. No node runtime yet. Read
+[`REVIEW.md`](REVIEW.md) before writing code.
