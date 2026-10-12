@@ -188,8 +188,12 @@ tunnel worth starting.
 1. **Caddy, or the standard library?** Every doc leaned on Caddy for **on-demand
    TLS**, which the path decision deferred. With one host and one cert, Go's
    stdlib + `autocert` may suffice and drops a large dependency. *Decide.*
-2. **Repo scaffolding:** module path, layout (`cmd/relay`, `internal/…`),
-   **LICENSE**, CI, test strategy (needs two-node tunnel integration tests).
+2. **Repo scaffolding:** *Decided:* module `github.com/nemoNoboru/relay`; layout
+   `cmd/relay` + `internal/domain/…`; CI (`.github/workflows/test.yml`) runs
+   `gofmt`, `go vet`, `staticcheck`, and `go test -race` on push to `main` and
+   on PRs, with pre-commit as the local gate. *Still open:* **LICENSE** (pick
+   before the first release); two-node tunnel integration tests arrive with
+   the tunnel.
 3. **Domains:** do we own `cloudpunk.org` / `relay.cloudpunk.org`?
 4. **Versioning:** policy for the protocol (`v1`) and for node/per-site data
    migrations.
@@ -242,8 +246,10 @@ tunnel worth starting.
 
 ## 8. Not finished (pre-build checklist)
 
-- [ ] **No code, no `go.mod`, no CI, no `LICENSE`.** The repo is docs + a static
-      site + draft deploy manifests.
+- [x] **Go scaffolding:** `go.mod` (`github.com/nemoNoboru/relay`), `cmd/relay`
+      (`relay version`, `relay key new`), `internal/domain/{key,prefix}` with
+      tests, CI, and pre-commit. **`LICENSE` is still missing** — pick one
+      before the first release (§7.2).
 - [x] **Specs to write:** `tunnel.md` — drafted as the tunnel section of
       [`docs/api-contract.md`](docs/api-contract.md); Stage 1 unblocked pending
       sign-off. Remaining: `threat-model.md`, `abuse.md`, `cli.md`, and the

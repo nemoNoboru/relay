@@ -2,6 +2,10 @@ __pycache__/
 *.pyc
 .DS_Store
 
+# Go
+/relay
+*.test
+
 # web/ frontend (built output and deps are not source)
 web/node_modules/
 web/dist/*
