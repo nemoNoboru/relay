@@ -1,7 +1,10 @@
 /**
  * Client-side smoke test for the production bundles (no browser available).
  *
- * Usage: node tools/smoke.mjs <node|site|bundle.js> <error|ready>
+ * Usage: node tools/smoke.mjs <node|site|admin|bundle.js> <error|ready>
+ *
+ * `admin` is the mock admin page: it has only a `ready` scenario, and its
+ * fetch stub rejects on call — the bundle must never call fetch.
  *        page/bundle paths are relative to web/ (node|site auto-resolve
  *        dist/assets/<page>-*.js; an explicit path may also be given)
  *
@@ -17,7 +20,7 @@ import path from "node:path";
 // relative to it so the smoke test runs from anywhere.
 const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-// Resolve a page name (node|site) to its entry bundle (dist/assets/<page>-*.js).
+// Resolve a page name (node|site|admin) to its entry bundle (dist/assets/<page>-*.js).
 const resolveBundle = (page) => {
   const dir = path.join(webDir, "dist/assets");
   const hit = readdirSync(dir).find((f) => f.startsWith(`${page}-`) && f.endsWith(".js"));
@@ -26,14 +29,16 @@ const resolveBundle = (page) => {
 };
 const [pageOrBundle, scenario] = process.argv.slice(2);
 if (!pageOrBundle || !scenario)
-  throw new Error("usage: node tools/smoke.mjs <node|site|bundle.js> <error|ready>");
+  throw new Error("usage: node tools/smoke.mjs <node|site|admin|bundle.js> <error|ready>");
 if (!/^(error|ready)$/.test(scenario)) throw new Error(`unknown scenario ${scenario} (use error|ready)`);
-const bundlePath =
-  pageOrBundle === "node" || pageOrBundle === "site"
-    ? resolveBundle(pageOrBundle)
-    : path.isAbsolute(pageOrBundle)
-      ? pageOrBundle
-      : path.join(webDir, pageOrBundle);
+const isPage = (p) => p === "node" || p === "site" || p === "admin";
+if (pageOrBundle === "admin" && scenario === "error")
+  throw new Error("admin has no error scenario (the mock page never calls the API)");
+const bundlePath = isPage(pageOrBundle)
+  ? resolveBundle(pageOrBundle)
+  : path.isAbsolute(pageOrBundle)
+    ? pageOrBundle
+    : path.join(webDir, pageOrBundle);
 
 class El {
   constructor(tag, nodeType = 1) {
@@ -323,20 +328,34 @@ const DEPLOYS = {
 };
 
 let fetchImpl;
-globalThis.fetch = (...args) => fetchImpl(...args);
+let fetchCalls = 0;
+globalThis.fetch = (...args) => {
+  fetchCalls++;
+  return fetchImpl(...args);
+};
 
 const fail = () => Promise.reject(new TypeError("fetch failed"));
 const ok = (body) => () => Promise.resolve({ ok: true, status: 200, json: async () => body });
 
-// Derive the page (node|site) from the bundle name if a path was given.
-const page =
-  pageOrBundle === "node" || pageOrBundle === "site"
-    ? pageOrBundle
-    : path.basename(bundlePath).startsWith("site")
-      ? "site"
+// Derive the page (node|site|admin) from the bundle name if a path was given.
+const page = isPage(pageOrBundle)
+  ? pageOrBundle
+  : path.basename(bundlePath).startsWith("site")
+    ? "site"
+    : path.basename(bundlePath).startsWith("admin")
+      ? "admin"
       : "node";
 
-fetchImpl = scenario === "error" ? fail : page === "node" ? ok(TUNNELS) : ok(DEPLOYS);
+// The admin page is a mock: any fetch call is a bug, so the stub rejects on
+// call, and the assertions below require fetchCalls === 0.
+fetchImpl =
+  scenario === "error"
+    ? fail
+    : page === "node"
+      ? ok(TUNNELS)
+      : page === "site"
+        ? ok(DEPLOYS)
+        : () => Promise.reject(new Error("admin mock must not call fetch"));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -378,11 +397,16 @@ if (scenario === "error") {
   assert(html.includes("2606:4700::/32"), "prefix rendered");
   assert(html.includes("offline"), "offline status rendered");
   assert(html.includes("1 of 2 tunnels online"), "live summary rendered");
-} else {
+} else if (page === "site") {
   assert(html.includes("example.com"), "site name rendered");
   assert(html.includes("v42") && html.includes("v41"), "versions rendered");
   assert(html.includes("previous"), "previous status rendered");
   assert(html.includes("2 site version(s) on record"), "live summary rendered");
+} else if (page === "admin") {
+  assert(html.includes("home-pi"), "node name rendered");
+  assert(html.includes("Public friends"), "public friends panel rendered");
+  assert(html.includes("Keys"), "keys panel rendered");
+  assert(fetchCalls === 0, "fetch was never called");
 }
 
 console.log(`${label} ✓`);
