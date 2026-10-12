@@ -19,6 +19,7 @@ platform's permission.
 | [`technicals.html`](technicals.html) | How it works and how to deploy it. **Generated** from [`docs/technicals.md`](docs/technicals.md) |
 | [`node-ui.html`](node-ui.html) | Draft: the Relay node admin UI (static mockup) |
 | [`metrics.html`](metrics.html) | Draft: the per-site owner console (static mockup) |
+| [`web/`](web/README.md) | **The owner UI itself** (Svelte + Vite build, embedded in the node binary) — replaces the two mockups above |
 
 ## Design documents
 
@@ -47,6 +48,13 @@ The two generated pages are rebuilt from their Markdown sources:
 ./tools/sync.sh --check   # exit 1 if either is out of date (CI / pre-commit)
 ```
 
+The owner UI (`web/`) is built with Svelte + Vite and embedded into the node binary via
+`web/embed.go`; `make build` keeps the order right (frontend first, then
+`go build`). `make check` runs every gate that works without a node binary —
+the static site in sync, plus the frontend's typecheck, build, tests, and
+bundle smoke test. See [`web/README.md`](web/README.md) for the frontend
+layout, scripts, and its draft wire contracts.
+
 ## Agent skills
 
 - The Go engineering standard lives in
@@ -65,5 +73,7 @@ applies the matching one to each kind of work; force one with
 
 ## Status
 
-**Pre-development.** This repository is design documents and static UI mockups;
-there is no implementation yet. Read [`REVIEW.md`](REVIEW.md) before writing code.
+**Pre-development (Go).** The owner UI ([`web/`](web/README.md)) is
+implemented; the node binary that serves it is not. Everything else is design
+documents and static UI mockups. Read [`REVIEW.md`](REVIEW.md) before writing
+code.
