@@ -49,6 +49,17 @@ class El {
     this.parentNode = null;
     this._text = null;
   }
+  // Real DOM aliases Svelte's runtime reads (e.g. the input `checked`
+  // setter probes nodeName/namespaceURI before touching the property).
+  get nodeName() {
+    return this.tagName;
+  }
+  get namespaceURI() {
+    return this.nodeType === 1 ? "http://www.w3.org/1999/xhtml" : null;
+  }
+  get ownerDocument() {
+    return globalThis.document;
+  }
   get firstChild() {
     return this.children[0] ?? null;
   }
