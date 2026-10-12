@@ -17,12 +17,15 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
+          # no dependencies, so no go.sum; key the module cache on go.mod
+          # (the cache holds the staticcheck download)
+          cache-dependency-path: go.mod
 
       - name: gofmt
         run: |
