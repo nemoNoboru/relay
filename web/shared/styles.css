@@ -324,9 +324,43 @@
 .site-head h1{font-family:var(--display);font-size:clamp(2.4rem,6vw,4.4rem);text-transform:uppercase;line-height:.9;margin:6px 0 0;letter-spacing:.005em}
 .site-sub{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-top:10px}
 
+/* admin mock page (admin.html) — lifted from node-ui.html page-local styles */
+.adminapp{padding:38px 0 90px}
+.draft-note{font-family:var(--mono);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--red);border:2px solid var(--red);display:inline-block;padding:6px 10px;margin-bottom:22px}
+.admin-head{display:flex;justify-content:space-between;align-items:flex-end;gap:26px;border-bottom:6px solid var(--ink);padding-bottom:22px}
+.admin-head h1{font-family:var(--display);font-weight:400;font-size:clamp(2.4rem,6vw,4.4rem);text-transform:uppercase;line-height:.9;margin:6px 0 0;letter-spacing:.005em}
+.admin-sub{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-top:10px}
+.node-vis{border:4px solid var(--ink);padding:14px 18px;text-align:right;background:var(--paper-2);flex:none}
+.node-vis .tagline{font-family:var(--mono);font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;display:block;color:var(--red)}
+.node-vis strong{font-family:var(--display);font-weight:400;font-size:1.9rem;text-transform:uppercase;display:block;line-height:1}
+.node-vis em{font-style:normal;font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+.pick{list-style:none;display:flex;flex-direction:column}
+.pick li{border-bottom:1px dashed rgba(20,18,16,.3)}
+.pick li:last-child{border-bottom:0}
+.pick label{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;cursor:pointer}
+.pick input{margin-top:6px;accent-color:var(--red)}
+.pick b{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.02rem;display:block;letter-spacing:.01em}
+.pick small{font-family:var(--mono);font-size:.63rem;letter-spacing:.04em;opacity:.7}
+.result{font-family:var(--mono);font-size:.72rem;letter-spacing:.02em;padding:12px 14px;border:2px solid var(--ink);background:var(--paper-2)}
+.result code{background:var(--ink);color:var(--paper);padding:2px 6px}
+.row-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.friends,.rules{list-style:none;display:flex;flex-direction:column}
+.friends li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:11px 0;border-bottom:1px dashed rgba(20,18,16,.25);flex-wrap:wrap}
+.friends b{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.02rem}
+.friends small{font-family:var(--mono);font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7;display:block}
+.friends code{font-family:var(--mono);font-size:.62rem;background:var(--ink);color:var(--paper);padding:2px 5px}
+/* `.rules li` also carries the site-wide `.rule` class (the h2 underline);
+   override its height/width/background here so the list rows render. */
+.rules li{height:auto;width:auto;margin:0;background:transparent;padding:11px 0;border-bottom:1px dashed rgba(20,18,16,.25);font-weight:300;font-size:.95rem}
+.rules li span{display:inline-block;font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;background:var(--red);color:var(--paper);padding:2px 7px;margin-right:9px}
+.field{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.field label{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase}
+.field input[type=text]{font-family:var(--mono);font-size:.78rem;padding:11px 12px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);min-width:180px}
+.keyfile{font-family:var(--mono);font-size:.72rem;line-height:1.6;background:var(--ink);color:var(--paper);padding:16px;overflow:auto}
+
 @media(max-width:880px){
   .panels{grid-template-columns:1fr}
-  .node-head,.site-head{flex-direction:column;align-items:flex-start}
+  .node-head,.site-head,.admin-head{flex-direction:column;align-items:flex-start}
   .statrow{flex-wrap:wrap}
   .stat{min-width:50%;border-bottom:2px solid var(--ink)}
 }
