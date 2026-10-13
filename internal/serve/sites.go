@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/domain"
 )
 
 // Sites maps site names to their file systems. Once loaded, a Sites is

@@ -2,7 +2,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vite";
 
 /**
- * Relay owner UI (node admin + site console).
+ * Relay owner UI (node admin + site console + admin mock).
  *
  * The built `dist/` is embedded into the Go node binary (see `embed.go`) and
  * served under an arbitrary path prefix — Relay's addressing is path-based.
@@ -25,6 +25,7 @@ export default defineConfig({
       input: {
         node: "node.html",
         site: "site.html",
+        admin: "admin.html",
       },
     },
   },

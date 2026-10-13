@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"relay/internal/serve"
+	"github.com/nemoNoboru/relay/internal/serve"
 )
 
 const indexHTML = "<!doctype html><title>hello</title>"

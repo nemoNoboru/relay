@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/domain"
 )
 
 // AC-10: name grammar (contract section 2.2):

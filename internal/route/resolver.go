@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/domain"
 )
 
 // Target is where a request is served from: a file path (Rest) within a

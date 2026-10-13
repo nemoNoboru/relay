@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"relay/internal/domain"
-	"relay/internal/route"
+	"github.com/nemoNoboru/relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/route"
 )
 
 // siteServer pairs one site's file system with the stdlib handler that

@@ -1,9 +1,14 @@
-# Relay — build and check targets.
+# Relay — build and quality gates.
 #
 # The Go node binary embeds the built owner UI (web/dist, see web/embed.go),
 # so the frontend must be built before `go build`.
+#
+# Note: staticcheck v0.8.1 reads standard-library export data, so run it
+# with the Go toolchain pinned in go.mod (1.26), not a newer major.
 
-.PHONY: web build check site-check web-check go-check
+GO ?= go
+
+.PHONY: check web build site-check web-check go-check test fmt vet staticcheck clean
 
 # Build the owner UI (web/) into web/dist/.
 # --include=dev: some environments set NODE_ENV=production, which would
@@ -16,7 +21,7 @@ web:
 
 # Full: frontend, then the Go binary.
 build: web
-	go build ./...
+	$(GO) build -o relay ./cmd/relay
 
 # Static root site: the generated pages are in sync with their Markdown.
 site-check:
@@ -27,18 +32,29 @@ site-check:
 web-check:
 	cd web && npm ci --include=dev && npm run build && npm test && npm run smoke
 
-# Go gates: gofmt (must be clean), vet, and the race-enabled test suite.
-# The race detector needs cgo, so without a C compiler it falls back to a
-# plain test run (with a visible note).
+# Go gates: gofmt + vet + staticcheck + test -race. The full gate runs in
+# CI (.github/workflows/test.yml); pre-commit runs a fast subset before
+# each commit (.pre-commit-config.yaml).
 go-check:
-	@test -z "$$(gofmt -l .)" || { echo "gofmt -l is not clean:"; gofmt -l .; exit 1; }
-	go vet ./...
-	@if command -v gcc >/dev/null 2>&1 || command -v cc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1; then \
-		CGO_ENABLED=1 go test -race ./...; \
-	else \
-		echo "go-check: no C compiler found, running without -race"; \
-		go test ./...; \
-	fi
+	@test -z "$$(gofmt -l .)" || { echo "gofmt: unformatted files:"; gofmt -l .; exit 1; }
+	$(GO) vet ./...
+	$(GO) run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+	$(GO) test -race ./...
 
 # CI-style: everything that can be checked without a node binary.
 check: site-check web-check go-check
+
+test: ## go test -race ./...
+	$(GO) test -race ./...
+
+fmt: ## gofmt -w .
+	gofmt -w .
+
+vet: ## go vet ./...
+	$(GO) vet ./...
+
+staticcheck: ## staticcheck ./...
+	$(GO) run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+
+clean:
+	rm -f relay

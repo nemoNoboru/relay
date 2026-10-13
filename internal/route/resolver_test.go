@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"relay/internal/domain"
-	"relay/internal/route"
+	"github.com/nemoNoboru/relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/route"
 )
 
 // AC-11: route resolution (contract section 5).

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"relay/internal/serve"
+	"github.com/nemoNoboru/relay/internal/serve"
 )
 
 func writeFile(t *testing.T, path, content string) {

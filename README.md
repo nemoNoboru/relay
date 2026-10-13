@@ -28,6 +28,7 @@ platform's permission.
 | [`REVIEW.md`](REVIEW.md) | **The one to read.** Decisions, open questions, and the pre-build checklist |
 | [`docs/vision.md`](docs/vision.md) | The vision. Source of truth for `manifesto.html` |
 | [`docs/technicals.md`](docs/technicals.md) | Technical overview and deployment. Source of truth for `technicals.html` |
+| [`docs/keys.md`](docs/keys.md) | Ownership keys: the two halves, signatures, fingerprints, the key file format, and how to guard a key |
 | [`docs/api-contract.md`](docs/api-contract.md) | **Draft:** the wire contract — tunnel protocol (WebSocket + yamux), control API, runtime API |
 | [`docs/architecture.md`](docs/architecture.md) | **Draft:** backend code architecture — embedded Caddy, tunnel transport, package layout |
 
@@ -54,9 +55,35 @@ The two generated pages are rebuilt from their Markdown sources:
 The owner UI (`web/`) is built with Svelte + Vite and embedded into the node binary via
 `web/embed.go`; `make build` keeps the order right (frontend first, then
 `go build`). `make check` runs every gate that works without a node binary —
-the static site in sync, plus the frontend's typecheck, build, tests, and
-bundle smoke test. See [`web/README.md`](web/README.md) for the frontend
-layout, scripts, and its draft wire contracts.
+the static site in sync, the frontend's typecheck, build, tests, and bundle
+smoke test, and the Go gates (gofmt, vet, staticcheck, test -race). See
+[`web/README.md`](web/README.md) for the frontend layout, scripts, and its
+draft wire contracts.
+
+## Go development
+
+The Go side lives under `cmd/relay` and `internal/` (module
+`github.com/nemoNoboru/relay`), built to the standard in
+[`.pi/skills/go-architecture`](.pi/skills/go-architecture/SKILL.md).
+
+```sh
+make check        # all gates that work without a node binary: site, web, Go
+make test         # go test -race ./...
+make build        # build the relay binary (builds the owner UI first)
+```
+
+The Go gates also run in CI on every push to `main` and on pull requests
+(`.github/workflows/test.yml`), and a fast subset runs locally before each
+commit via [pre-commit](https://pre-commit.com):
+
+```sh
+pip install pre-commit
+pre-commit install   # once, per clone; needs a Go toolchain on PATH
+```
+
+`relay key new` generates the Ed25519 ownership key — the deed to a Relay
+address. Guard key files like passwords; with `-o` they are written `0600`.
+The [ownership keys guide](docs/keys.md) explains how keys work.
 
 ## Agent skills
 
@@ -76,9 +103,11 @@ applies the matching one to each kind of work; force one with
 
 ## Status
 
-**Stage 0 in progress (Go).** Static file hosting works: `relay node
---name <node> --data <dir> --listen <addr>` serves the site folders under
-`<data>/sites/` at `/<node>/<site>/` on a plain HTTP listener. The owner UI
-([`web/`](web/README.md)) is implemented and will be embedded in the node
-binary. Keys, claim, deploy, TLS, and the tunnel are not built yet. Read
+**Stage 0 in progress (Go).** The owner UI ([`web/`](web/README.md)) and the
+Go skeleton — `go.mod`, `cmd/relay` (`relay version`, `relay key new`), and
+the pure domain packages `internal/domain/{key,prefix}` with tests, CI, and
+pre-commit — are in place, and the node runtime now serves static files:
+`relay node --name <node> --data <dir> --listen <addr>` serves the site
+folders under `<data>/sites/` at `/<node>/<site>/` on a plain HTTP listener.
+Keys, claim, deploy, TLS, and the tunnel are not built yet. Read
 [`REVIEW.md`](REVIEW.md) before writing code.
