@@ -3,7 +3,7 @@
 # The Go node binary embeds the built owner UI (web/dist, see web/embed.go),
 # so the frontend must be built before `go build`.
 
-.PHONY: web build check site-check web-check
+.PHONY: web build check site-check web-check go-check
 
 # Build the owner UI (web/) into web/dist/.
 # --include=dev: some environments set NODE_ENV=production, which would
@@ -27,5 +27,18 @@ site-check:
 web-check:
 	cd web && npm ci --include=dev && npm run build && npm test && npm run smoke
 
+# Go gates: gofmt (must be clean), vet, and the race-enabled test suite.
+# The race detector needs cgo, so without a C compiler it falls back to a
+# plain test run (with a visible note).
+go-check:
+	@test -z "$$(gofmt -l .)" || { echo "gofmt -l is not clean:"; gofmt -l .; exit 1; }
+	go vet ./...
+	@if command -v gcc >/dev/null 2>&1 || command -v cc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1; then \
+		CGO_ENABLED=1 go test -race ./...; \
+	else \
+		echo "go-check: no C compiler found, running without -race"; \
+		go test ./...; \
+	fi
+
 # CI-style: everything that can be checked without a node binary.
-check: site-check web-check
+check: site-check web-check go-check

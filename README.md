@@ -76,7 +76,9 @@ applies the matching one to each kind of work; force one with
 
 ## Status
 
-**Pre-development (Go).** The owner UI ([`web/`](web/README.md)) is
-implemented; the node binary that serves it is not. Everything else is design
-documents and static UI mockups. Read [`REVIEW.md`](REVIEW.md) before writing
-code.
+**Stage 0 in progress (Go).** Static file hosting works: `relay node
+--name <node> --data <dir> --listen <addr>` serves the site folders under
+`<data>/sites/` at `/<node>/<site>/` on a plain HTTP listener. The owner UI
+([`web/`](web/README.md)) is implemented and will be embedded in the node
+binary. Keys, claim, deploy, TLS, and the tunnel are not built yet. Read
+[`REVIEW.md`](REVIEW.md) before writing code.
