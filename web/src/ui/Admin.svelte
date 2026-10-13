@@ -65,7 +65,7 @@
       </Panel>
 
       <!-- FRIENDS -->
-      <Panel title="Friends">
+      <Panel title="Friends" wide>
         <p class="hint">Nodes this node is connected to. Each owns a path prefix under a public friend.</p>
         {#if data.friends.length > 0}
           <ul class="friends">
@@ -174,7 +174,7 @@
       </Panel>
 
       <!-- NODE -->
-      <Panel title="Node">
+      <Panel title="Node" wide>
         <div class="statrow">
           <div class="stat">
             <b>{data.node.sessionsUsed}/{data.node.sessionsMax}</b>
