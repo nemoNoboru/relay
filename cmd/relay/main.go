@@ -27,14 +27,14 @@ func main() {
 // run executes the node and returns the process exit code. Config errors
 // exit 2 before any socket is opened.
 func run(logger *slog.Logger, args []string) int {
-	fs := flag.NewFlagSet("relay node", flag.ContinueOnError)
-	name := fs.String("name", "", "node name (required, [a-z0-9-])")
-	data := fs.String("data", "./data", "data directory containing sites/")
-	listen := fs.String("listen", ":8080", "address to listen on")
+	flags := flag.NewFlagSet("relay node", flag.ContinueOnError)
+	name := flags.String("name", "", "node name (required, [a-z0-9-])")
+	data := flags.String("data", "./data", "data directory containing sites/")
+	listen := flags.String("listen", ":8080", "address to listen on")
 	if len(args) > 0 && args[0] == "node" { // `relay node --name ...`
 		args = args[1:]
 	}
-	if err := fs.Parse(args); err != nil {
+	if err := flags.Parse(args); err != nil {
 		return 2 // usage error; the flag package already printed it
 	}
 	if *name == "" {

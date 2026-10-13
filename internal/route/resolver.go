@@ -31,13 +31,13 @@ var (
 	ErrReserved = domain.ErrReservedName
 )
 
-// Resolve parses an absolute request path into its node, site, and the
-// rooted file path within the site. The path is cleaned before
-// segmentation, so "//" collapses and route-level ".." cannot change the
-// node or site; the file layer is the second guard.
-func Resolve(p string) (*Target, error) {
-	clean := path.Clean(p)
-	segs := strings.Split(clean, "/") // clean is absolute: segs[0] == ""
+// Resolve parses an absolute request path (r.URL.Path) into its node,
+// site, and the rooted file path within the site. The path is cleaned
+// before segmentation, so "//" collapses and route-level ".." cannot
+// change the node or site; the file layer is the second guard.
+func Resolve(requestPath string) (*Target, error) {
+	clean := path.Clean(requestPath)
+	segs := strings.Split(clean, "/") // clean is absolute, so segs[0] == ""
 	if len(segs) < 2 || segs[1] == "" {
 		return nil, ErrNoNode
 	}
@@ -56,7 +56,7 @@ func Resolve(p string) (*Target, error) {
 		return nil, ErrNoSite
 	}
 	rest := "/" + strings.Join(segs[3:], "/")
-	if rest != "/" && strings.HasSuffix(p, "/") {
+	if rest != "/" && strings.HasSuffix(requestPath, "/") {
 		rest += "/"
 	}
 	return &Target{Node: string(node), Site: string(site), Rest: rest}, nil

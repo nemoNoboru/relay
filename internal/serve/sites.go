@@ -32,15 +32,16 @@ func LoadSites(dataDir string) (Sites, []string, error) {
 	}
 	var skipped []string
 	for _, e := range entries {
+		name := e.Name()
 		if !e.IsDir() {
-			skipped = append(skipped, e.Name())
+			skipped = append(skipped, name)
 			continue
 		}
-		if _, err := domain.ParseName(e.Name()); err != nil {
-			skipped = append(skipped, e.Name())
+		if _, err := domain.ParseName(name); err != nil {
+			skipped = append(skipped, name)
 			continue
 		}
-		sites[domain.Name(e.Name())] = os.DirFS(filepath.Join(dir, e.Name()))
+		sites[domain.Name(name)] = os.DirFS(filepath.Join(dir, name))
 	}
 	return sites, skipped, nil
 }
