@@ -103,9 +103,11 @@ applies the matching one to each kind of work; force one with
 
 ## Status
 
-**Pre-development.** The owner UI ([`web/`](web/README.md)) and the Go
-skeleton — `go.mod`, `cmd/relay` (`relay version`, `relay key new`), and the
-pure domain packages `internal/domain/{key,prefix}` with tests, CI, and
-pre-commit — are in place; the node runtime that serves the UI is not.
-Everything else is design documents and static UI mockups. Read
+**Stage 0 in progress (Go).** The owner UI ([`web/`](web/README.md)) and the
+Go skeleton — `go.mod`, `cmd/relay` (`relay version`, `relay key new`), and
+the pure domain packages `internal/domain/{key,prefix}` with tests, CI, and
+pre-commit — are in place, and the node runtime now serves static files:
+`relay node --name <node> --data <dir> --listen <addr>` serves the site
+folders under `<data>/sites/` at `/<node>/<site>/` on a plain HTTP listener.
+Keys, claim, deploy, TLS, and the tunnel are not built yet. Read
 [`REVIEW.md`](REVIEW.md) before writing code.
