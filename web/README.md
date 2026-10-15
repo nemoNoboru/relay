@@ -21,7 +21,11 @@ Locked by `.pi/skills/frontend-architecture/SKILL.md`:
 
 ```
 node.html, site.html     page shells (thin; the app is the script module)
+admin.html               admin mock page shell
+deploy.html              static upload docs page (plain HTML, no script)
 shared/styles.css        design tokens (mirrored from the root site) + owner UI
+public/skills/           generated: relay-deploy/SKILL.md, copied from .pi/skills
+                         at build time and served at /_relay/skills/…/SKILL.md
 src/live.ts              the live-page driver both pages share: store, scoped
                          poll Stream, fold, Svelte mount, pagehide teardown
 src/main/node.ts         node page entry — the options handed to startPage
@@ -36,6 +40,7 @@ src/api/client.ts        fetch + Schema decode, typed ApiError — the only wire
 src/fold.ts              pure (state, event) → state live-data machine (+ `ago`)
 src/tunnels/schema.ts    GET /api/tunnels — DRAFT wire contract
 src/deploys/schema.ts    GET /api/site/deploy — DRAFT wire contract
+tools/copy-skill.mjs     copies .pi/skills/relay-deploy/SKILL.md → public/skills/
 test/                    @effect/vitest suites (fold table, client, SSR component render)
 tools/smoke.mjs          DOM-stub smoke test of the built production bundles
 embed.go                 Go: //go:embed all:dist → webui.FS for the node binary

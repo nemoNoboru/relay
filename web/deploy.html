@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Upload — Relay</title>
+    <link rel="stylesheet" href="./shared/styles.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="wrap">
+        <a class="brand" href="./node.html"><span class="mark">R</span> RELAY</a>
+        <nav class="main">
+          <a href="./node.html">Node</a>
+          <a href="./deploy.html">Upload</a>
+        </nav>
+        <span class="stamp">Upload docs</span>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="prose" style="padding: 72px 0 90px">
+        <span class="kick">Relay · static hosting</span>
+        <h2>Upload a static site</h2>
+
+        <p>
+          Relay serves a site folder at <code>/&lt;node&gt;/&lt;site&gt;/</code>.
+          To put a site there, upload a <code>tar</code> archive of the folder
+          to the node. One request, and the site is live — atomically replacing
+          whatever was there before.
+        </p>
+
+        <h3>The endpoint</h3>
+        <pre>POST /_relay/v1/sites/{site}/deploy
+Authorization: Bearer {token}
+Content-Type: application/x-tar</pre>
+        <p>
+          The body is the raw tar bytes of the site folder's <b>contents</b>
+          (not the folder itself). <code>{site}</code> is a lowercase name:
+          letters, digits, and interior hyphens, 1–63 characters.
+        </p>
+
+        <h3>Example</h3>
+        <pre>tar -C ./site-folder -cf site.tar .
+curl -X POST \
+  -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
+  -H "Content-Type: application/x-tar" \
+  --data-binary @site.tar \
+  "https://relay.example.org/_relay/v1/sites/docs/deploy"</pre>
+        <p>The response names where the site is live:</p>
+        <pre>{"site":"docs","files":3,"bytes":5120,"url":"/mynode/docs/"}</pre>
+
+        <h3>The deploy token</h3>
+        <p>
+          The deploy token is the credential that authorizes uploads. The node
+          keeps it in <code>&lt;data&gt;/upload-token</code> (mode 0600) and
+          prints it once on first run — or the operator sets it with
+          <code>relay node --upload-token</code>. Hand it to whoever deploys
+          as a bearer token: never in a URL, never committed, never logged.
+        </p>
+
+        <h3>The key</h3>
+        <p>
+          Relay's permanent identity is an <b>Ed25519 key</b> — the deed to a
+          name. <code>relay key new</code> generates one. For this MVP the
+          token is what authorizes uploads; keys and signed deploys arrive
+          with the control API. See <code>docs/keys.md</code> in the source.
+        </p>
+
+        <h3>Archive rules</h3>
+        <ul>
+          <li>Relative paths only — no <code>..</code>, no absolute paths, no symlinks or hard links.</li>
+          <li>Regular files and directories only.</li>
+          <li>At most 65536 files and 256 MiB per upload.</li>
+          <li>Every upload is a full replacement — send the whole site each time.</li>
+        </ul>
+
+        <h3>Errors</h3>
+        <table>
+          <thead>
+            <tr><th>code</th><th>HTTP</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>bad_token</code></td><td>401</td><td>missing or wrong token</td></tr>
+            <tr><td><code>bad_name</code></td><td>400</td><td>the site path segment is invalid</td></tr>
+            <tr><td><code>bad_archive</code></td><td>400</td><td>not a tar, or an entry breaks the rules</td></tr>
+            <tr><td><code>too_large</code></td><td>413</td><td>archive over the size cap</td></tr>
+          </tbody>
+        </table>
+
+        <h3>For agents</h3>
+        <p>
+          Point your agent at the hosted skill — the same contract as
+          machine-readable instructions:
+          <a href="./skills/relay-deploy/SKILL.md"><code>./skills/relay-deploy/SKILL.md</code></a>.
+        </p>
+      </div>
+    </main>
+  </body>
+</html>

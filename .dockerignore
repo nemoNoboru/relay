@@ -1,0 +1,10 @@
+# Build context hygiene: never send local build output, dependencies, or git.
+.git
+.github
+relay
+*.test
+
+# Frontend: dependencies and build output are regenerated inside the image.
+web/node_modules
+web/dist
+web/public/skills

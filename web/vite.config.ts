@@ -26,6 +26,7 @@ export default defineConfig({
         node: "node.html",
         site: "site.html",
         admin: "admin.html",
+        deploy: "deploy.html",
       },
     },
   },
