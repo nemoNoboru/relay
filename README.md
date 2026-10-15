@@ -40,8 +40,20 @@ contract and the backend architecture are already drafted in `docs/`.
 ## Deployment
 
 How to run a node — as a binary, in Docker, on Docker Swarm, or on Kubernetes —
-is in [`docs/technicals.md`](docs/technicals.md). There are no deploy files in the
-repo yet, because there is no binary to deploy.
+is in [`docs/technicals.md`](docs/technicals.md).
+
+A container image is built and published to GitHub Packages on every push to
+`main` and on `v*` tags (`.github/workflows/image.yml`):
+
+```sh
+docker pull ghcr.io/nemoNoboru/relay:latest
+docker run -d -p 8080:8080 -v relay-data:/data ghcr.io/nemoNoboru/relay:latest
+```
+
+The image runs unprivileged and keeps all state under `/data`. The node prints
+its deploy token on first start; set one explicitly with
+`--upload-token` via the image's entrypoint (append it as a command, e.g.
+`docker run ... ghcr.io/nemoNoboru/relay:latest --upload-token secret`).
 
 ## Building
 
@@ -96,6 +108,11 @@ The [ownership keys guide](docs/keys.md) explains how keys work.
   functional programming as a first-class paradigm, Effect-TS as the functional library
   of choice, TypeScript, vanilla DOM, and the live-data patterns for the node UI and
   site console.
+- The deploy skill lives in
+  [`.pi/skills/relay-deploy`](.pi/skills/relay-deploy/SKILL.md) — instructions for an
+  agent to upload a static site into a Relay node. The node also serves it at
+  `/_relay/skills/relay-deploy/SKILL.md`, so a hosted node can hand the URL to an
+  agent directly.
 
 The [Pi harness](https://pi.dev) discovers both automatically from `.pi/skills/` and
 applies the matching one to each kind of work; force one with
@@ -106,8 +123,12 @@ applies the matching one to each kind of work; force one with
 **Stage 0 in progress (Go).** The owner UI ([`web/`](web/README.md)) and the
 Go skeleton — `go.mod`, `cmd/relay` (`relay version`, `relay key new`), and
 the pure domain packages `internal/domain/{key,prefix}` with tests, CI, and
-pre-commit — are in place, and the node runtime now serves static files:
-`relay node --name <node> --data <dir> --listen <addr>` serves the site
-folders under `<data>/sites/` at `/<node>/<site>/` on a plain HTTP listener.
-Keys, claim, deploy, TLS, and the tunnel are not built yet. Read
+pre-commit — are in place. The node runtime serves static files and accepts
+uploads: `relay node --name <node> --data <dir> --listen <addr>` serves the
+site folders under `<data>/sites/` at `/<node>/<site>/`, and
+`POST /_relay/v1/sites/<site>/deploy` (a `tar` archive with a bearer deploy
+token) atomically replaces a site. The node also hosts its owner UI and the
+upload documentation at `/_relay/` (see [`web/deploy.html`](web/deploy.html))
+and the deploy skill at `/_relay/skills/relay-deploy/SKILL.md`. Keys, claim,
+signed deploys, TLS, and the tunnel are not built yet. Read
 [`REVIEW.md`](REVIEW.md) before writing code.

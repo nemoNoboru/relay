@@ -26,14 +26,23 @@ func NodeHandler(self domain.Name, sites Sites) http.Handler {
 	for name, root := range sites {
 		bySite[name] = siteServer{root: root, handler: http.FileServer(http.FS(root))}
 	}
+	return siteHandler(self, func(name domain.Name) (siteServer, bool) {
+		ss, ok := bySite[name]
+		return ss, ok
+	})
+}
 
+// siteHandler resolves a request to a site and serves it. The lookup
+// function supplies the live site map, so callers can back it with a
+// static map (NodeHandler) or a reloadable registry (Registry).
+func siteHandler(self domain.Name, lookup func(domain.Name) (siteServer, bool)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		target, err := route.Resolve(r.URL.Path)
 		if err != nil || target.Node != string(self) {
 			http.NotFound(w, r)
 			return
 		}
-		ss, ok := bySite[domain.Name(target.Site)]
+		ss, ok := lookup(domain.Name(target.Site))
 		if !ok {
 			http.NotFound(w, r)
 			return
