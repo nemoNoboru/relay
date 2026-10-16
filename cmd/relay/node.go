@@ -74,11 +74,13 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	uploader := serve.NewUploader(node, *data, keys, serve.MaxDeployBytes, func() error {
+	versions := serve.NewVersions(*data)
+	reload := func() error {
 		_, err := registry.Reload()
 		return err
-	})
-	admin := serve.NewAdmin(token, keys)
+	}
+	uploader := serve.NewUploader(node, *data, keys, versions, serve.MaxDeployBytes, reload)
+	admin := serve.NewAdmin(token, keys, versions, reload)
 	ui, err := serve.UIHandler()
 	if err != nil {
 		fmt.Fprintf(stderr, "relay: serving owner UI: %v\n", err)

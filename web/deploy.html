@@ -93,6 +93,22 @@ curl -X POST \
           </tbody>
         </table>
 
+        <h3>Rollback</h3>
+        <p>
+          Deploys keep the last 10 versions. The operator can roll a site back
+          to a previous version from the console or with
+          <code>relay rollback --origin … --site …</code>. The current live
+          site is snapshotted first, so nothing is lost.
+        </p>
+
+        <h3>The CLI</h3>
+        <p>
+          The node's own <code>relay</code> binary drives both sides:
+          <code>relay deploy --origin … --site … ./dist</code> uploads a
+          folder, and <code>relay rollback --origin … --site …</code> rolls it
+          back.
+        </p>
+
         <h3>For agents</h3>
         <p>
           Point your agent at the hosted skill — the same contract as

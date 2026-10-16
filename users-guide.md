@@ -219,6 +219,38 @@ https://relay.example.org/mynode/nick-site/
 
 The operator console now lists `nick-site` under this friend's user.
 
+### Or use the CLI
+
+If you have the `relay` binary, the same upload is one command:
+
+```sh
+RELAY_DEPLOY_TOKEN=… relay deploy \
+  --origin https://relay.example.org --site nick-site ./dist
+```
+
+---
+
+## Roll back a site
+
+Deploys keep the last 10 versions, so a bad deploy is reversible.
+
+```sh
+# list a site's versions
+curl -H "Authorization: Bearer $RELAY_ADMIN_TOKEN" \
+  https://relay.example.org/_relay/v1/admin/sites/nick-site/versions
+
+# roll back to the previous version
+RELAY_ADMIN_TOKEN=… relay rollback \
+  --origin https://relay.example.org --site nick-site
+
+# or to a specific version id
+RELAY_ADMIN_TOKEN=… relay rollback \
+  --origin https://relay.example.org --site nick-site --to <version-id>
+```
+
+Rollback snapshots the current live site first, so you can roll back and
+forth without losing anything.
+
 ---
 
 ## Using an agent instead

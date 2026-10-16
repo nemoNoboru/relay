@@ -2,6 +2,7 @@ package serve_test
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,11 +15,12 @@ const adminToken = "admin-secret"
 
 func newAdmin(t *testing.T) (*serve.Admin, *serve.KeyStore) {
 	t.Helper()
-	ks, err := serve.NewKeyStore(t.TempDir())
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewAdmin(adminToken, ks), ks
+	return serve.NewAdmin(adminToken, ks, serve.NewVersions(data), nil), ks
 }
 
 // doJSON issues a request to the admin handler with an optional bearer token
@@ -206,5 +208,131 @@ func TestAdminUnknownRoute(t *testing.T) {
 		if rec := doJSON(t, a, req.method, req.path, adminToken, ""); rec.Code != http.StatusNotFound {
 			t.Fatalf("%s %s = %d, want 404", req.method, req.path, rec.Code)
 		}
+	}
+}
+
+// newAdminNode wires a registry, uploader, and admin over one data dir, and
+// returns them with a minted deploy key token for "tester".
+func newAdminNode(t *testing.T) (*serve.Admin, *serve.Registry, http.Handler, string) {
+	t.Helper()
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := ks.Create("tester")
+	if err != nil {
+		t.Fatal(err)
+	}
+	versions := serve.NewVersions(data)
+	reg, _, err := serve.NewRegistry("mynode", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reload := func() error {
+		_, err := reg.Reload()
+		return err
+	}
+	up := serve.NewUploader("mynode", data, ks, versions, serve.MaxDeployBytes, reload)
+	return serve.NewAdmin(adminToken, ks, versions, reload), reg, up, token
+}
+
+func deploySite(t *testing.T, up http.Handler, token, site, content string) {
+	t.Helper()
+	rec := doDeploy(t, up, "/_relay/v1/sites/"+site+"/deploy", token, tarSite(t, map[string]string{"index.html": content}))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("deploy %s: status %d body %s", site, rec.Code, rec.Body.String())
+	}
+}
+
+func serveSite(t *testing.T, reg *serve.Registry, path string) string {
+	t.Helper()
+	srv := httptest.NewServer(reg.Handler())
+	defer srv.Close()
+	res, err := http.Get(srv.URL + path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+func TestAdminListVersions(t *testing.T) {
+	admin, _, up, token := newAdminNode(t)
+
+	rec := doJSON(t, admin, http.MethodGet, "/_relay/v1/admin/sites/blog/versions", adminToken, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("empty list status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), `"versions":[]`) {
+		t.Fatalf("empty versions body = %s", rec.Body.String())
+	}
+
+	deploySite(t, up, token, "blog", "v1")
+	deploySite(t, up, token, "blog", "v2")
+
+	rec = doJSON(t, admin, http.MethodGet, "/_relay/v1/admin/sites/blog/versions", adminToken, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list status = %d, body %s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Site     string `json:"site"`
+		Versions []struct {
+			ID string `json:"id"`
+		} `json:"versions"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Site != "blog" || len(body.Versions) != 1 {
+		t.Fatalf("list = %+v, want one version for blog", body)
+	}
+}
+
+func TestAdminRollback(t *testing.T) {
+	admin, reg, up, token := newAdminNode(t)
+	deploySite(t, up, token, "blog", "v1")
+	deploySite(t, up, token, "blog", "v2")
+
+	rec := doJSON(t, admin, http.MethodGet, "/_relay/v1/admin/sites/blog/versions", adminToken, "")
+	var body struct {
+		Versions []struct {
+			ID string `json:"id"`
+		} `json:"versions"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Versions) != 1 {
+		t.Fatalf("versions = %+v, want 1", body.Versions)
+	}
+
+	rec = doJSON(t, admin, http.MethodPost, "/_relay/v1/admin/sites/blog/rollback", adminToken, `{"version":"`+body.Versions[0].ID+`"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("rollback status = %d, body %s", rec.Code, rec.Body.String())
+	}
+	if got := serveSite(t, reg, "/mynode/blog/"); got != "v1" {
+		t.Fatalf("served after rollback = %q, want v1", got)
+	}
+
+	if rec := doJSON(t, admin, http.MethodPost, "/_relay/v1/admin/sites/blog/rollback", adminToken, `{"version":"nope"}`); rec.Code != http.StatusNotFound {
+		t.Fatalf("unknown version = %d, want 404", rec.Code)
+	}
+}
+
+func TestAdminRollbackPrevious(t *testing.T) {
+	admin, reg, up, token := newAdminNode(t)
+	deploySite(t, up, token, "blog", "v1")
+	deploySite(t, up, token, "blog", "v2")
+
+	if rec := doJSON(t, admin, http.MethodPost, "/_relay/v1/admin/sites/blog/rollback", adminToken, ""); rec.Code != http.StatusOK {
+		t.Fatalf("rollback previous status = %d, body %s", rec.Code, rec.Body.String())
+	}
+	if got := serveSite(t, reg, "/mynode/blog/"); got != "v1" {
+		t.Fatalf("served after rollback = %q, want v1", got)
 	}
 }

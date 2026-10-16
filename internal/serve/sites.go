@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nemoNoboru/relay/internal/domain"
 )
@@ -33,6 +34,11 @@ func LoadSites(dataDir string) (Sites, []string, error) {
 	var skipped []string
 	for _, e := range entries {
 		name := e.Name()
+		// Hidden entries (e.g. .versions) are node-internal, not sites and
+		// not worth reporting as skipped.
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
 		if !e.IsDir() {
 			skipped = append(skipped, name)
 			continue

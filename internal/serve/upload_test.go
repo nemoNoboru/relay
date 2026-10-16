@@ -64,7 +64,7 @@ func testUploader(t *testing.T, data string, maxBytes int64, reload func() error
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewUploader("mynode", data, ks, maxBytes, reload), token
+	return serve.NewUploader("mynode", data, ks, serve.NewVersions(data), maxBytes, reload), token
 }
 
 // TestUploadRequiresToken pins that uploads are gated by a deploy key.
@@ -93,7 +93,7 @@ func TestUploadRejectsRevokedKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	up := serve.NewUploader("mynode", data, ks, serve.MaxDeployBytes, nil)
+	up := serve.NewUploader("mynode", data, ks, serve.NewVersions(data), serve.MaxDeployBytes, nil)
 	body := tarSite(t, map[string]string{"index.html": "hi"})
 
 	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, body); rec.Code != http.StatusOK {
@@ -151,7 +151,7 @@ func TestUploadRecordsSiteOwner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	up := serve.NewUploader("mynode", data, ks, serve.MaxDeployBytes, nil)
+	up := serve.NewUploader("mynode", data, ks, serve.NewVersions(data), serve.MaxDeployBytes, nil)
 
 	rec := doDeploy(t, up, "/_relay/v1/sites/blog/deploy", token, tarSite(t, map[string]string{"index.html": "hi"}))
 	if rec.Code != http.StatusOK {
