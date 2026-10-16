@@ -100,6 +100,9 @@ func TestAdminOverview(t *testing.T) {
 		if _, hasHash := k["hash"]; hasHash {
 			t.Fatalf("key %+v leaks its hash", k)
 		}
+		if tok, ok := k["token"].(string); !ok || tok == "" {
+			t.Fatalf("key %+v is missing its token", k)
+		}
 	}
 	if len(ov.Sites) != 1 || ov.Sites[0].Site != "blog" || ov.Sites[0].User != "alice" {
 		t.Fatalf("sites = %+v, want blog->alice", ov.Sites)

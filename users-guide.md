@@ -98,38 +98,68 @@ https://relay.example.org/_relay/admin.html
 
 Sign in with the **admin token**. The console shows two panels:
 
-1. **Deploy keys** — every key you have issued, with its user, creation time,
-   status (`active` / `revoked`), and **Rotate** / **Revoke** actions.
+1. **Deploy keys** — every key you have issued, **grouped by user**, each
+   with its id, creation time, status (`active` / `revoked`), a **Reveal /
+   Copy** button for its token, and **Rotate** / **Revoke** actions.
 2. **Sites by user** — every deployed site, grouped under the user who last
    deployed it.
 
 ### Create a key for a friend
 
 Enter the friend's name (a label like `alice`, any of letters/digits/`.`/`_`/`-`,
-1–63 chars) and press **Create key**. The console shows the key's token
-**once**:
-
-```
-dk_… — token: <shown once, copy it now>
-```
+1–63 chars) and press **Create key**. The console shows the new key's token in
+a highlighted box; copy it now. The token is **also listed under that user**
+in the Deploy keys panel, where **Reveal** unmasks it and **Copy** puts it on
+your clipboard — so you can re-send it later if needed.
 
 Send the friend two things, over a secure channel (Signal / password manager /
 1Password secret link — never email plaintext or commit):
 
 1. **Origin** — e.g. `https://relay.example.org`
-2. **Their deploy key token** — the value shown once above
+2. **Their deploy key token** — the value shown above
 
 Optionally also send the hosted docs/skill URLs:
 
 - `https://relay.example.org/_relay/deploy.html`
 - `https://relay.example.org/_relay/skills/relay-deploy/SKILL.md`
 
+### Manage keys via the API
+
+The console is one front-end for the admin API. The same actions are plain
+HTTP, authenticated with the **admin token** (the master key):
+
+```sh
+# list keys + sites
+curl -H "Authorization: Bearer $RELAY_ADMIN_TOKEN" \
+  "https://relay.example.org/_relay/v1/admin"
+
+# create a deploy key for a user (returns the token)
+curl -X POST \
+  -H "Authorization: Bearer $RELAY_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"user":"alice"}' \
+  "https://relay.example.org/_relay/v1/admin/keys"
+
+# rotate a key (returns a new token; the old one stops working)
+curl -X POST \
+  -H "Authorization: Bearer $RELAY_ADMIN_TOKEN" \
+  "https://relay.example.org/_relay/v1/admin/keys/dk_…/rotate"
+
+# revoke a key
+curl -X POST \
+  -H "Authorization: Bearer $RELAY_ADMIN_TOKEN" \
+  "https://relay.example.org/_relay/v1/admin/keys/dk_…/revoke"
+```
+
+All return JSON. Errors use the same envelope as uploads (`bad_token` 401,
+`bad_request` 400, `not_found` 404).
+
 ### Revoke or rotate a key
 
 - **Revoke** immediately stops that key from uploading. Idempotent — revoking
   an already-revoked key is a no-op.
 - **Rotate** revokes the old key and mints a fresh one for the same user,
-  showing the new token once. Use this when a key leaks, or just on schedule.
+  showing the new token. Use this when a key leaks, or just on schedule.
 
 A revoked key cannot upload, but sites already deployed stay live — revocation
 only cuts future uploads.
@@ -241,8 +271,10 @@ Read the `code`; don't retry blindly.
   and rotates every deploy key. Keep it out of shell history, logs, and chat.
   If it leaks, rotate it by restarting the node with a new `--admin-token`
   (and then rotate the deploy keys too, out of caution).
-- **Deploy keys are per-user**, and their tokens are shown once — Relay stores
-  only their SHA-256, so a lost token cannot be recovered; rotate instead.
+- **Deploy keys are per-user**, and their tokens are stored on the node's
+  operator-only console (the `<data>/deploy-keys.json` store is `0600`), so
+  you can reveal and copy a token again later. The token is still a secret:
+  hand it out over a secure channel, and rotate it if it leaks.
 - In this MVP a deploy key can upload to **any** site on the node; sites are
   attributed to the uploading user but a key may overwrite someone else's
   site. Per-site ownership arrives with the control API.

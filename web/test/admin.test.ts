@@ -42,8 +42,8 @@ const locked = (): AdminState => ({ token: "", phase: "locked", busy: false });
 
 const OVERVIEW: AdminOverview = {
   keys: [
-    { id: "dk_1", user: "alice", created: "2026-01-01T00:00:00Z", revoked: false },
-    { id: "dk_2", user: "bob", created: "2026-01-02T00:00:00Z", revoked: true },
+    { id: "dk_1", user: "alice", token: "tok-alice-1234567890", created: "2026-01-01T00:00:00Z", revoked: false },
+    { id: "dk_2", user: "bob", token: "tok-bob-9876543210", created: "2026-01-02T00:00:00Z", revoked: true },
   ],
   sites: [
     { site: "alice-blog", user: "alice" },
@@ -87,7 +87,7 @@ describe("Admin.svelte sign-in", () => {
 });
 
 describe("Admin.svelte ready", () => {
-  it("renders deploy keys with status and actions", async () => {
+  it("renders deploy keys grouped by user, with status and actions", async () => {
     const html = await renderAdmin(ready(OVERVIEW));
     expect(html).toContain("Deploy keys");
     expect(html).toContain("alice");
@@ -97,6 +97,15 @@ describe("Admin.svelte ready", () => {
     expect(html).toContain("Rotate");
     expect(html).toContain("Revoke");
     expect(html).toContain("Create key");
+  });
+
+  it("masks tokens until revealed", async () => {
+    const html = await renderAdmin(ready(OVERVIEW));
+    expect(html).toContain("Reveal");
+    expect(html).toContain("••••••••••••••");
+    // plaintext tokens stay hidden in the initial (masked) render
+    expect(html).not.toContain("tok-alice-1234567890");
+    expect(html).not.toContain("tok-bob-9876543210");
   });
 
   it("groups sites by user", async () => {

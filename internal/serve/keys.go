@@ -27,8 +27,9 @@ func GenerateToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-// tokenHash returns the hex SHA-256 of a token — the only form ever stored
-// on disk or held for comparison.
+// tokenHash returns the hex SHA-256 of a token — the form used for
+// constant-time comparison. The token itself is also stored (see deployKey)
+// so the operator can copy it from the console.
 func tokenHash(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
@@ -39,10 +40,12 @@ func tokenHash(token string) string {
 var ErrBadUser = errors.New("invalid user label: must match [A-Za-z0-9._-]{1,63}")
 
 // deployKey is one issued per-user deploy credential, as persisted. The
-// plaintext token is never stored: only its SHA-256 hash.
+// plaintext token is kept so the operator can copy it from the console; the
+// hash is what Authenticate compares against, in constant time.
 type deployKey struct {
 	ID      string    `json:"id"`
 	User    string    `json:"user"`
+	Token   string    `json:"token"`
 	Hash    string    `json:"hash"`
 	Created time.Time `json:"created"`
 	Revoked bool      `json:"revoked,omitempty"`
@@ -54,11 +57,12 @@ type keyFile struct {
 	Sites map[string]string `json:"sites"` // site name -> user label
 }
 
-// PublicKey is the non-secret view of a deploy key, returned by the admin
-// API. It never includes the hash.
-type PublicKey struct {
+// KeyInfo is the view of a deploy key returned by the admin API. It carries
+// the plaintext token (for the operator console) but never the hash.
+type KeyInfo struct {
 	ID      string    `json:"id"`
 	User    string    `json:"user"`
+	Token   string    `json:"token"`
 	Created time.Time `json:"created"`
 	Revoked bool      `json:"revoked"`
 }
@@ -71,14 +75,13 @@ type SiteOwner struct {
 
 // Overview is the admin API's read view: all keys plus site ownership.
 type Overview struct {
-	Keys  []PublicKey `json:"keys"`
+	Keys  []KeyInfo   `json:"keys"`
 	Sites []SiteOwner `json:"sites"`
 }
 
 // KeyStore persists per-user deploy keys and site ownership under
-// <dataDir>/deploy-keys.json. Mutations are serialized and written
-// atomically; reads take a shared lock. Tokens exist in plaintext only in
-// the Create/Rotate response.
+// <dataDir>/deploy-keys.json (0600). Mutations are serialized and written
+// atomically; reads take a shared lock.
 type KeyStore struct {
 	path string
 	mu   sync.RWMutex
@@ -160,78 +163,78 @@ func (ks *KeyStore) Authenticate(token string) (user string, ok bool) {
 	return ks.file.Keys[match].User, true
 }
 
-// Create mints a deploy key for user and returns the plaintext token (shown
-// once) alongside its public view. The token itself is not stored.
-func (ks *KeyStore) Create(user string) (string, PublicKey, error) {
+// Create mints a deploy key for user and returns the plaintext token
+// alongside its view (the token is also stored, for the operator console).
+func (ks *KeyStore) Create(user string) (string, KeyInfo, error) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 	if !validUser(user) {
-		return "", PublicKey{}, ErrBadUser
+		return "", KeyInfo{}, ErrBadUser
 	}
 	token, err := GenerateToken()
 	if err != nil {
-		return "", PublicKey{}, err
+		return "", KeyInfo{}, err
 	}
 	id, err := newKeyID()
 	if err != nil {
-		return "", PublicKey{}, err
+		return "", KeyInfo{}, err
 	}
-	k := deployKey{ID: id, User: user, Hash: tokenHash(token), Created: time.Now().UTC()}
+	k := deployKey{ID: id, User: user, Token: token, Hash: tokenHash(token), Created: time.Now().UTC()}
 	ks.file.Keys = append(ks.file.Keys, k)
 	if err := ks.persist(); err != nil {
 		ks.file.Keys = ks.file.Keys[:len(ks.file.Keys)-1]
-		return "", PublicKey{}, err
+		return "", KeyInfo{}, err
 	}
-	return token, publicKey(k), nil
+	return token, keyInfo(k), nil
 }
 
 // Revoke marks a key as revoked. It is idempotent: revoking an already
 // revoked key succeeds. found=false means no such key.
-func (ks *KeyStore) Revoke(id string) (PublicKey, bool, error) {
+func (ks *KeyStore) Revoke(id string) (KeyInfo, bool, error) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 	i := ks.indexOf(id)
 	if i == -1 {
-		return PublicKey{}, false, nil
+		return KeyInfo{}, false, nil
 	}
 	if ks.file.Keys[i].Revoked {
-		return publicKey(ks.file.Keys[i]), true, nil
+		return keyInfo(ks.file.Keys[i]), true, nil
 	}
 	ks.file.Keys[i].Revoked = true
 	if err := ks.persist(); err != nil {
 		ks.file.Keys[i].Revoked = false
-		return PublicKey{}, false, err
+		return KeyInfo{}, false, err
 	}
-	return publicKey(ks.file.Keys[i]), true, nil
+	return keyInfo(ks.file.Keys[i]), true, nil
 }
 
 // Rotate revokes the old key and mints a fresh one for the same user,
 // returning the new plaintext token. found=false means no such key.
-func (ks *KeyStore) Rotate(id string) (string, PublicKey, bool, error) {
+func (ks *KeyStore) Rotate(id string) (string, KeyInfo, bool, error) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 	i := ks.indexOf(id)
 	if i == -1 {
-		return "", PublicKey{}, false, nil
+		return "", KeyInfo{}, false, nil
 	}
 	token, err := GenerateToken()
 	if err != nil {
-		return "", PublicKey{}, false, err
+		return "", KeyInfo{}, false, err
 	}
 	newID, err := newKeyID()
 	if err != nil {
-		return "", PublicKey{}, false, err
+		return "", KeyInfo{}, false, err
 	}
 	user := ks.file.Keys[i].User
 	ks.file.Keys[i].Revoked = true
-	k := deployKey{ID: newID, User: user, Hash: tokenHash(token), Created: time.Now().UTC()}
+	k := deployKey{ID: newID, User: user, Token: token, Hash: tokenHash(token), Created: time.Now().UTC()}
 	ks.file.Keys = append(ks.file.Keys, k)
 	if err := ks.persist(); err != nil {
 		ks.file.Keys[i].Revoked = false
 		ks.file.Keys = ks.file.Keys[:len(ks.file.Keys)-1]
-		return "", PublicKey{}, false, err
+		return "", KeyInfo{}, false, err
 	}
-	return token, publicKey(k), true, nil
+	return token, keyInfo(k), true, nil
 }
 
 // RecordSite attributes a site to the user who last deployed it. A no-op
@@ -250,9 +253,9 @@ func (ks *KeyStore) RecordSite(site, user string) error {
 func (ks *KeyStore) Overview() Overview {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
-	keys := make([]PublicKey, 0, len(ks.file.Keys))
+	keys := make([]KeyInfo, 0, len(ks.file.Keys))
 	for _, k := range ks.file.Keys {
-		keys = append(keys, publicKey(k))
+		keys = append(keys, keyInfo(k))
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i].Created.Before(keys[j].Created) })
 	sites := make([]SiteOwner, 0, len(ks.file.Sites))
@@ -273,8 +276,8 @@ func (ks *KeyStore) indexOf(id string) int {
 	return -1
 }
 
-func publicKey(k deployKey) PublicKey {
-	return PublicKey{ID: k.ID, User: k.User, Created: k.Created, Revoked: k.Revoked}
+func keyInfo(k deployKey) KeyInfo {
+	return KeyInfo{ID: k.ID, User: k.User, Token: k.Token, Created: k.Created, Revoked: k.Revoked}
 }
 
 func validUser(s string) bool {

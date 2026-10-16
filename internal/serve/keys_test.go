@@ -20,7 +20,7 @@ func TestKeyStoreCreateAuthenticate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if token == "" || key.ID == "" || key.User != "alice" || key.Revoked {
+	if token == "" || key.ID == "" || key.User != "alice" || key.Revoked || key.Token != token {
 		t.Fatalf("key = %+v, token = %q", key, token)
 	}
 	if user, ok := ks.Authenticate(token); !ok || user != "alice" {
@@ -134,7 +134,8 @@ func TestKeyStoreRecordSite(t *testing.T) {
 }
 
 // TestKeyStorePersists pins that state survives a reload (new instance reads
-// the same file) and that plaintext tokens are never written to disk.
+// the same file), that tokens stay recoverable for the operator, and that
+// the store file is 0600.
 func TestKeyStorePersists(t *testing.T) {
 	data := t.TempDir()
 	ks, err := serve.NewKeyStore(data)
@@ -160,12 +161,23 @@ func TestKeyStorePersists(t *testing.T) {
 		t.Fatalf("revoke after reload = found %v, err %v", found, err)
 	}
 
-	raw, err := os.ReadFile(filepath.Join(data, "deploy-keys.json"))
+	// The operator can recover the token from the console; the store itself
+	// is 0600.
+	recoverable := ""
+	for _, k := range reloaded.Overview().Keys {
+		if k.ID == key.ID {
+			recoverable = k.Token
+		}
+	}
+	if recoverable != token {
+		t.Fatalf("token not recoverable after reload: %q", recoverable)
+	}
+	fi, err := os.Stat(filepath.Join(data, "deploy-keys.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(raw), token) {
-		t.Fatalf("plaintext token leaked to disk")
+	if fi.Mode().Perm() != 0o600 {
+		t.Fatalf("store mode = %o, want 600", fi.Mode().Perm())
 	}
 }
 
