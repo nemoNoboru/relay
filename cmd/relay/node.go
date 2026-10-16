@@ -94,6 +94,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", healthz)
 	mux.Handle("/_relay/v1/admin", admin)
 	mux.Handle("/_relay/v1/admin/", admin)
 	mux.Handle("/_relay/v1/", uploader)
@@ -139,6 +140,15 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// healthz reports liveness and readiness for Kubernetes probes: 200 "ok"
+// whenever the node process is serving. It depends on nothing but the
+// listener and mux, so a successful probe means the node is up.
+func healthz(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, "ok\n")
 }
 
 // resolveAdminToken returns the node's admin token — the operator's master

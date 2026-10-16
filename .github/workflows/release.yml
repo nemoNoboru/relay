@@ -1,0 +1,72 @@
+name: Release binaries
+
+# Builds static relay binaries (owner UI embedded) for Linux and macOS,
+# amd64 and arm64, and attaches them to the GitHub Release created for the
+# pushed v* tag. install.sh downloads these assets.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build owner UI
+        run: cd web && npm ci --include=dev && npm run build
+
+      - name: Build relay binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w -X main.version=${VERSION#v}" \
+            -o relay ./cmd/relay
+
+      - name: Package
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          dir="release/${GOOS}-${GOARCH}"
+          mkdir -p "$dir"
+          cp relay "$dir/relay"
+          tar -czf "relay-${GOOS}-${GOARCH}.tar.gz" -C "$dir" relay
+          sha256sum "relay-${GOOS}-${GOARCH}.tar.gz" \
+            > "relay-${GOOS}-${GOARCH}.tar.gz.sha256"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: relay-*.tar.gz*
