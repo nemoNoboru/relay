@@ -136,18 +136,18 @@
 <pre class="ascii">relay node --data /var/lib/relay --listen :8080</pre>
 <p>Put Caddy (or any reverse proxy) in front for :80/:443, or let the embedded Caddy handle TLS directly.</p>
 <h4 id="docker">Docker</h4>
-<p>The node ships as a single container image published to GitHub Packages — <code>ghcr.io/nemoNoboru/relay</code> — built from the <a href="./Dockerfile"><code>Dockerfile</code></a> at the repository root:</p>
+<p>The node ships as a single container image published to GitHub Packages — <code>ghcr.io/nemonoboru/relay</code> — built from the <a href="./Dockerfile"><code>Dockerfile</code></a> at the repository root:</p>
 <pre class="ascii">docker run -d --name relay --restart unless-stopped \
   -p 8080:8080 \
   -v relay-data:/data \
-  ghcr.io/nemoNoboru/relay:latest</pre>
+  ghcr.io/nemonoboru/relay:latest</pre>
 <p>The image runs unprivileged and keeps all state under <code>/data</code>.</p>
 <h4 id="docker-compose">Docker Compose</h4>
 <p>A Compose file for a single node, with its data on a named volume:</p>
 <pre class="ascii">services:
   relay:
     build: .
-    # image: ghcr.io/nemoNoboru/relay:latest
+    # image: ghcr.io/nemonoboru/relay:latest
     command: [&quot;node&quot;, &quot;--data&quot;, &quot;/data&quot;, &quot;--listen&quot;, &quot;:8080&quot;]
     ports:
       - &quot;80:8080&quot;
@@ -165,7 +165,7 @@ volumes:
 <p>A Swarm stack — a public node on a manager, plus private nodes that dial out to it:</p>
 <pre class="ascii">services:
   relay-public:
-    image: ghcr.io/nemoNoboru/relay:latest
+    image: ghcr.io/nemonoboru/relay:latest
     command: [&quot;node&quot;, &quot;--public&quot;, &quot;--data&quot;, &quot;/data&quot;, &quot;--listen&quot;, &quot;:8080&quot;]
     ports:
       - target: 8080
@@ -182,7 +182,7 @@ volumes:
         constraints: [&quot;node.role == manager&quot;]
 
   relay-private:
-    image: ghcr.io/nemoNoboru/relay:latest
+    image: ghcr.io/nemonoboru/relay:latest
     command: [&quot;node&quot;, &quot;--friend&quot;, &quot;relay-public:8080&quot;, &quot;--data&quot;, &quot;/data&quot;]
     volumes:
       - relay-data:/data
