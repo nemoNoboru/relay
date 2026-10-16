@@ -44,7 +44,7 @@ spec:
       containers:
         - name: relay
           # Pin to a version tag (e.g. v0.1.0) once releases exist.
-          image: ghcr.io/nemoNoboru/relay:latest
+          image: ghcr.io/nemonoboru/relay:latest
           args:
             - node
             - --name

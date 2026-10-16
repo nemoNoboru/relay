@@ -64,14 +64,14 @@ built and published to GitHub Packages on every push to `main` and on `v*`
 tags (`.github/workflows/image.yml`):
 
 ```sh
-docker pull ghcr.io/nemoNoboru/relay:latest
-docker run -d -p 8080:8080 -v relay-data:/data ghcr.io/nemoNoboru/relay:latest
+docker pull ghcr.io/nemonoboru/relay:latest
+docker run -d -p 8080:8080 -v relay-data:/data ghcr.io/nemonoboru/relay:latest
 ```
 
 The image runs unprivileged and keeps all state under `/data`. The node prints
 its admin token on first start; set one explicitly with `--admin-token` via the
 image's entrypoint (e.g.
-`docker run ... ghcr.io/nemoNoboru/relay:latest --admin-token secret`). The
+`docker run ... ghcr.io/nemonoboru/relay:latest --admin-token secret`). The
 admin token unlocks the operator console at `/_relay/admin.html`, where the
 operator issues per-user deploy keys and revokes or rotates them. To serve
 HTTPS directly, pass `--tls-cert` and `--tls-key`; otherwise terminate TLS at

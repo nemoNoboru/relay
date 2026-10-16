@@ -146,14 +146,14 @@ Put Caddy (or any reverse proxy) in front for :80/:443, or let the embedded Cadd
 #### Docker
 
 The node ships as a single container image published to GitHub Packages —
-`ghcr.io/nemoNoboru/relay` — built from the [`Dockerfile`](./Dockerfile) at
+`ghcr.io/nemonoboru/relay` — built from the [`Dockerfile`](./Dockerfile) at
 the repository root:
 
 ```sh
 docker run -d --name relay --restart unless-stopped \
   -p 8080:8080 \
   -v relay-data:/data \
-  ghcr.io/nemoNoboru/relay:latest
+  ghcr.io/nemonoboru/relay:latest
 ```
 
 The image runs unprivileged and keeps all state under `/data`.
@@ -166,7 +166,7 @@ A Compose file for a single node, with its data on a named volume:
 services:
   relay:
     build: .
-    # image: ghcr.io/nemoNoboru/relay:latest
+    # image: ghcr.io/nemonoboru/relay:latest
     command: ["node", "--data", "/data", "--listen", ":8080"]
     ports:
       - "80:8080"
@@ -189,7 +189,7 @@ A Swarm stack — a public node on a manager, plus private nodes that dial out t
 ```yaml
 services:
   relay-public:
-    image: ghcr.io/nemoNoboru/relay:latest
+    image: ghcr.io/nemonoboru/relay:latest
     command: ["node", "--public", "--data", "/data", "--listen", ":8080"]
     ports:
       - target: 8080
@@ -206,7 +206,7 @@ services:
         constraints: ["node.role == manager"]
 
   relay-private:
-    image: ghcr.io/nemoNoboru/relay:latest
+    image: ghcr.io/nemonoboru/relay:latest
     command: ["node", "--friend", "relay-public:8080", "--data", "/data"]
     volumes:
       - relay-data:/data

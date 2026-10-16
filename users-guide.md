@@ -44,9 +44,9 @@ immediately — no restart — and the site is attributed to that user.
 **Docker** (from the published image):
 
 ```sh
-docker pull ghcr.io/nemoNoboru/relay:latest
+docker pull ghcr.io/nemonoboru/relay:latest
 docker run -d --name relay -p 8080:8080 -v relay-data:/data \
-  ghcr.io/nemoNoboru/relay:latest
+  ghcr.io/nemonoboru/relay:latest
 ```
 
 **Binary:**
@@ -74,7 +74,7 @@ Or set your own, so you control the value:
 
 ```sh
 docker run -d --name relay -p 8080:8080 -v relay-data:/data \
-  ghcr.io/nemoNoboru/relay:latest --admin-token "$(openssl rand -base64 32)"
+  ghcr.io/nemonoboru/relay:latest --admin-token "$(openssl rand -base64 32)"
 ```
 
 > The admin token is the master key to the node. It is **not** what you hand
@@ -327,5 +327,5 @@ Read the `code`; don't retry blindly.
 Restart the node with a new value; it overwrites `<data>/admin-token`:
 
 ```sh
-docker run -d ... ghcr.io/nemoNoboru/relay:latest --admin-token "$(openssl rand -base64 32)"
+docker run -d ... ghcr.io/nemonoboru/relay:latest --admin-token "$(openssl rand -base64 32)"
 ```
