@@ -55,7 +55,9 @@ its admin token on first start; set one explicitly with `--admin-token` via the
 image's entrypoint (e.g.
 `docker run ... ghcr.io/nemoNoboru/relay:latest --admin-token secret`). The
 admin token unlocks the operator console at `/_relay/admin.html`, where the
-operator issues per-user deploy keys and revokes or rotates them.
+operator issues per-user deploy keys and revokes or rotates them. To serve
+HTTPS directly, pass `--tls-cert` and `--tls-key`; otherwise terminate TLS at
+a reverse proxy in front of the node.
 
 ## Building
 

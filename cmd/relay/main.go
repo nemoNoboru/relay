@@ -50,11 +50,12 @@ func usage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
   relay version          print the version
   relay key new [-o f]   generate a new ownership key
-  relay deploy --origin <url> --site <n> [--token <t>] <folder>
+  relay deploy --origin <url> --site <n> [--token <t>] [--insecure] <folder>
                          upload a folder as site <n> (replaces it atomically)
-  relay rollback --origin <url> --site <n> [--admin-token <t>] [--to <v>]
+  relay rollback --origin <url> --site <n> [--admin-token <t>] [--to <v>] [--insecure]
                          roll site <n> back to a previous version
   relay node --name <n> --data <d> --listen <addr> [--admin-token <t>]
+                         [--tls-cert <f> --tls-key <f>]
                          serve <d>/sites/ at /<n>/<site>/ and accept site
                          uploads at /_relay/v1/sites/<site>/deploy
 

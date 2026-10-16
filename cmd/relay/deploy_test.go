@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/nemoNoboru/relay/internal/serve"
 )
@@ -72,9 +73,10 @@ func TestTarDir(t *testing.T) {
 	}
 }
 
-// TestRunDeployAndRollback drives the real deploy/rollback commands against a
-// real (in-process) node, end to end.
-func TestRunDeployAndRollback(t *testing.T) {
+// newTestNode builds the node's mux (registry + uploader + admin) over a
+// fresh data dir and returns it with a minted deploy key token.
+func newTestNode(t *testing.T) (http.Handler, string) {
+	t.Helper()
 	data := t.TempDir()
 	ks, err := serve.NewKeyStore(data)
 	if err != nil {
@@ -101,6 +103,13 @@ func TestRunDeployAndRollback(t *testing.T) {
 	mux.Handle("/_relay/v1/admin/", admin)
 	mux.Handle("/_relay/v1/", up)
 	mux.Handle("/", reg.Handler())
+	return mux, keyToken
+}
+
+// TestRunDeployAndRollback drives the real deploy/rollback commands against a
+// real (in-process) node, end to end.
+func TestRunDeployAndRollback(t *testing.T) {
+	mux, keyToken := newTestNode(t)
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -148,4 +157,33 @@ func fetch(t *testing.T, url string) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// TestRunDeployInsecureTLS pins that `relay deploy --insecure` works against
+// an HTTPS node with a self-signed certificate.
+func TestRunDeployInsecureTLS(t *testing.T) {
+	mux, keyToken := newTestNode(t)
+	srv := httptest.NewTLSServer(mux)
+	defer srv.Close()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<h1>tls</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if code := runDeploy([]string{"--origin", srv.URL, "--site", "blog", "--token", keyToken, "--insecure", dir}, &out, io.Discard); code != 0 {
+		t.Fatalf("deploy over TLS exit = %d", code)
+	}
+
+	// A TLS client that trusts nothing must be told to skip verification; the
+	// default client would fail on the self-signed cert.
+	res, err := newHTTPClient(true, time.Second).Get(srv.URL + "/mynode/blog/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	b, _ := io.ReadAll(res.Body)
+	if string(b) != "<h1>tls</h1>" {
+		t.Fatalf("served over TLS = %q", b)
+	}
 }

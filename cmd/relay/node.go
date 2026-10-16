@@ -29,6 +29,8 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	data := flags.String("data", "", "data directory containing sites/ (required)")
 	listen := flags.String("listen", "", "address to listen on, e.g. :8080 (required)")
 	adminToken := flags.String("admin-token", "", "admin token for the operator console (default: generated into <data>/admin-token)")
+	tlsCert := flags.String("tls-cert", "", "TLS certificate file (serve HTTPS; requires --tls-key)")
+	tlsKey := flags.String("tls-key", "", "TLS private key file (requires --tls-cert)")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
@@ -45,6 +47,10 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "relay: missing required flag %s\n", f.flag)
 			return 2
 		}
+	}
+	if (*tlsCert == "") != (*tlsKey == "") {
+		fmt.Fprintf(stderr, "relay: --tls-cert and --tls-key must be set together\n")
+		return 2
 	}
 	node, err := domain.ParseName(*name)
 	if err != nil {
@@ -94,7 +100,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.Handle("/_relay/", ui)
 	mux.Handle("/", registry.Handler())
 
-	logger.Info("relay node listening", "node", string(node), "addr", *listen)
+	logger.Info("relay node listening", "node", string(node), "addr", *listen, "tls", *tlsCert != "")
 	srv := &http.Server{
 		Addr:              *listen,
 		Handler:           mux,
@@ -105,6 +111,10 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 		var ln net.Listener
 		if ln, err = net.Listen("tcp", *listen); err != nil {
 			errCh <- fmt.Errorf("listen on %s: %w", *listen, err)
+			return
+		}
+		if *tlsCert != "" {
+			errCh <- srv.ServeTLS(ln, *tlsCert, *tlsKey)
 			return
 		}
 		errCh <- srv.Serve(ln)

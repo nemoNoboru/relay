@@ -82,9 +82,17 @@ docker run -d --name relay -p 8080:8080 -v relay-data:/data \
 
 ### 3. Put the node behind TLS
 
-Expose it through your reverse proxy (Caddy, Nginx, …) so the console, uploads,
-and sites are served over HTTPS, e.g. `https://relay.example.org` →
-`localhost:8080`.
+Two ways to get HTTPS:
+
+1. **Native TLS:** pass a certificate pair to the node —
+   `relay node … --tls-cert cert.pem --tls-key key.pem` (or append the flags to
+   the image's entrypoint, mounting the files).
+2. **Reverse proxy:** Caddy/Nginx terminates TLS and forwards to
+   `localhost:8080`.
+
+With a self-signed certificate, tell the CLI to skip verification with
+`--insecure` on `relay deploy` / `relay rollback`. Real deployments should use
+a trusted certificate (or the reverse proxy's).
 
 ---
 
