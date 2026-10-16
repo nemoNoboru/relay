@@ -7,14 +7,15 @@ description: Upload a static website into a Relay node. Use when the task is to 
 
 Upload a finished static site — any folder of files — to a Relay node, where it
 is served live at `/<node>/<site>/`. This skill covers the current (MVP) upload
-endpoint: one signed-in upload with a deploy token.
+endpoint: one signed-in upload with a per-user deploy key (a bearer token).
 
 ## What you need before you start
 
 1. **The node's origin** — the base URL you upload to, e.g.
    `https://relay.example.org`.
-2. **A deploy token** — the secret from the node operator. It is sent as a
-   bearer token, never in the URL, never committed, never logged.
+2. **A deploy key** — a per-user credential the node operator creates on the
+   operator console. Use its token as a bearer token, never in the URL,
+   never committed, never logged.
 3. **A site name** — the path segment the site will live under. Lowercase
    letters, digits, and interior hyphens, 1–63 characters, no leading or
    trailing hyphen (e.g. `docs`, `my-blog`, `zine-42`).
@@ -86,16 +87,19 @@ directories) with relative paths and no `..` segments.
 
 ## Credentials and safety
 
-- The **deploy token is a secret**. Keep it out of shell history, logs, commit
-  messages, chat output, and files you commit. Prefer it as an environment
+- The **deploy key is a secret**. Keep its token out of shell history, logs,
+  commit messages, chat output, and files you commit. Prefer an environment
   variable (`RELAY_DEPLOY_TOKEN`) or a secret store.
 - Relay's long-term identity is an **Ed25519 key**: the deed to a name. For
-  this MVP the deploy token is the credential that authorizes uploads; keys
-  and signed deploys arrive with the control API. Never send or sign with a
-  private key unless a later skill says so.
-- The token authorizes writing any site on the node. Treat a leaked token as
-  compromised and ask the operator to rotate it (restart the node with a new
-  `--upload-token`).
+  this MVP the per-user deploy key is the credential that authorizes uploads;
+  keys and signed deploys arrive with the control API. Never send or sign
+  with a private key unless a later skill says so.
+- A deploy key can upload to any site on the node (sites are attributed to
+  the key's user, but a key may overwrite any site). Treat a leaked token as
+  compromised and ask the operator to revoke or rotate it on the operator
+  console.
+- The **admin token** is separate and operator-only: it unlocks the operator
+  console, not uploads. Never ask for it — a deploy key is all you need.
 
 ## Worked example (shell)
 

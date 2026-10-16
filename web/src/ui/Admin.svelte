@@ -1,201 +1,165 @@
 <script lang="ts">
-  import type { AdminData } from "../admin/fixture";
-  import Panel from "./Panel.svelte";
+  import type { Writable } from "svelte/store";
+
+  import type { AdminOverview } from "../admin/schema";
+  import type { AdminState } from "../admin/state";
 
   /**
-   * Relay admin mock view (admin.html).
-   *
-   * A pure function of `{ data }`: fixture in, static HTML out. No store, no
-   * polling, no fetch — the smoke test asserts the production bundle never
-   * calls the API. Interactions are visual only (no handlers); the
-   * `draft-note` chip says so. Promoting the mock to a live page means
-   * swapping the fixture for live.ts data — the view stays.
+   * Operator admin page (admin.html). Pure rendering of the `admin` store;
+   * all effects (fetch, create, revoke, rotate) live in `main/admin.ts` and
+   * arrive here as callbacks, so this component never touches the network.
    */
-  let { data }: { data: AdminData } = $props();
+  let {
+    admin,
+    onConnect,
+    onCreate,
+    onRevoke,
+    onRotate,
+    onRefresh,
+    onDismiss,
+    onLogout,
+  }: {
+    admin: Writable<AdminState>;
+    onConnect: (token: string) => void;
+    onCreate: (user: string) => void;
+    onRevoke: (id: string) => void;
+    onRotate: (id: string) => void;
+    onRefresh: () => void;
+    onDismiss: () => void;
+    onLogout: () => void;
+  } = $props();
+
+  let tokenInput = $state("");
+  let userInput = $state("");
+
+  /** Sites grouped by owner, newest name first within a user. Pure. */
+  const byUser = (ov: AdminOverview | undefined): { user: string; sites: string[] }[] => {
+    if (ov === undefined) return [];
+    const m = new Map<string, string[]>();
+    for (const s of ov.sites) {
+      const list = m.get(s.user) ?? [];
+      list.push(s.site);
+      m.set(s.user, list);
+    }
+    return [...m.entries()]
+      .map(([user, sites]) => ({ user, sites }))
+      .sort((a, b) => a.user.localeCompare(b.user));
+  };
 </script>
 
 <main class="adminapp">
   <div class="wrap">
-    <span class="draft-note">Mock data · no functionality</span>
-
     <div class="admin-head">
       <div>
-        <span class="kick">Relay admin</span>
-        <h1>{data.node.name}</h1>
-        <p class="admin-sub">{data.node.version}</p>
-      </div>
-      <div class="node-vis">
-        <span class="tagline">Visibility</span>
-        <strong>{data.node.visibility}</strong>
-        <em>{data.node.visibilityNote}</em>
+        <span class="kick">Relay operator</span>
+        <h1>Admin</h1>
+        <p class="admin-sub">Deploy keys &amp; sites</p>
       </div>
     </div>
 
-    <div class="panels">
-      <!-- PUBLIC FRIENDS -->
-      <Panel title="Public friends" wide>
-        <p class="warn">This node is not reachable from the open internet. Pick a public friend to relay through.</p>
-        <ul class="pick">
-          {#each data.publicFriends as p}
-            <li>
-              <label>
-                <input type="radio" name="public-friend" checked={p.selected} />
-                <span>
-                  <b>{p.name}</b>
-                  <small>{p.note} · {p.latencyMs} ms</small>
-                </span>
-              </label>
-            </li>
-          {/each}
-          <li>
-            <label>
-              <input type="radio" name="public-friend" disabled />
-              <span>
-                <b>Add a public friend…</b>
-                <small>any public node will do</small>
-              </span>
-            </label>
-          </li>
-        </ul>
-        <p class="result">You would be reachable at <code>{data.resultAddress}</code></p>
-        <div class="row-actions">
-          <button class="btn solid">Connect</button>
-          <span class="hint">Connecting dials the friend and registers /raspberry/ with it.</span>
+    {#if $admin.phase === "locked" || $admin.phase === "error"}
+      <section class="panel">
+        <h3>Sign in</h3>
+        <div class="panel-body">
+          <p class="hint">Enter the node's admin token to manage deploy keys and sites.</p>
+          <form onsubmit={(e) => { e.preventDefault(); onConnect(tokenInput); }}>
+            <div class="field">
+              <label for="admin-token">admin token</label>
+              <input id="admin-token" type="password" bind:value={tokenInput} placeholder="…" autocomplete="off" />
+              <button class="btn solid" type="submit">Connect</button>
+            </div>
+          </form>
+          {#if $admin.phase === "error"}
+            <p class="warn">Cannot connect: {$admin.error ?? "unknown error"}.</p>
+          {/if}
         </div>
-      </Panel>
-
-      <!-- FRIENDS -->
-      <Panel title="Friends" wide>
-        <p class="hint">Nodes this node is connected to. Each owns a path prefix under a public friend.</p>
-        {#if data.friends.length > 0}
-          <ul class="friends">
-            {#each data.friends as f}
-              <li class="friend">
-                <span>
-                  <b>{f.name}</b>
-                  <small>{f.role} · {f.online ? "connected" : "offline"}</small>
-                </span>
-                <code>{f.prefix}</code>
-              </li>
-            {/each}
-          </ul>
-        {:else}
-          <p class="hint">No friends connected.</p>
-        {/if}
-        <div class="row-actions">
-          <button class="btn">Invite a node</button>
-          <span class="hint">Send an invite file, or tell them your address.</span>
-        </div>
-      </Panel>
-
-      <!-- KEYS -->
-      <Panel title="Keys" wide>
-        <p class="hint">A key lets a user claim a name and deploy a site on this node. The operator creates the key file and hands it over once.</p>
-        <div class="field">
-          <label for="key-name">name</label>
-          <input id="key-name" type="text" placeholder="e.g. zine" />
-          <button class="btn solid">Create key</button>
-        </div>
-        {#if data.keyFile}
-          <pre class="keyfile">{@html JSON.stringify(data.keyFile, null, 2)}</pre>
-          <div class="row-actions">
-            <button class="btn">Reveal</button>
-            <button class="btn solid">Save a copy</button>
+      </section>
+    {:else if $admin.phase === "loading"}
+      <p class="hint">Loading…</p>
+    {:else}
+      {#if $admin.newToken}
+        <section class="panel wide">
+          <h3>New deploy key — shown once</h3>
+          <div class="panel-body">
+            <p class="hint">{$admin.notice}. Copy the token now; it will not be shown again.</p>
+            <pre class="keyfile">{$admin.newToken}</pre>
+            <div class="row-actions">
+              <button class="btn solid" onclick={() => void navigator.clipboard?.writeText($admin.newToken ?? "")}>Copy</button>
+              <button class="btn" onclick={onDismiss}>Done</button>
+            </div>
           </div>
-        {/if}
-        <p class="warn">The private half is the deed to the name: shown once, stored nowhere, and impossible to recover. There is no account recovery — ever.</p>
-        {#if data.keys.length > 0}
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th>name</th>
-                <th>key</th>
-                <th>created</th>
-                <th>status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each data.keys as k}
-                <tr>
-                  <td>{k.name}</td>
-                  <td><code>{k.fingerprint}</code></td>
-                  <td>{k.created}</td>
-                  <td>{k.status}</td>
-                </tr>
+        </section>
+      {/if}
+
+      {#if $admin.actionError}
+        <p class="warn">{$admin.actionError}</p>
+      {/if}
+
+      <section class="panel wide">
+        <h3>Deploy keys</h3>
+        <div class="panel-body">
+          <p class="hint">Each key lets one user deploy sites. Rotate or revoke a key to cut them off.</p>
+          <form onsubmit={(e) => { e.preventDefault(); onCreate(userInput); userInput = ""; }}>
+            <div class="field">
+              <label for="key-user">user</label>
+              <input id="key-user" type="text" bind:value={userInput} placeholder="e.g. alice" disabled={$admin.busy} />
+              <button class="btn solid" type="submit" disabled={$admin.busy}>Create key</button>
+            </div>
+          </form>
+          {#if ($admin.overview?.keys.length ?? 0) === 0}
+            <p class="hint">No keys issued.</p>
+          {:else}
+            <table class="tbl">
+              <thead>
+                <tr><th>user</th><th>created</th><th>status</th><th></th></tr>
+              </thead>
+              <tbody>
+                {#each $admin.overview?.keys ?? [] as k (k.id)}
+                  <tr>
+                    <td>{k.user}</td>
+                    <td>{k.created}</td>
+                    <td>{k.revoked ? "revoked" : "active"}</td>
+                    <td>
+                      {#if !k.revoked}
+                        <button class="btn" onclick={() => onRotate(k.id)} disabled={$admin.busy}>Rotate</button>
+                        <button class="btn" onclick={() => onRevoke(k.id)} disabled={$admin.busy}>Revoke</button>
+                      {:else}
+                        <span class="hint">—</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        </div>
+      </section>
+
+      <section class="panel wide">
+        <h3>Sites by user</h3>
+        <div class="panel-body">
+          {#if byUser($admin.overview).length === 0}
+            <p class="hint">No sites deployed yet.</p>
+          {:else}
+            <ul class="friends">
+              {#each byUser($admin.overview) as u (u.user)}
+                <li class="friend">
+                  <span>
+                    <b>{u.user}</b>
+                    <small>{u.sites.length} site{u.sites.length === 1 ? "" : "s"}</small>
+                  </span>
+                  <code>{u.sites.join(" · ")}</code>
+                </li>
               {/each}
-            </tbody>
-          </table>
-        {:else}
-          <p class="hint">No keys issued.</p>
-        {/if}
-      </Panel>
-
-      <!-- NAMES -->
-      <Panel title="Names">
-        {#if data.names.length > 0}
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th>name</th>
-                <th>address</th>
-                <th>owner</th>
-                <th>size</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each data.names as n}
-                <tr>
-                  <td>{n.name}</td>
-                  <td><code>{n.address}</code></td>
-                  <td><code>{n.owner}</code></td>
-                  <td>{n.size}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        {:else}
-          <p class="hint">No names claimed on this node.</p>
-        {/if}
-      </Panel>
-
-      <!-- RULES -->
-      <Panel title="Rules">
-        <p class="hint">Open deployments on this node must follow the published rule set.</p>
-        <ul class="rules">
-          {#each data.rules as r}
-            <li class="rule">
-              <span>{r.tag}</span>
-              {r.text}
-            </li>
-          {/each}
-        </ul>
-        <p class="result"><code>rules/community.txt</code></p>
-        <p class="hint">published to every site on this node</p>
-      </Panel>
-
-      <!-- NODE -->
-      <Panel title="Node" wide>
-        <div class="statrow">
-          <div class="stat">
-            <b>{data.node.sessionsUsed}/{data.node.sessionsMax}</b>
-            <span>sessions</span>
-          </div>
-          <div class="stat">
-            <b>{data.node.storage}</b>
-            <span>storage</span>
-          </div>
-          <div class="stat">
-            <b>{data.node.friendsOnline} of {data.node.friendsTotal}</b>
-            <span>friends online</span>
-          </div>
-          <div class="stat">
-            <b>{data.node.uptime}</b>
-            <span>uptime</span>
-          </div>
+            </ul>
+          {/if}
         </div>
-      </Panel>
-    </div>
+      </section>
 
-    <p class="sr-only">2 of 3 friends connected. 2 keys issued, 1 name claimed.</p>
+      <div class="row-actions">
+        <button class="btn" onclick={onRefresh} disabled={$admin.busy}>Refresh</button>
+        <button class="btn" onclick={onLogout}>Sign out</button>
+      </div>
+    {/if}
   </div>
 </main>

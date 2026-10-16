@@ -2,7 +2,7 @@
  * Tests for the node client (`api/`) — the only wire-aware code. The layer
  * takes a `fetch` stub, so these run without a network and without a node.
  */
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { describe, effect, layer } from "@effect/vitest";
 import { ApiError, Client } from "../src/api/client";
 import { Tunnels } from "../src/tunnels/schema";
@@ -79,6 +79,37 @@ describe("Client", () => {
           ctx.expect(result.value._tag).toBe("ApiError");
           ctx.expect(result.value.message).toContain("boom");
         }
+      }),
+    );
+  });
+});
+
+describe("Client.post", () => {
+  const KeyCreated = Schema.Struct({ token: Schema.String });
+  let captured: { method?: string; auth?: string; body?: string } = {};
+
+  const recordingStub: FetchFn = async (_input, init) => {
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    captured = {
+      method: init?.method,
+      auth: headers.authorization,
+      body: typeof init?.body === "string" ? init.body : undefined,
+    };
+    return new Response(JSON.stringify({ token: "t-123" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  layer(Client.layer(recordingStub))("POST with body and token", (it) => {
+    it.effect("sends JSON + bearer and decodes the response", (ctx) =>
+      Effect.gen(function* () {
+        const client = yield* Client;
+        const data = yield* client.post("/_relay/v1/admin/keys", { user: "alice" }, KeyCreated, "admin-token");
+        ctx.expect(data).toEqual({ token: "t-123" });
+        ctx.expect(captured.method).toBe("POST");
+        ctx.expect(captured.auth).toBe("Bearer admin-token");
+        ctx.expect(captured.body).toBe(JSON.stringify({ user: "alice" }));
       }),
     );
   });

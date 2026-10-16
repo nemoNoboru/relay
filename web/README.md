@@ -1,7 +1,8 @@
 # Relay owner UI
 
-The node's owner UI: `node.html` (node admin — tunnels, health) and
-`site.html` (site console — deploys, metrics). Svelte 5 components + Effect-TS,
+The node's owner UI: `node.html` (node admin — tunnels, health),
+`site.html` (site console — deploys, metrics), and `admin.html` (operator
+console — deploy keys, sites by user). Svelte 5 components + Effect-TS,
 built with Vite, embedded into the Go node binary via `embed.go`, served by the
 node same-origin with its API.
 
@@ -21,7 +22,7 @@ Locked by `.pi/skills/frontend-architecture/SKILL.md`:
 
 ```
 node.html, site.html     page shells (thin; the app is the script module)
-admin.html               admin mock page shell
+admin.html               operator console shell (deploy keys, sites by user)
 deploy.html              static upload docs page (plain HTML, no script)
 shared/styles.css        design tokens (mirrored from the root site) + owner UI
 public/skills/           generated: relay-deploy/SKILL.md, copied from .pi/skills
@@ -30,11 +31,16 @@ src/live.ts              the live-page driver both pages share: store, scoped
                          poll Stream, fold, Svelte mount, pagehide teardown
 src/main/node.ts         node page entry — the options handed to startPage
 src/main/site.ts         site page entry — same shape
+src/main/admin.ts        operator console entry — token session + API effects
+src/admin/schema.ts      /_relay/v1/admin wire schemas (keys, sites, create/rotate)
+src/admin/ops.ts         the admin API effects (overview, create, revoke, rotate)
+src/admin/state.ts       the console's UI state type + initial
 src/ui/Phase.svelte      shared presentation of the live phases (loading,
                          error, stale); the page's data view is a snippet
 src/ui/Panel.svelte      shared panel wrapper (title + body snippet)
 src/ui/Node.svelte       node admin view: pure renderer of the live-data store
 src/ui/Site.svelte       site console view: same shape
+src/ui/Admin.svelte      operator console view: pure renderer of the admin store
 src/shims-svelte.d.ts    .svelte module shim for plain `tsc` (svelte-check does the real check)
 src/api/client.ts        fetch + Schema decode, typed ApiError — the only wire code
 src/fold.ts              pure (state, event) → state live-data machine (+ `ago`)
@@ -57,7 +63,7 @@ dist/                    Vite output (generated; .gitkeep keeps embed valid pre-
 | `npm run typecheck` | `tsc --noEmit` + `svelte-check` (strict Svelte + prop typing) |
 | `npm test`          | `vitest run` — fold table, client, SSR component render |
 | `npm run test:watch`| `vitest`                                            |
-| `npm run smoke`     | DOM-stub smoke test of the built bundles (all four page/state scenarios) |
+| `npm run smoke`     | DOM-stub smoke test of the built bundles (all page/state scenarios) |
 
 Node >= 22.12 is required (engines). `smoke` needs a fresh `dist/`
 (`npm run build` first).
@@ -91,7 +97,8 @@ Three layers, all browser-free:
    decode, typed errors, the only wire-aware code.
 3. **`test/ui.test.ts`** — SSR-rendering of the Svelte components
    (`svelte/server` `render`) for every visible state: loading, ready (with
-   data and empty), stale (last data retained), and error.
+   data and empty), stale (last data retained), and error. **`test/admin.test.ts`**
+   covers the operator console (locked sign-in, ready, one-time token).
 
 `tools/smoke.mjs` goes one step further: it imports the **built production
 bundles** into Node with a minimal DOM stub (just enough for Svelte's client

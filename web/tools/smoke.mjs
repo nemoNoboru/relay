@@ -3,8 +3,9 @@
  *
  * Usage: node tools/smoke.mjs <node|site|admin|bundle.js> <error|ready>
  *
- * `admin` is the mock admin page: it has only a `ready` scenario, and its
- * fetch stub rejects on call — the bundle must never call fetch.
+ * `admin` is the operator page: it renders the sign-in form on load and
+ * only calls fetch after a token is entered, so its fetch stub rejects on
+ * call and the bundle must never call fetch during the smoke run.
  *        page/bundle paths are relative to web/ (node|site auto-resolve
  *        dist/assets/<page>-*.js; an explicit path may also be given)
  *
@@ -33,7 +34,7 @@ if (!pageOrBundle || !scenario)
 if (!/^(error|ready)$/.test(scenario)) throw new Error(`unknown scenario ${scenario} (use error|ready)`);
 const isPage = (p) => p === "node" || p === "site" || p === "admin";
 if (pageOrBundle === "admin" && scenario === "error")
-  throw new Error("admin has no error scenario (the mock page never calls the API)");
+  throw new Error("admin has no error scenario (it never calls the API without a token)");
 const bundlePath = isPage(pageOrBundle)
   ? resolveBundle(pageOrBundle)
   : path.isAbsolute(pageOrBundle)
@@ -304,6 +305,12 @@ globalThis.window = {
     listeners[name] = (listeners[name] ?? []).filter((f) => f !== fn);
   },
 };
+// The admin page keeps its token in sessionStorage between reloads.
+globalThis.sessionStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+};
 globalThis.MutationObserver = class {
   observe() {}
   disconnect() {}
@@ -323,6 +330,10 @@ globalThis.Node = El;
 globalThis.Element = El;
 globalThis.Text = El;
 globalThis.Comment = Comment;
+// Svelte's event-delegation cleanup probes `instanceof HTMLMediaElement`
+// (for media listeners). Real buttons are not media elements; the stub
+// class mirrors that so no smoke element matches it.
+globalThis.HTMLMediaElement = class {};
 
 const TUNNELS = {
   tunnels: [
@@ -357,8 +368,8 @@ const page = isPage(pageOrBundle)
       ? "admin"
       : "node";
 
-// The admin page is a mock: any fetch call is a bug, so the stub rejects on
-// call, and the assertions below require fetchCalls === 0.
+// The admin page renders the sign-in form and never fetches until a token is
+// entered, so any fetch call is a bug and the stub rejects on call.
 fetchImpl =
   scenario === "error"
     ? fail
@@ -414,10 +425,9 @@ if (scenario === "error") {
   assert(html.includes("previous"), "previous status rendered");
   assert(html.includes("2 site version(s) on record"), "live summary rendered");
 } else if (page === "admin") {
-  assert(html.includes("home-pi"), "node name rendered");
-  assert(html.includes("Public friends"), "public friends panel rendered");
-  assert(html.includes("Keys"), "keys panel rendered");
-  assert(fetchCalls === 0, "fetch was never called");
+  assert(html.includes("Sign in"), "sign-in form rendered");
+  assert(html.includes("admin token"), "admin token field rendered");
+  assert(fetchCalls === 0, "fetch was never called (no saved token)");
 }
 
 console.log(`${label} ✓`);

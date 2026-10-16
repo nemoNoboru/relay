@@ -2,8 +2,6 @@ package serve
 
 import (
 	"archive/tar"
-	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,25 +25,27 @@ const (
 )
 
 // Uploader accepts a site upload and swaps it in as the live site. It is
-// the write half of static hosting; Registry is the read half.
+// the write half of static hosting; Registry is the read half. Uploads are
+// authenticated against the per-user deploy keys in a KeyStore, and each
+// site is attributed to the user who last deployed it.
 type Uploader struct {
 	self     domain.Name
 	sitesDir string
-	token    [sha256.Size]byte // SHA-256 of the deploy token, for constant-time checks
+	ks       *KeyStore
 	maxBytes int64
 	maxFiles int
 	reload   func() error
 }
 
 // NewUploader returns an uploader that writes sites under <dataDir>/sites
-// and reports them at /<self>/<site>/. token is the deploy secret; only its
-// hash is kept. reload is called after every successful deploy so the
+// and reports them at /<self>/<site>/. ks authorizes uploads and records
+// site ownership. reload is called after every successful deploy so the
 // serving registry picks up the new site; it may be nil.
-func NewUploader(self domain.Name, dataDir, token string, maxBytes int64, reload func() error) *Uploader {
+func NewUploader(self domain.Name, dataDir string, ks *KeyStore, maxBytes int64, reload func() error) *Uploader {
 	return &Uploader{
 		self:     self,
 		sitesDir: filepath.Join(dataDir, "sites"),
-		token:    sha256.Sum256([]byte(token)),
+		ks:       ks,
 		maxBytes: maxBytes,
 		maxFiles: maxDeployFiles,
 		reload:   reload,
@@ -79,7 +79,8 @@ func (u *Uploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Uploader) deploy(w http.ResponseWriter, r *http.Request, name domain.Name) {
-	if !u.authorized(r) {
+	user, ok := u.user(r)
+	if !ok {
 		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or missing deploy token")
 		return
 	}
@@ -108,6 +109,10 @@ func (u *Uploader) deploy(w http.ResponseWriter, r *http.Request, name domain.Na
 			fmt.Fprintf(os.Stderr, "serve: reload sites after deploy: %v\n", err)
 		}
 	}
+	if err := u.ks.RecordSite(string(name), user); err != nil {
+		// The site is live; only the ownership bookkeeping failed.
+		fmt.Fprintf(os.Stderr, "serve: record owner of %s: %v\n", name, err)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"site":  string(name),
 		"files": files,
@@ -116,14 +121,13 @@ func (u *Uploader) deploy(w http.ResponseWriter, r *http.Request, name domain.Na
 	})
 }
 
-// authorized reports whether r carries the deploy token as a bearer token.
-func (u *Uploader) authorized(r *http.Request) bool {
+// user returns the user a bearer deploy token belongs to.
+func (u *Uploader) user(r *http.Request) (string, bool) {
 	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok || token == "" {
-		return false
+		return "", false
 	}
-	got := sha256.Sum256([]byte(token))
-	return subtle.ConstantTimeCompare(got[:], u.token[:]) == 1
+	return u.ks.Authenticate(token)
 }
 
 // stage extracts the archive in body into a fresh staging directory next to

@@ -13,16 +13,16 @@ func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func TestResolveUploadTokenExplicit(t *testing.T) {
+func TestResolveAdminTokenExplicit(t *testing.T) {
 	data := t.TempDir()
-	token, err := resolveUploadToken(data, "supersecret", discardLogger())
+	token, err := resolveAdminToken(data, "supersecret", discardLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if token != "supersecret" {
 		t.Fatalf("token = %q, want supersecret", token)
 	}
-	b, err := os.ReadFile(filepath.Join(data, "upload-token"))
+	b, err := os.ReadFile(filepath.Join(data, "admin-token"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,16 +34,16 @@ func TestResolveUploadTokenExplicit(t *testing.T) {
 	}
 }
 
-func TestResolveUploadTokenGenerated(t *testing.T) {
+func TestResolveAdminTokenGenerated(t *testing.T) {
 	data := t.TempDir()
-	token, err := resolveUploadToken(data, "", discardLogger())
+	token, err := resolveAdminToken(data, "", discardLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(token) < 32 {
 		t.Fatalf("generated token too short: %q", token)
 	}
-	again, err := resolveUploadToken(data, "", discardLogger())
+	again, err := resolveAdminToken(data, "", discardLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,12 +55,12 @@ func TestResolveUploadTokenGenerated(t *testing.T) {
 	}
 }
 
-func TestResolveUploadTokenExisting(t *testing.T) {
+func TestResolveAdminTokenExisting(t *testing.T) {
 	data := t.TempDir()
-	if err := os.WriteFile(filepath.Join(data, "upload-token"), []byte("already\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(data, "admin-token"), []byte("already\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	token, err := resolveUploadToken(data, "", discardLogger())
+	token, err := resolveAdminToken(data, "", discardLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestResolveUploadTokenExisting(t *testing.T) {
 
 func tokenFilePerm(t *testing.T, data string) os.FileMode {
 	t.Helper()
-	fi, err := os.Stat(filepath.Join(data, "upload-token"))
+	fi, err := os.Stat(filepath.Join(data, "admin-token"))
 	if err != nil {
 		t.Fatal(err)
 	}

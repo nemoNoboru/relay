@@ -15,8 +15,6 @@ import (
 	"github.com/nemoNoboru/relay/internal/serve"
 )
 
-const deployToken = "test-token"
-
 // tarSite builds an in-memory tar archive of the given regular files.
 func tarSite(t *testing.T, files map[string]string) []byte {
 	t.Helper()
@@ -54,9 +52,24 @@ func doDeploy(t *testing.T, up http.Handler, path, auth string, body []byte) *ht
 	return rec
 }
 
-// TestUploadRequiresToken pins that uploads are gated by the deploy token.
+// testUploader returns an uploader backed by a fresh key store with one
+// deploy key minted for user "tester", plus that key's token.
+func testUploader(t *testing.T, data string, maxBytes int64, reload func() error) (*serve.Uploader, string) {
+	t.Helper()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := ks.Create("tester")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return serve.NewUploader("mynode", data, ks, maxBytes, reload), token
+}
+
+// TestUploadRequiresToken pins that uploads are gated by a deploy key.
 func TestUploadRequiresToken(t *testing.T) {
-	up := serve.NewUploader("mynode", t.TempDir(), deployToken, serve.MaxDeployBytes, nil)
+	up, _ := testUploader(t, t.TempDir(), serve.MaxDeployBytes, nil)
 	body := tarSite(t, map[string]string{"index.html": "hi"})
 
 	for name, auth := range map[string]string{"missing": "", "wrong": "nope"} {
@@ -69,6 +82,31 @@ func TestUploadRequiresToken(t *testing.T) {
 	}
 }
 
+// TestUploadRejectsRevokedKey pins that a revoked deploy key stops working.
+func TestUploadRejectsRevokedKey(t *testing.T) {
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, key, err := ks.Create("tester")
+	if err != nil {
+		t.Fatal(err)
+	}
+	up := serve.NewUploader("mynode", data, ks, serve.MaxDeployBytes, nil)
+	body := tarSite(t, map[string]string{"index.html": "hi"})
+
+	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, body); rec.Code != http.StatusOK {
+		t.Fatalf("deploy before revoke = %d", rec.Code)
+	}
+	if _, _, err := ks.Revoke(key.ID); err != nil {
+		t.Fatal(err)
+	}
+	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, body); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("deploy after revoke = %d, want 401", rec.Code)
+	}
+}
+
 // TestUploadAndServe is the end-to-end acceptance: upload a folder, then
 // fetch it live at /<node>/<site>/.
 func TestUploadAndServe(t *testing.T) {
@@ -77,13 +115,13 @@ func TestUploadAndServe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	up := serve.NewUploader("mynode", data, deployToken, serve.MaxDeployBytes, func() error {
+	up, token := testUploader(t, data, serve.MaxDeployBytes, func() error {
 		_, err := reg.Reload()
 		return err
 	})
 
 	body := tarSite(t, map[string]string{"index.html": "<h1>hello</h1>"})
-	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, body)
+	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("deploy status = %d, body %s", rec.Code, rec.Body.String())
 	}
@@ -101,19 +139,43 @@ func TestUploadAndServe(t *testing.T) {
 	}
 }
 
+// TestUploadRecordsSiteOwner pins that a deploy attributes the site to the
+// user whose key uploaded it.
+func TestUploadRecordsSiteOwner(t *testing.T) {
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := ks.Create("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	up := serve.NewUploader("mynode", data, ks, serve.MaxDeployBytes, nil)
+
+	rec := doDeploy(t, up, "/_relay/v1/sites/blog/deploy", token, tarSite(t, map[string]string{"index.html": "hi"}))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("deploy = %d", rec.Code)
+	}
+	ov := ks.Overview()
+	if len(ov.Sites) != 1 || ov.Sites[0].Site != "blog" || ov.Sites[0].User != "alice" {
+		t.Fatalf("sites = %+v, want blog->alice", ov.Sites)
+	}
+}
+
 // TestUploadReplacesLiveSite pins that a second deploy replaces the first.
 func TestUploadReplacesLiveSite(t *testing.T) {
 	data := t.TempDir()
 	reg, _, _ := serve.NewRegistry("mynode", data)
-	up := serve.NewUploader("mynode", data, deployToken, serve.MaxDeployBytes, func() error {
+	up, token := testUploader(t, data, serve.MaxDeployBytes, func() error {
 		_, err := reg.Reload()
 		return err
 	})
 
-	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, tarSite(t, map[string]string{"index.html": "v1"})); rec.Code != http.StatusOK {
+	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, tarSite(t, map[string]string{"index.html": "v1"})); rec.Code != http.StatusOK {
 		t.Fatalf("first deploy = %d", rec.Code)
 	}
-	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, tarSite(t, map[string]string{"index.html": "v2", "style.css": "body{}"})); rec.Code != http.StatusOK {
+	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, tarSite(t, map[string]string{"index.html": "v2", "style.css": "body{}"})); rec.Code != http.StatusOK {
 		t.Fatalf("second deploy = %d", rec.Code)
 	}
 
@@ -132,8 +194,8 @@ func TestUploadReplacesLiveSite(t *testing.T) {
 
 // TestUploadBadArchive pins the 400 on non-tar bodies.
 func TestUploadBadArchive(t *testing.T) {
-	up := serve.NewUploader("mynode", t.TempDir(), deployToken, serve.MaxDeployBytes, nil)
-	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, []byte("not a tar"))
+	up, token := testUploader(t, t.TempDir(), serve.MaxDeployBytes, nil)
+	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, []byte("not a tar"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -147,12 +209,12 @@ func TestUploadBadArchive(t *testing.T) {
 func TestUploadRejectsEscape(t *testing.T) {
 	data := t.TempDir()
 	reg, _, _ := serve.NewRegistry("mynode", data)
-	up := serve.NewUploader("mynode", data, deployToken, serve.MaxDeployBytes, func() error {
+	up, token := testUploader(t, data, serve.MaxDeployBytes, func() error {
 		_, err := reg.Reload()
 		return err
 	})
 
-	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, tarSite(t, map[string]string{"index.html": "safe"})); rec.Code != http.StatusOK {
+	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, tarSite(t, map[string]string{"index.html": "safe"})); rec.Code != http.StatusOK {
 		t.Fatalf("seed deploy = %d", rec.Code)
 	}
 
@@ -175,7 +237,7 @@ func TestUploadRejectsEscape(t *testing.T) {
 		if err := tw.Close(); err != nil {
 			t.Fatal(err)
 		}
-		rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, buf.Bytes())
+		rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, buf.Bytes())
 		if rec.Code != http.StatusBadRequest {
 			t.Fatalf("entry %q status = %d, want 400", entry.Name, rec.Code)
 		}
@@ -197,8 +259,8 @@ func TestUploadRejectsEscape(t *testing.T) {
 
 // TestUploadTooLarge pins the 413 on archives over the configured cap.
 func TestUploadTooLarge(t *testing.T) {
-	up := serve.NewUploader("mynode", t.TempDir(), deployToken, 16, nil)
-	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, tarSite(t, map[string]string{"index.html": "this body is longer than sixteen bytes"}))
+	up, token := testUploader(t, t.TempDir(), 16, nil)
+	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, tarSite(t, map[string]string{"index.html": "this body is longer than sixteen bytes"}))
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status = %d, want 413 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -206,7 +268,7 @@ func TestUploadTooLarge(t *testing.T) {
 
 // TestUploadBadNameAndRoute pins 400/404 for malformed paths.
 func TestUploadBadNameAndRoute(t *testing.T) {
-	up := serve.NewUploader("mynode", t.TempDir(), deployToken, serve.MaxDeployBytes, nil)
+	up, token := testUploader(t, t.TempDir(), serve.MaxDeployBytes, nil)
 	body := tarSite(t, map[string]string{"index.html": "hi"})
 
 	for _, path := range []string{
@@ -215,7 +277,7 @@ func TestUploadBadNameAndRoute(t *testing.T) {
 		"/_relay/v1/other",
 	} {
 		t.Run(path, func(t *testing.T) {
-			rec := doDeploy(t, up, path, deployToken, body)
+			rec := doDeploy(t, up, path, token, body)
 			if rec.Code != http.StatusBadRequest && rec.Code != http.StatusNotFound {
 				t.Fatalf("status = %d, want 400 or 404", rec.Code)
 			}
@@ -226,8 +288,8 @@ func TestUploadBadNameAndRoute(t *testing.T) {
 // TestUploadWritesSiteDirOnDisk pins the on-disk layout the serving side reads.
 func TestUploadWritesSiteDirOnDisk(t *testing.T) {
 	data := t.TempDir()
-	up := serve.NewUploader("mynode", data, deployToken, serve.MaxDeployBytes, nil)
-	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, tarSite(t, map[string]string{"assets/logo.svg": "<svg/>"}))
+	up, token := testUploader(t, data, serve.MaxDeployBytes, nil)
+	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, tarSite(t, map[string]string{"assets/logo.svg": "<svg/>"}))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
 	}
@@ -244,7 +306,7 @@ func TestUploadWritesSiteDirOnDisk(t *testing.T) {
 // directory entry first) is accepted — the common way a folder is archived.
 func TestUploadAcceptsArchiveRootEntry(t *testing.T) {
 	data := t.TempDir()
-	up := serve.NewUploader("mynode", data, deployToken, serve.MaxDeployBytes, nil)
+	up, token := testUploader(t, data, serve.MaxDeployBytes, nil)
 
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
@@ -265,7 +327,7 @@ func TestUploadAcceptsArchiveRootEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", deployToken, buf.Bytes())
+	rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, buf.Bytes())
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
 	}
