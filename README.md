@@ -55,6 +55,9 @@ every `v*` tag (`.github/workflows/release.yml`). Then run a node:
 relay node --name <node> --data <dir> --listen :8080
 ```
 
+The node also hosts the Relay landing page at its root — `index.html`,
+`manifesto.html`, and `technicals.html`, all embedded in the binary.
+
 How to run a node — as a binary, in Docker, on Docker Swarm, or on Kubernetes —
 is in [`docs/technicals.md`](docs/technicals.md). A container image is also
 built and published to GitHub Packages on every push to `main` and on `v*`
@@ -166,7 +169,8 @@ Go skeleton — `go.mod`, `cmd/relay` (`relay version`, `relay key new`), and
 the pure domain packages `internal/domain/{key,prefix}` with tests, CI, and
 pre-commit — are in place. The node runtime serves static files and accepts
 uploads: `relay node --name <node> --data <dir> --listen <addr>` serves the
-site folders under `<data>/sites/` at `/<node>/<site>/`, and
+site folders under `<data>/sites/` at `/<node>/<site>/`, hosts the landing
+page at `/` (embedded in the binary), and
 `POST /_relay/v1/sites/<site>/deploy` (a `tar` archive with a bearer deploy
 key) atomically replaces a site and attributes it to the key's user, keeping
 the last 10 versions for rollback. The
