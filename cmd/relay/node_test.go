@@ -77,3 +77,16 @@ func tokenFilePerm(t *testing.T, data string) os.FileMode {
 	}
 	return fi.Mode().Perm()
 }
+
+// TestRunNodeTLSFlagsTogether pins that --tls-cert and --tls-key must be
+// given as a pair.
+func TestRunNodeTLSFlagsTogether(t *testing.T) {
+	for _, args := range [][]string{
+		{"--name", "n", "--data", "d", "--listen", ":0", "--tls-cert", "c.pem"},
+		{"--name", "n", "--data", "d", "--listen", ":0", "--tls-key", "k.pem"},
+	} {
+		if code := runNode(args, io.Discard, io.Discard); code != 2 {
+			t.Fatalf("runNode(%v) = %d, want 2", args, code)
+		}
+	}
+}

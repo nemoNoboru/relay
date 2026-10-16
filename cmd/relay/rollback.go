@@ -23,6 +23,7 @@ func runRollback(args []string, stdout, stderr io.Writer) int {
 	site := flags.String("site", "", "site name to roll back (required)")
 	adminToken := flags.String("admin-token", os.Getenv("RELAY_ADMIN_TOKEN"), "admin token (default: $RELAY_ADMIN_TOKEN)")
 	to := flags.String("to", "", "version id to roll back to (default: previous version)")
+	insecure := flags.Bool("insecure", false, "skip TLS certificate verification (self-signed certs only)")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
@@ -68,7 +69,7 @@ func runRollback(args []string, stdout, stderr io.Writer) int {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	res, err := (&http.Client{Timeout: time.Minute}).Do(req)
+	res, err := newHTTPClient(*insecure, time.Minute).Do(req)
 	if err != nil {
 		fmt.Fprintf(stderr, "relay: rollback: %v\n", err)
 		return 1

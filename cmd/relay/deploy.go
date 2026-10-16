@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -24,6 +25,7 @@ func runDeploy(args []string, stdout, stderr io.Writer) int {
 	origin := flags.String("origin", "", "node origin, e.g. https://relay.example.org (required)")
 	site := flags.String("site", "", "site name to deploy under (required)")
 	token := flags.String("token", os.Getenv("RELAY_DEPLOY_TOKEN"), "deploy key token (default: $RELAY_DEPLOY_TOKEN)")
+	insecure := flags.Bool("insecure", false, "skip TLS certificate verification (self-signed certs only)")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
@@ -61,7 +63,7 @@ func runDeploy(args []string, stdout, stderr io.Writer) int {
 	req.Header.Set("Authorization", "Bearer "+*token)
 	req.Header.Set("Content-Type", "application/x-tar")
 
-	res, err := (&http.Client{Timeout: 5 * time.Minute}).Do(req)
+	res, err := newHTTPClient(*insecure, 5*time.Minute).Do(req)
 	if err != nil {
 		fmt.Fprintf(stderr, "relay: deploy: %v\n", err)
 		return 1
@@ -74,6 +76,17 @@ func runDeploy(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintln(stdout, strings.TrimSpace(string(respBody)))
 	return 0
+}
+
+// newHTTPClient returns a client with the given timeout, optionally skipping
+// TLS verification (for talking to a node with a self-signed certificate).
+func newHTTPClient(insecure bool, timeout time.Duration) *http.Client {
+	if !insecure {
+		return &http.Client{Timeout: timeout}
+	}
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	return &http.Client{Timeout: timeout, Transport: tr}
 }
 
 // tarDir returns a tar archive of the contents of root: regular files and
