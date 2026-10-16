@@ -391,6 +391,34 @@ claiming):
 The private half is the deed. Losing it means losing the name (no recovery —
 to be stated loudly in the CLI, `REVIEW.md` §7.14 **OPEN**).
 
+### 6.3 Operator admin + uploads (MVP bearer-token surface)
+
+The Stage-0 MVP runs before §3 signatures land, so it uses two bearer tokens
+instead of signatures: an **admin token** and per-user **deploy keys**, both
+sent as `Authorization: Bearer <token>` and compared in constant time. The
+node stores only their SHA-256; deploy-key tokens are shown once, on issue or
+rotation.
+
+Upload (any valid, non-revoked deploy key):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/sites/{site}/deploy` | Replace `{site}` with a `tar` archive of its contents (`application/x-tar`). Returns `{ "site", "files", "bytes", "url" }`. |
+
+Operator admin (admin token only; web console at `/_relay/admin.html`):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/admin` | Overview: `{ "keys": [...], "sites": [{ "site", "user" }] }`. |
+| `POST` | `/admin/keys` | Issue a deploy key. Body `{ "user" }`; returns `{ "key", "token" }` (token shown once). |
+| `POST` | `/admin/keys/{id}/revoke` | Revoke a key (idempotent). Returns `{ "key" }`. |
+| `POST` | `/admin/keys/{id}/rotate` | Revoke and re-issue for the same user. Returns `{ "key", "token" }`. |
+
+Error codes: `bad_token` (401), `bad_request` (400), `not_found` (404),
+`too_large` (413), `bad_name` / `bad_archive` (400, uploads). This surface is
+the MVP stand-in for the signed `POST /names/{name}/deploys` flow and is
+removed once §3 signing is wired.
+
 ## 7. Runtime API (`/<node>/<site>/_relay/...`)
 
 Called by a site's own pages, same-origin, no owner signature. Access is gated

@@ -50,13 +50,17 @@ curl -X POST \
         <p>The response names where the site is live:</p>
         <pre>{"site":"docs","files":3,"bytes":5120,"url":"/mynode/docs/"}</pre>
 
-        <h3>The deploy token</h3>
+        <h3>Credentials: admin token vs deploy keys</h3>
         <p>
-          The deploy token is the credential that authorizes uploads. The node
-          keeps it in <code>&lt;data&gt;/upload-token</code> (mode 0600) and
-          prints it once on first run — or the operator sets it with
-          <code>relay node --upload-token</code>. Hand it to whoever deploys
-          as a bearer token: never in a URL, never committed, never logged.
+          There are two credentials. The <b>admin token</b> is the operator's
+          master credential — generated into <code>&lt;data&gt;/admin-token</code>
+          (mode 0600) on first run, or set with
+          <code>relay node --admin-token</code>. It unlocks the operator
+          console at <code>/_relay/admin.html</code>, not uploads.
+          <b>Deploy keys</b> are per-user upload credentials the operator
+          creates on that console; each key's token is shown once, when it is
+          created or rotated. Upload with a deploy key's token as a bearer
+          token — never in a URL, never committed, never logged.
         </p>
 
         <h3>The key</h3>

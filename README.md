@@ -51,9 +51,11 @@ docker run -d -p 8080:8080 -v relay-data:/data ghcr.io/nemoNoboru/relay:latest
 ```
 
 The image runs unprivileged and keeps all state under `/data`. The node prints
-its deploy token on first start; set one explicitly with
-`--upload-token` via the image's entrypoint (append it as a command, e.g.
-`docker run ... ghcr.io/nemoNoboru/relay:latest --upload-token secret`).
+its admin token on first start; set one explicitly with `--admin-token` via the
+image's entrypoint (e.g.
+`docker run ... ghcr.io/nemoNoboru/relay:latest --admin-token secret`). The
+admin token unlocks the operator console at `/_relay/admin.html`, where the
+operator issues per-user deploy keys and revokes or rotates them.
 
 ## Building
 
@@ -127,8 +129,11 @@ pre-commit — are in place. The node runtime serves static files and accepts
 uploads: `relay node --name <node> --data <dir> --listen <addr>` serves the
 site folders under `<data>/sites/` at `/<node>/<site>/`, and
 `POST /_relay/v1/sites/<site>/deploy` (a `tar` archive with a bearer deploy
-token) atomically replaces a site. The node also hosts its owner UI and the
-upload documentation at `/_relay/` (see [`web/deploy.html`](web/deploy.html))
-and the deploy skill at `/_relay/skills/relay-deploy/SKILL.md`. Keys, claim,
-signed deploys, TLS, and the tunnel are not built yet. Read
+key) atomically replaces a site and attributes it to the key's user. The
+operator console at `/_relay/admin.html` (admin-token protected) issues,
+revokes, and rotates per-user deploy keys and lists sites by owner. The node
+also hosts its owner UI and the upload documentation at `/_relay/` (see
+[`web/deploy.html`](web/deploy.html)) and the deploy skill at
+`/_relay/skills/relay-deploy/SKILL.md`. Keys, claim, signed deploys, TLS, and
+the tunnel are not built yet. Read
 [`REVIEW.md`](REVIEW.md) before writing code.

@@ -46,12 +46,13 @@ func usage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
   relay version          print the version
   relay key new [-o f]   generate a new ownership key
-  relay node --name <n> --data <d> --listen <addr> [--upload-token <t>]
+  relay node --name <n> --data <d> --listen <addr> [--admin-token <t>]
                          serve <d>/sites/ at /<n>/<site>/ and accept site
                          uploads at /_relay/v1/sites/<site>/deploy
 
 The ownership key is the deed to a Relay address: guard it like a password.
-The deploy token authorizes site uploads; without --upload-token it is
-generated once into <data>/upload-token (0600) and printed.
+The admin token authorizes the operator console (/_relay/admin.html); without
+--admin-token it is generated once into <data>/admin-token (0600) and printed.
+Users upload with per-user deploy keys created on the operator console.
 `)
 }

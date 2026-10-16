@@ -58,11 +58,11 @@ func serveGet(h http.Handler, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// TestUploadTokenFileIsPrivate is belt-and-braces that the deploy token file
-// created by the node is not world-readable (see resolveUploadToken).
-func TestUploadTokenFileIsPrivate(t *testing.T) {
+// TestAdminTokenFileIsPrivate is belt-and-braces that the admin token file
+// created by the node is not world-readable (see resolveAdminToken).
+func TestAdminTokenFileIsPrivate(t *testing.T) {
 	data := t.TempDir()
-	path := filepath.Join(data, "upload-token")
+	path := filepath.Join(data, "admin-token")
 	if err := os.WriteFile(path, []byte("secret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
