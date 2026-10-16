@@ -9,6 +9,8 @@ import { Schema } from "effect";
 export const DeployKey = Schema.Struct({
   id: Schema.String,
   user: Schema.String,
+  /** The plaintext token — returned only to the admin-authenticated console. */
+  token: Schema.String,
   /** RFC 3339 timestamp, rendered verbatim. */
   created: Schema.String,
   revoked: Schema.Boolean,

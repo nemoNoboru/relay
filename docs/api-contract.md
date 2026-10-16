@@ -395,9 +395,10 @@ to be stated loudly in the CLI, `REVIEW.md` §7.14 **OPEN**).
 
 The Stage-0 MVP runs before §3 signatures land, so it uses two bearer tokens
 instead of signatures: an **admin token** and per-user **deploy keys**, both
-sent as `Authorization: Bearer <token>` and compared in constant time. The
-node stores only their SHA-256; deploy-key tokens are shown once, on issue or
-rotation.
+sent as `Authorization: Bearer <token>` and compared in constant time. Deploy
+keys are stored on the node in a `0600` store with their plaintext token so
+the operator console can reveal and copy them; uploads authenticate against
+the token's SHA-256 in constant time.
 
 Upload (any valid, non-revoked deploy key):
 
@@ -409,8 +410,8 @@ Operator admin (admin token only; web console at `/_relay/admin.html`):
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/admin` | Overview: `{ "keys": [...], "sites": [{ "site", "user" }] }`. |
-| `POST` | `/admin/keys` | Issue a deploy key. Body `{ "user" }`; returns `{ "key", "token" }` (token shown once). |
+| `GET` | `/admin` | Overview: `{ "keys": [{ "id", "user", "token", "created", "revoked" }], "sites": [{ "site", "user" }] }`. |
+| `POST` | `/admin/keys` | Issue a deploy key. Body `{ "user" }`; returns `{ "key", "token" }` (the token is also listed in `GET /admin`). |
 | `POST` | `/admin/keys/{id}/revoke` | Revoke a key (idempotent). Returns `{ "key" }`. |
 | `POST` | `/admin/keys/{id}/rotate` | Revoke and re-issue for the same user. Returns `{ "key", "token" }`. |
 

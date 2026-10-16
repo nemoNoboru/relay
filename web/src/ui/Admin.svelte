@@ -1,13 +1,15 @@
 <script lang="ts">
   import type { Writable } from "svelte/store";
 
-  import type { AdminOverview } from "../admin/schema";
+  import type { AdminOverview, DeployKey } from "../admin/schema";
   import type { AdminState } from "../admin/state";
 
   /**
    * Operator admin page (admin.html). Pure rendering of the `admin` store;
    * all effects (fetch, create, revoke, rotate) live in `main/admin.ts` and
    * arrive here as callbacks, so this component never touches the network.
+   * Key tokens are shown masked until revealed; `revealed`/`copied` are local
+   * presentation state only.
    */
   let {
     admin,
@@ -31,9 +33,10 @@
 
   let tokenInput = $state("");
   let userInput = $state("");
+  let revealed = $state<Record<string, boolean>>({});
 
-  /** Sites grouped by owner, newest name first within a user. Pure. */
-  const byUser = (ov: AdminOverview | undefined): { user: string; sites: string[] }[] => {
+  /** Sites grouped by owner. Pure. */
+  const sitesByUser = (ov: AdminOverview | undefined): { user: string; sites: string[] }[] => {
     if (ov === undefined) return [];
     const m = new Map<string, string[]>();
     for (const s of ov.sites) {
@@ -44,6 +47,28 @@
     return [...m.entries()]
       .map(([user, sites]) => ({ user, sites }))
       .sort((a, b) => a.user.localeCompare(b.user));
+  };
+
+  /** Keys grouped by owner. Pure. */
+  const keysByUser = (ov: AdminOverview | undefined): { user: string; keys: DeployKey[] }[] => {
+    if (ov === undefined) return [];
+    const m = new Map<string, DeployKey[]>();
+    for (const k of ov.keys) {
+      const list = m.get(k.user) ?? [];
+      list.push(k);
+      m.set(k.user, list);
+    }
+    return [...m.entries()]
+      .map(([user, keys]) => ({ user, keys }))
+      .sort((a, b) => a.user.localeCompare(b.user));
+  };
+
+  const toggleReveal = (id: string): void => {
+    revealed = { ...revealed, [id]: !revealed[id] };
+  };
+
+  const copy = (text: string): void => {
+    void navigator.clipboard?.writeText(text);
   };
 </script>
 
@@ -81,10 +106,10 @@
         <section class="panel wide">
           <h3>New deploy key — shown once</h3>
           <div class="panel-body">
-            <p class="hint">{$admin.notice}. Copy the token now; it will not be shown again.</p>
+            <p class="hint">{$admin.notice}. Copy the token now; it is also listed under the user below.</p>
             <pre class="keyfile">{$admin.newToken}</pre>
             <div class="row-actions">
-              <button class="btn solid" onclick={() => void navigator.clipboard?.writeText($admin.newToken ?? "")}>Copy</button>
+              <button class="btn solid" onclick={() => copy($admin.newToken ?? "")}>Copy</button>
               <button class="btn" onclick={onDismiss}>Done</button>
             </div>
           </div>
@@ -98,7 +123,7 @@
       <section class="panel wide">
         <h3>Deploy keys</h3>
         <div class="panel-body">
-          <p class="hint">Each key lets one user deploy sites. Rotate or revoke a key to cut them off.</p>
+          <p class="hint">Each key lets one user deploy sites. Reveal to copy a token; rotate or revoke to cut someone off.</p>
           <form onsubmit={(e) => { e.preventDefault(); onCreate(userInput); userInput = ""; }}>
             <div class="field">
               <label for="key-user">user</label>
@@ -106,31 +131,45 @@
               <button class="btn solid" type="submit" disabled={$admin.busy}>Create key</button>
             </div>
           </form>
-          {#if ($admin.overview?.keys.length ?? 0) === 0}
+
+          {#if keysByUser($admin.overview).length === 0}
             <p class="hint">No keys issued.</p>
           {:else}
-            <table class="tbl">
-              <thead>
-                <tr><th>user</th><th>created</th><th>status</th><th></th></tr>
-              </thead>
-              <tbody>
-                {#each $admin.overview?.keys ?? [] as k (k.id)}
-                  <tr>
-                    <td>{k.user}</td>
-                    <td>{k.created}</td>
-                    <td>{k.revoked ? "revoked" : "active"}</td>
-                    <td>
-                      {#if !k.revoked}
-                        <button class="btn" onclick={() => onRotate(k.id)} disabled={$admin.busy}>Rotate</button>
-                        <button class="btn" onclick={() => onRevoke(k.id)} disabled={$admin.busy}>Revoke</button>
-                      {:else}
-                        <span class="hint">—</span>
-                      {/if}
-                    </td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
+            <div class="keygroups">
+              {#each keysByUser($admin.overview) as g (g.user)}
+                <div class="keygroup">
+                  <h4>{g.user}</h4>
+                  <ul class="keylist">
+                    {#each g.keys as k (k.id)}
+                      <li class="keyrow">
+                        <div class="keymeta">
+                          <code>{k.id}</code>
+                          <small>{k.created} · {k.revoked ? "revoked" : "active"}</small>
+                        </div>
+                        <div class="keytoken">
+                          {#if revealed[k.id]}
+                            <code class="tokensecret">{k.token}</code>
+                            <button class="btn" onclick={() => copy(k.token)}>Copy</button>
+                            <button class="btn" onclick={() => toggleReveal(k.id)}>Hide</button>
+                          {:else}
+                            <code class="tokensecret">••••••••••••••</code>
+                            <button class="btn" onclick={() => toggleReveal(k.id)}>Reveal</button>
+                          {/if}
+                        </div>
+                        <div class="keyactions">
+                          {#if !k.revoked}
+                            <button class="btn" onclick={() => onRotate(k.id)} disabled={$admin.busy}>Rotate</button>
+                            <button class="btn" onclick={() => onRevoke(k.id)} disabled={$admin.busy}>Revoke</button>
+                          {:else}
+                            <span class="hint">revoked</span>
+                          {/if}
+                        </div>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/each}
+            </div>
           {/if}
         </div>
       </section>
@@ -138,11 +177,11 @@
       <section class="panel wide">
         <h3>Sites by user</h3>
         <div class="panel-body">
-          {#if byUser($admin.overview).length === 0}
+          {#if sitesByUser($admin.overview).length === 0}
             <p class="hint">No sites deployed yet.</p>
           {:else}
             <ul class="friends">
-              {#each byUser($admin.overview) as u (u.user)}
+              {#each sitesByUser($admin.overview) as u (u.user)}
                 <li class="friend">
                   <span>
                     <b>{u.user}</b>

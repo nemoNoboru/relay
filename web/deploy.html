@@ -58,9 +58,10 @@ curl -X POST \
           <code>relay node --admin-token</code>. It unlocks the operator
           console at <code>/_relay/admin.html</code>, not uploads.
           <b>Deploy keys</b> are per-user upload credentials the operator
-          creates on that console; each key's token is shown once, when it is
-          created or rotated. Upload with a deploy key's token as a bearer
-          token — never in a URL, never committed, never logged.
+          creates on that console. The console lists each user's keys (grouped
+          by user) and can reveal and copy a token at any time. Upload with a
+          deploy key's token as a bearer token — never in a URL, never
+          committed, never logged.
         </p>
 
         <h3>The key</h3>

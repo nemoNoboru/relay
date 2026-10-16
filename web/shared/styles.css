@@ -355,8 +355,18 @@
 .rules li span{display:inline-block;font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;background:var(--red);color:var(--paper);padding:2px 7px;margin-right:9px}
 .field{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .field label{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase}
-.field input[type=text]{font-family:var(--mono);font-size:.78rem;padding:11px 12px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);min-width:180px}
+.field input[type=text],.field input[type=password]{font-family:var(--mono);font-size:.78rem;padding:11px 12px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);min-width:180px}
 .keyfile{font-family:var(--mono);font-size:.72rem;line-height:1.6;background:var(--ink);color:var(--paper);padding:16px;overflow:auto}
+.keygroups{display:flex;flex-direction:column;gap:16px;margin-top:14px}
+.keygroup h4{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.1rem;margin:0 0 4px}
+.keylist{list-style:none;display:flex;flex-direction:column}
+.keyrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed rgba(20,18,16,.25)}
+.keymeta{display:flex;flex-direction:column;gap:2px;min-width:160px}
+.keymeta code{font-family:var(--mono);font-size:.62rem;background:var(--ink);color:var(--paper);padding:2px 5px;align-self:flex-start}
+.keymeta small{font-family:var(--mono);font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7}
+.keytoken{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:220px}
+.tokensecret{font-family:var(--mono);font-size:.68rem;background:var(--ink);color:var(--paper);padding:4px 6px;word-break:break-all}
+.keyactions{display:flex;gap:8px;align-items:center}
 
 @media(max-width:880px){
   .panels{grid-template-columns:1fr}
