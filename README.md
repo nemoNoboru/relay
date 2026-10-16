@@ -39,11 +39,26 @@ contract and the backend architecture are already drafted in `docs/`.
 
 ## Deployment
 
-How to run a node — as a binary, in Docker, on Docker Swarm, or on Kubernetes —
-is in [`docs/technicals.md`](docs/technicals.md).
+Install the `relay` binary locally (Linux or macOS, amd64/arm64):
 
-A container image is built and published to GitHub Packages on every push to
-`main` and on `v*` tags (`.github/workflows/image.yml`):
+```sh
+curl --proto '=https' --tlsv1.2 -sSfL \
+  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+```
+
+The installer downloads a prebuilt binary from GitHub Releases into
+`~/.local/bin` (override with `RELAY_INSTALL_DIR`) and falls back to building
+from source when no release asset matches. Prebuilt binaries are published on
+every `v*` tag (`.github/workflows/release.yml`). Then run a node:
+
+```sh
+relay node --name <node> --data <dir> --listen :8080
+```
+
+How to run a node — as a binary, in Docker, on Docker Swarm, or on Kubernetes —
+is in [`docs/technicals.md`](docs/technicals.md). A container image is also
+built and published to GitHub Packages on every push to `main` and on `v*`
+tags (`.github/workflows/image.yml`):
 
 ```sh
 docker pull ghcr.io/nemoNoboru/relay:latest
@@ -58,6 +73,28 @@ admin token unlocks the operator console at `/_relay/admin.html`, where the
 operator issues per-user deploy keys and revokes or rotates them. To serve
 HTTPS directly, pass `--tls-cert` and `--tls-key`; otherwise terminate TLS at
 a reverse proxy in front of the node.
+
+### Kubernetes
+
+One command installs a `relay` namespace, a one-replica StatefulSet with a
+persistent volume, and a Service — see
+[`deploy/kubernetes.yaml`](deploy/kubernetes.yaml):
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/nemoNoboru/relay/main/deploy/kubernetes.yaml
+```
+
+The node serves HTTP on `:8080` with liveness and readiness probes on
+`/healthz`; all state lives in the `/data` volume. Expose it with TLS at the
+cluster edge by filling in your hostname in
+[`deploy/ingress.yaml`](deploy/ingress.yaml) and applying it. On first start
+the node writes its admin token to `/data/admin-token` (and prints it once to
+the logs); read it with either of:
+
+```sh
+kubectl logs -n relay relay-0
+kubectl exec -n relay relay-0 -- cat /data/admin-token
+```
 
 ## Building
 

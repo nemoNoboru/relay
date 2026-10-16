@@ -125,6 +125,17 @@ All node state — keys, site files, per-site SQLite — lives under one data di
 
 #### As a binary
 
+Install the prebuilt binary (Linux or macOS, amd64/arm64) with the installer
+script, or build it from source with `make build` (see
+[`install.sh`](./install.sh) and the [`Makefile`](./Makefile)):
+
+```sh
+curl --proto '=https' --tlsv1.2 -sSfL \
+  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+```
+
+Then run a node:
+
 ```sh
 relay node --data /var/lib/relay --listen :8080
 ```
@@ -133,28 +144,18 @@ Put Caddy (or any reverse proxy) in front for :80/:443, or let the embedded Cadd
 
 #### Docker
 
-A draft Dockerfile:
-
-```dockerfile
-FROM golang:1.23-alpine AS build
-WORKDIR /src
-COPY . .
-RUN CGO_ENABLED=0 go build -o /relay ./cmd/relay
-
-FROM gcr.io/distroless/static-debian12:nonroot
-COPY --from=build /relay /relay
-VOLUME /data
-EXPOSE 8080
-ENTRYPOINT ["/relay", "node", "--data", "/data", "--listen", ":8080"]
-```
+The node ships as a single container image published to GitHub Packages —
+`ghcr.io/nemoNoboru/relay` — built from the [`Dockerfile`](./Dockerfile) at
+the repository root:
 
 ```sh
-docker build -t relay ./deploy
 docker run -d --name relay --restart unless-stopped \
-  -p 80:8080 -p 443:8443 \
+  -p 8080:8080 \
   -v relay-data:/data \
-  relay
+  ghcr.io/nemoNoboru/relay:latest
 ```
+
+The image runs unprivileged and keeps all state under `/data`.
 
 #### Docker Compose
 
@@ -164,7 +165,7 @@ A Compose file for a single node, with its data on a named volume:
 services:
   relay:
     build: .
-    # image: ghcr.io/relay/relay:latest
+    # image: ghcr.io/nemoNoboru/relay:latest
     command: ["node", "--data", "/data", "--listen", ":8080"]
     ports:
       - "80:8080"
@@ -187,7 +188,7 @@ A Swarm stack — a public node on a manager, plus private nodes that dial out t
 ```yaml
 services:
   relay-public:
-    image: ghcr.io/relay/relay:latest
+    image: ghcr.io/nemoNoboru/relay:latest
     command: ["node", "--public", "--data", "/data", "--listen", ":8080"]
     ports:
       - target: 8080
@@ -204,7 +205,7 @@ services:
         constraints: ["node.role == manager"]
 
   relay-private:
-    image: ghcr.io/relay/relay:latest
+    image: ghcr.io/nemoNoboru/relay:latest
     command: ["node", "--friend", "relay-public:8080", "--data", "/data"]
     volumes:
       - relay-data:/data
@@ -219,52 +220,29 @@ The public node needs a stable address; the private nodes only dial out, so they
 
 #### Kubernetes
 
-A Kubernetes StatefulSet (one node, one data volume) and a Service:
+A one-command install lives in
+[`deploy/kubernetes.yaml`](./deploy/kubernetes.yaml) — a `relay` namespace, a
+one-replica StatefulSet with a persistent volume, and a ClusterIP Service:
 
-```yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: relay
-spec:
-  serviceName: relay
-  replicas: 1
-  selector:
-    matchLabels: { app: relay }
-  template:
-    metadata:
-      labels: { app: relay }
-    spec:
-      containers:
-        - name: relay
-          image: ghcr.io/relay/relay:latest
-          args: ["node", "--data", "/data", "--listen", ":8080"]
-          ports:
-            - containerPort: 8080
-          volumeMounts:
-            - name: data
-              mountPath: /data
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 10Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: relay
-spec:
-  selector: { app: relay }
-  ports:
-    - port: 80
-      targetPort: 8080
+```sh
+kubectl apply -f https://raw.githubusercontent.com/nemoNoboru/relay/main/deploy/kubernetes.yaml
 ```
 
-An Ingress (or a LoadBalancer Service) terminates TLS at the cluster edge and forwards to the Service. Because Relay uses path-based addressing, the Ingress needs no wildcard host and no per-site certificate — one host and one certificate is enough for every site on the node.
+The node serves HTTP on `:8080` with liveness and readiness probes on
+`/healthz`, and keeps all state in the `/data` volume. Expose it with TLS at
+the cluster edge using [`deploy/ingress.yaml`](./deploy/ingress.yaml) — fill in
+your hostname and TLS secret, then apply it. On first start the node writes its
+admin token to `/data/admin-token`; read it with either of:
+
+```sh
+kubectl logs -n relay relay-0
+kubectl exec -n relay relay-0 -- cat /data/admin-token
+```
+
+An Ingress (or a LoadBalancer Service) terminates TLS at the cluster edge and
+forwards to the Service. Because Relay uses path-based addressing, the Ingress
+needs no wildcard host and no per-site certificate — one host and one
+certificate is enough for every site on the node.
 
 **A node is stateful; the edge is not.** Keep the data on a PersistentVolumeClaim, and keep TLS at the ingress or in the embedded Caddy. Scale private nodes freely; give a public node one stable address.
 

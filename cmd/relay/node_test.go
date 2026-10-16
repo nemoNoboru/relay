@@ -3,6 +3,8 @@ package main
 import (
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,6 +78,22 @@ func tokenFilePerm(t *testing.T, data string) os.FileMode {
 		t.Fatal(err)
 	}
 	return fi.Mode().Perm()
+}
+
+// TestHealthz pins the liveness/readiness endpoint that Kubernetes probes.
+func TestHealthz(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	healthz(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if got, want := rec.Body.String(), "ok\n"; got != want {
+		t.Fatalf("body = %q, want %q", got, want)
+	}
+	if got := rec.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Fatalf("Content-Type = %q", got)
+	}
 }
 
 // TestRunNodeTLSFlagsTogether pins that --tls-cert and --tls-key must be
