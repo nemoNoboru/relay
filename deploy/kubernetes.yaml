@@ -36,10 +36,13 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        # The image runs as the unprivileged "relay" user (Alpine's first
-        # system UID/GID, 100). Give the /data volume that group so the pod
-        # can write its state (sites, admin token) to it.
-        fsGroup: 100
+        # The image's USER is the named "relay" account (uid 100, gid 101).
+        # runAsNonRoot can't verify a named user, so pin the numeric IDs
+        # explicitly — 100 is non-root. Alpine's base image already has
+        # gid 100 (users), so addgroup -S allocates gid 101 for relay.
+        runAsUser: 100
+        runAsGroup: 101
+        fsGroup: 101
       terminationGracePeriodSeconds: 45
       containers:
         - name: relay
