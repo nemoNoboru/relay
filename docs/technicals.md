@@ -30,6 +30,7 @@ https://relay.cloudpunk.org/<node>/<site>/
 - No wildcards, no per-site certificates, no on-demand TLS.
 - The router reads the first path segment, finds that node's tunnel, and forwards the rest.
 - Reserved paths: `/_relay/` for the control API; `_relay` inside a site for its runtime API.
+- The node root serves Relay's own landing page — `index.html`, `manifesto.html`, `technicals.html`, and `styles.css` — embedded in the binary.
 
 **The trade-off, stated plainly.** Sites share one browser origin, so the browser does not isolate them from each other. Relay compensates in code: path-scoped cookies (`SameSite=Strict`, `HttpOnly`, `Secure`), a per-site CSRF token on mutations, and a `Referer`-prefix check. Absolute-path assets are handled with a `<base>` prefix or the `X-Forwarded-Prefix` header. The full analysis is in [`REVIEW.md`](./REVIEW.md).
 

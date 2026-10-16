@@ -66,7 +66,7 @@
 <h2 id="addressing">Addressing</h2>
 <p>Every site lives at a <strong>path</strong> under one host:</p>
 <pre class="ascii">https://relay.cloudpunk.org/&lt;node&gt;/&lt;site&gt;/</pre>
-<ul><li>One hostname per public node, <strong>one TLS certificate</strong>, renewed automatically.</li><li>No wildcards, no per-site certificates, no on-demand TLS.</li><li>The router reads the first path segment, finds that node's tunnel, and forwards the rest.</li><li>Reserved paths: <code>/_relay/</code> for the control API; <code>_relay</code> inside a site for its runtime API.</li></ul>
+<ul><li>One hostname per public node, <strong>one TLS certificate</strong>, renewed automatically.</li><li>No wildcards, no per-site certificates, no on-demand TLS.</li><li>The router reads the first path segment, finds that node's tunnel, and forwards the rest.</li><li>Reserved paths: <code>/_relay/</code> for the control API; <code>_relay</code> inside a site for its runtime API.</li><li>The node root serves Relay's own landing page — <code>index.html</code>, <code>manifesto.html</code>, <code>technicals.html</code>, and <code>styles.css</code> — embedded in the binary.</li></ul>
 <p><strong>The trade-off, stated plainly.</strong> Sites share one browser origin, so the browser does not isolate them from each other. Relay compensates in code: path-scoped cookies (<code>SameSite=Strict</code>, <code>HttpOnly</code>, <code>Secure</code>), a per-site CSRF token on mutations, and a <code>Referer</code>-prefix check. Absolute-path assets are handled with a <code>&lt;base&gt;</code> prefix or the <code>X-Forwarded-Prefix</code> header. The full analysis is in <a href="./REVIEW.md"><code>REVIEW.md</code></a>.</p>
 
 <h2 id="reachability">Reachability</h2>

@@ -99,7 +99,9 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.Handle("/_relay/v1/admin/", admin)
 	mux.Handle("/_relay/v1/", uploader)
 	mux.Handle("/_relay/", ui)
-	mux.Handle("/", registry.Handler())
+	// The node root serves the embedded landing page and its companions;
+	// everything else (sites at /<node>/<site>/...) goes to the registry.
+	mux.Handle("/", serve.Landing(registry.Handler()))
 
 	logger.Info("relay node listening", "node", string(node), "addr", *listen, "tls", *tlsCert != "")
 	srv := &http.Server{
