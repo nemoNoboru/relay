@@ -114,3 +114,10 @@ curl -X POST \
 ```
 
 Then check that `"$RELAY_ORIGIN$url"` returns the site.
+
+If the `relay` binary is available, the same upload is one command:
+
+```sh
+RELAY_DEPLOY_TOKEN="$RELAY_DEPLOY_TOKEN" relay deploy \
+  --origin "$RELAY_ORIGIN" --site "$RELAY_SITE" ./dist
+```

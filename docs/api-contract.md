@@ -414,6 +414,11 @@ Operator admin (admin token only; web console at `/_relay/admin.html`):
 | `POST` | `/admin/keys` | Issue a deploy key. Body `{ "user" }`; returns `{ "key", "token" }` (the token is also listed in `GET /admin`). |
 | `POST` | `/admin/keys/{id}/revoke` | Revoke a key (idempotent). Returns `{ "key" }`. |
 | `POST` | `/admin/keys/{id}/rotate` | Revoke and re-issue for the same user. Returns `{ "key", "token" }`. |
+| `GET` | `/admin/sites/{site}/versions` | List rollback snapshots, newest first. Returns `{ "site", "versions": [{ "id", "created" }] }`. |
+| `POST` | `/admin/sites/{site}/rollback` | Roll the site back. Body `{ "version" }` (omit = previous version). Returns `{ "site", "version" }`. |
+
+Deploys snapshot the previous live site and keep the last 10 versions per
+site; rollback re-points the live site and snapshots what it displaces.
 
 Error codes: `bad_token` (401), `bad_request` (400), `not_found` (404),
 `too_large` (413), `bad_name` / `bad_archive` (400, uploads). This surface is

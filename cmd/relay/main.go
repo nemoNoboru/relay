@@ -30,6 +30,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "key":
 		return runKey(args[1:], stdout, stderr)
+	case "deploy":
+		return runDeploy(args[1:], stdout, stderr)
+	case "rollback":
+		return runRollback(args[1:], stdout, stderr)
 	case "node":
 		return runNode(args[1:], stdout, stderr)
 	case "help", "--help", "-h":
@@ -46,6 +50,10 @@ func usage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
   relay version          print the version
   relay key new [-o f]   generate a new ownership key
+  relay deploy --origin <url> --site <n> [--token <t>] <folder>
+                         upload a folder as site <n> (replaces it atomically)
+  relay rollback --origin <url> --site <n> [--admin-token <t>] [--to <v>]
+                         roll site <n> back to a previous version
   relay node --name <n> --data <d> --listen <addr> [--admin-token <t>]
                          serve <d>/sites/ at /<n>/<site>/ and accept site
                          uploads at /_relay/v1/sites/<site>/deploy

@@ -10,9 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/nemoNoboru/relay/internal/domain"
 )
@@ -32,6 +30,7 @@ type Uploader struct {
 	self     domain.Name
 	sitesDir string
 	ks       *KeyStore
+	versions *Versions
 	maxBytes int64
 	maxFiles int
 	reload   func() error
@@ -39,13 +38,15 @@ type Uploader struct {
 
 // NewUploader returns an uploader that writes sites under <dataDir>/sites
 // and reports them at /<self>/<site>/. ks authorizes uploads and records
-// site ownership. reload is called after every successful deploy so the
-// serving registry picks up the new site; it may be nil.
-func NewUploader(self domain.Name, dataDir string, ks *KeyStore, maxBytes int64, reload func() error) *Uploader {
+// site ownership; versions keeps rollback snapshots. reload is called after
+// every successful deploy so the serving registry picks up the new site; it
+// may be nil.
+func NewUploader(self domain.Name, dataDir string, ks *KeyStore, versions *Versions, maxBytes int64, reload func() error) *Uploader {
 	return &Uploader{
 		self:     self,
 		sitesDir: filepath.Join(dataDir, "sites"),
 		ks:       ks,
+		versions: versions,
 		maxBytes: maxBytes,
 		maxFiles: maxDeployFiles,
 		reload:   reload,
@@ -149,22 +150,22 @@ func (u *Uploader) stage(name domain.Name, body io.Reader) (string, int, int64, 
 	return dir, files, bytes, nil
 }
 
-// commit swaps the staged site into place. The current site, if any, is
-// moved aside first and removed afterwards; on failure it is restored.
+// commit swaps the staged site into place, first snapshotting the current
+// live site (if any) so a rollback can return to it.
 func (u *Uploader) commit(name domain.Name, staging string) error {
-	target := filepath.Join(u.sitesDir, string(name))
-	backup := target + ".old-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-
-	if err := os.Rename(target, backup); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("move current site aside: %w", err)
+	snapshot, err := u.versions.Snapshot(name)
+	if err != nil {
+		return fmt.Errorf("snapshot current site: %w", err)
 	}
-	if err := os.Rename(staging, target); err != nil {
-		_ = os.Rename(backup, target) // best-effort rollback
+	if err := os.Rename(staging, filepath.Join(u.sitesDir, string(name))); err != nil {
+		if snapshot != "" {
+			_ = u.versions.Restore(name, snapshot) // best-effort rollback
+		}
 		return fmt.Errorf("move staging into place: %w", err)
 	}
-	if err := os.RemoveAll(backup); err != nil && !os.IsNotExist(err) {
-		// Non-fatal: the old site remains as an orphan backup directory.
-		fmt.Fprintf(os.Stderr, "serve: remove old site %s: %v\n", backup, err)
+	if err := u.versions.Prune(name); err != nil {
+		// Non-fatal: only the retention cap is unmet.
+		fmt.Fprintf(os.Stderr, "serve: prune versions of %s: %v\n", name, err)
 	}
 	return nil
 }

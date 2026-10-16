@@ -129,10 +129,13 @@ pre-commit — are in place. The node runtime serves static files and accepts
 uploads: `relay node --name <node> --data <dir> --listen <addr>` serves the
 site folders under `<data>/sites/` at `/<node>/<site>/`, and
 `POST /_relay/v1/sites/<site>/deploy` (a `tar` archive with a bearer deploy
-key) atomically replaces a site and attributes it to the key's user. The
+key) atomically replaces a site and attributes it to the key's user, keeping
+the last 10 versions for rollback. The
 operator console at `/_relay/admin.html` (admin-token protected) issues,
-revokes, and rotates per-user deploy keys and lists sites by owner. The node
-also hosts its owner UI and the upload documentation at `/_relay/` (see
+revokes, and rotates per-user deploy keys, lists sites by owner, and rolls a
+site back to a previous version. The CLI drives both sides: `relay deploy
+--origin … --site … <folder>` and `relay rollback --origin … --site …`. The
+node also hosts its owner UI and the upload documentation at `/_relay/` (see
 [`web/deploy.html`](web/deploy.html)) and the deploy skill at
 `/_relay/skills/relay-deploy/SKILL.md`. Keys, claim, signed deploys, TLS, and
 the tunnel are not built yet. Read
