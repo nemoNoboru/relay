@@ -266,8 +266,8 @@ def render_section(sec, manback=True):
                     out.append('<div class="manback"><p>Read it, fork it, run a node. '
                                'The web belongs to the people who build it.</p>'
                                '<div class="actions">'
-                               '<a class="btn solid" href="./index.html#deploy">Host a site</a>'
-                               '<a class="btn" href="./index.html#network">Run a node</a>'
+                               '<a class="btn solid" href="./index.html#deploy">Deploy a site</a>'
+                               '<a class="btn" href="./index.html#node">Run a node</a>'
                                '</div></div>')
                     manback_done = True
                 foot_open = True

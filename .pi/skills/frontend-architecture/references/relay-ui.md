@@ -1,16 +1,17 @@
 # Relay UI architecture
 
-Relay-specific rules for the frontend: the two pages, what data they show, how they talk
-to the node, and how the static mockups become real pages.
+Relay-specific rules for the frontend: the pages, what data they show, and how they talk
+to the node.
 
 ## The pages (locked)
 
 | Page | Shell | Audience | Contents |
 |---|---|---|---|
-| Node admin | `node.html` (mockup: `node-ui.html`) | Node operator | tunnels + friends, sites list, node health |
-| Site console | `site.html` (mockup: `metrics.html`) | Site owner | deploys, versions, rollback, daily-salted metrics, prefix claims |
+| Node admin | `node.html` | Node operator | tunnels + friends, sites list, node health |
+| Site console | `site.html` | Site owner | deploys, versions, rollback, daily-salted metrics, prefix claims |
+| Operator console | `admin.html` | Node operator | per-user deploy keys, sites by user |
 
-There is no third page without a stated reason. Cross-page links are plain `<a>` tags —
+There is no fourth page without a stated reason. Cross-page links are plain `<a>` tags —
 no router. The pages are short-lived documents, not a SPA.
 
 ## Same-origin node API
@@ -62,17 +63,12 @@ These are rendered (banner/section state), never `alert()`ed. Actions (deploy, r
 claim) are optimistic about UX, pessimistic about truth: the page shows "working…" from
 the click, and the next poll is what confirms it.
 
-## Mockup migration
+## Page anatomy
 
-`node-ui.html` and `metrics.html` (repo root, shared `styles.css`) are static mockups and
-the visual reference. When a page becomes real:
-
-1. Create `web/<page>.html` as a thin shell: `shared/styles.css` + one module entry.
-2. Copy the mockup's structure and classes as the initial view output — visual parity is
-   the acceptance bar.
-3. Build the feature services and fold; the view renders the shell's regions from state.
-4. Leave the mockups at the root untouched — they remain the design reference. Do not
-   edit them in place.
+Each page is a thin shell (`web/<page>.html`: `shared/styles.css` + one module entry)
+over a feature service and a fold; the view renders the shell's regions from state.
+Design tokens are mirrored from the root site's `styles.css` so the owner UI and the
+public pages read as one product.
 
 ## Do not confuse the two JavaScripts
 

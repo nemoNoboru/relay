@@ -281,9 +281,9 @@
 .manfoot .last em{color:var(--red);font-style:normal}
 
 /* ---------------------------------------------------------------------------
-   Owner UI (node.html / site.html) — classes shared by the app's views,
-   lifted from the static mockups (node-ui.html, metrics.html) so the live
-   pages keep visual parity with the design reference.
+   Owner UI (node.html / site.html) — classes shared by the app's views.
+   Design tokens are mirrored from the root site so the owner UI and the
+   public pages read as one product.
    --------------------------------------------------------------------------- */
 
 /* visually hidden, still read by screen readers (aria-live regions) */
@@ -324,7 +324,7 @@
 .site-head h1{font-family:var(--display);font-size:clamp(2.4rem,6vw,4.4rem);text-transform:uppercase;line-height:.9;margin:6px 0 0;letter-spacing:.005em}
 .site-sub{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-top:10px}
 
-/* admin mock page (admin.html) — lifted from node-ui.html page-local styles */
+/* operator console (admin.html) */
 .adminapp{padding:38px 0 90px}
 .draft-note{font-family:var(--mono);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--red);border:2px solid var(--red);display:inline-block;padding:6px 10px;margin-bottom:22px}
 .admin-head{display:flex;justify-content:space-between;align-items:flex-end;gap:26px;border-bottom:6px solid var(--ink);padding-bottom:22px}

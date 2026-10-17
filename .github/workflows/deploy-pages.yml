@@ -29,8 +29,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir dist
-          cp index.html manifesto.html technicals.html \
-             node-ui.html metrics.html styles.css dist/
+          cp index.html manifesto.html technicals.html styles.css dist/
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4
         with:
