@@ -51,4 +51,4 @@ Who owns the web decides who gets heard. That isn't destiny. Every site rescued 
 
 ---
 
-_The web was built by people, for people. Let's take it back._
+Of the web · by the web · for the web.
