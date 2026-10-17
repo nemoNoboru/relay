@@ -188,6 +188,26 @@
   .cta .btn.solid{background:var(--ink);border-color:var(--ink);color:var(--paper)}
   .cta .sub{margin-top:26px;font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;position:relative}
 
+  /* ---------- self-serve / deploy ---------- */
+  .deploysec{padding:96px 0;border-top:6px solid var(--red)}
+  .deploy-lead{font-size:1.08rem;font-weight:300;max-width:62ch;margin-top:22px}
+  .deploy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:4px solid var(--ink);margin-top:40px;background:var(--ink)}
+  .dcard{background:var(--paper);padding:30px 26px 34px;border-right:4px solid var(--ink);display:flex;flex-direction:column}
+  .dcard:last-child{border-right:0}
+  .dcard .dnum{font-family:var(--display);font-size:3.4rem;line-height:.8;color:var(--red);letter-spacing:-.02em}
+  .dcard h3{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.45rem;margin:8px 0 12px;letter-spacing:.01em}
+  .dcard p{font-weight:300;font-size:.97rem;margin-bottom:12px}
+  .dcard p b{font-weight:600}
+  .dcard pre{font-family:var(--mono);font-size:.66rem;line-height:1.55;background:var(--ink);color:var(--paper);padding:16px 18px;margin:4px 0 16px;overflow:auto;white-space:pre}
+  .dcard code{font-family:var(--mono);font-size:.82em;background:var(--ink);color:var(--paper);padding:1px 6px;white-space:nowrap}
+  .dcard .dnote{font-family:var(--mono);font-size:.62rem;letter-spacing:.04em;opacity:.75;margin:0 0 14px}
+  .dcard .actions{margin-top:14px;gap:10px}
+  .dcard .actions .btn{padding:12px 16px;font-size:.68rem}
+  .dcard .foot{margin-top:auto;font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;opacity:.7;padding-top:18px}
+  .deploysec .sub{margin-top:34px;font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;text-align:center}
+  .deploysec .meta{text-align:center}
+  @media(max-width:900px){.deploy-grid{grid-template-columns:1fr}.dcard{border-right:0;border-bottom:4px solid var(--ink)}.dcard:last-child{border-bottom:0}}
+
   /* ---------- footer ---------- */
   footer{background:var(--ink);color:var(--paper);padding:46px 0 54px;border-top:6px solid var(--red)}
   footer .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-end}
