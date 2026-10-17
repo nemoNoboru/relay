@@ -4,13 +4,30 @@
 
 ### How it works
 
-Relay is a **single Go binary**; every node runs the same code, and the only difference is whether a node is public. Every site lives at a **path** under one host — one hostname, one TLS certificate, no wildcards:
+Relay is a **single Go binary**. Every node runs the same code. Sites live at **paths** under one host, so a node needs one hostname and one TLS certificate, with no wildcards and no per-site certs:
 
 ```
 https://relay.example.org/<node>/<site>/
 ```
 
-A machine behind NAT cannot accept inbound connections, so a private node opens one **outbound WebSocket** to a public friend and registers its path prefixes. The public node routes each request by its first path segment down the matching tunnel, and the answer travels back up the same wire. No port forwarding, no static IP, no dynamic DNS.
+Uploading a site is one `POST` of a `tar` archive, authenticated with a per-user **deploy key**. The upload is atomic: the new version replaces the old one all at once, and the previous 10 are kept for rollback. Everything a node knows (sites, versions, keys, the admin token) lives in **one data directory**. Back it up and you've backed up the node.
+
+### What's built
+
+| Piece | Choice | Status |
+|---|---|---|
+| Static hosting | paths under one host | **live** |
+| Uploads | `tar` + per-user deploy key | **live** |
+| Versions | atomic deploys, last 10 kept, rollback | **live** |
+| Operator console | issue, reveal, revoke, rotate keys; sites by user | **live** |
+| HTTPS | native (`--tls-cert`/`--tls-key`) or a reverse proxy | **live** |
+| Reachability | outbound WebSocket tunnel to a public friend | planned |
+| Ownership | Ed25519 key as the deed to an address; signed deploys | planned |
+| Site data | one SQLite file per site, opt-in login and stats | planned |
+
+### Reachability (planned)
+
+A machine behind NAT can't accept inbound connections. So a private node will dial out: it opens one **outbound WebSocket** to a public friend and registers its path prefix. The public node routes each request by its first path segment down the matching tunnel. No port forwarding, no static IP, no dynamic DNS.
 
 ```
         Visitors
@@ -33,75 +50,51 @@ A machine behind NAT cannot accept inbound connections, so a private node opens 
                         └───────────┘  └───────────┘
 ```
 
-All node state — uploaded sites, the deploy-key store, the admin token — lives in **one data directory** you own. Mount it on a volume; without it, the node forgets everything.
-
-**Built today:** static hosting, per-user deploy keys, atomic deploys with rollback, the operator console, native HTTPS. **On the road:** NAT tunnels, one SQLite file per site, opt-in login and stats, sandboxed functions. The full design review is in [`REVIEW.md`](./REVIEW.md).
-
-### The stack
-
-| Concern | Choice | Why |
-|---|---|---|
-| Language | **Go** | one static binary, cheap concurrency |
-| Addressing | **paths under one host** | one cert, identical code public and private |
-| Tunnels | **outbound WebSocket** (yamux) | no inbound ports on private nodes |
-| Storage | **files now, SQLite per site next** | isolation, export, migration as a single file |
-| Keys | **Ed25519** | signed challenges; the secret never travels |
-
-### Deploy a site
-
-Uploading is one POST of a `tar` archive with a deploy key — the flow is on the [landing page](./index.html#deploy), in the [user's guide](./users-guide.md), and hosted on every node at `/_relay/deploy.html`.
-
 ### Run a node
 
-Relay is one binary, so it runs anywhere a process or a container runs. **Public nodes** need a stable address and ports 80/443; **private nodes** are outbound-only and need no inbound ports at all. On first start the node writes its **admin token** to `<data>/admin-token` (and prints it once to the log) — it unlocks the operator console at `/_relay/admin.html`.
+Every node needs a **name**, the first path segment of its sites (`--name mynode` serves `/mynode/<site>/`). On first start the node writes an **admin token** to `<data>/admin-token` and prints it once to the log. Use it to sign in to the operator console at `/_relay/admin.html` and issue deploy keys.
 
 #### Binary
 
-Install the prebuilt binary (Linux or macOS, amd64/arm64):
+Linux or macOS, amd64 or arm64:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSfL \
   https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
-```
 
-Then run a node:
-
-```sh
-relay node --data /var/lib/relay --listen :8080
+relay node --name mynode --data /var/lib/relay --listen :8080
 ```
 
 #### Docker
 
-The image is published to GitHub Packages, runs unprivileged, and keeps all state under `/data`:
+The image runs unprivileged and keeps all state in `/data`. Flags after the image name are passed to `relay node`:
 
 ```sh
 docker run -d --name relay --restart unless-stopped \
-  -p 8080:8080 \
-  -v relay-data:/data \
-  ghcr.io/nemonoboru/relay:latest
+  -p 8080:8080 -v relay-data:/data \
+  ghcr.io/nemonoboru/relay:latest --name mynode
 ```
+
+Read the admin token with `docker logs relay`.
 
 #### Kubernetes
 
-One command installs a `relay` namespace, a one-replica StatefulSet with a persistent volume, and a Service:
+One command installs a `relay` namespace, a single-replica StatefulSet with a persistent volume, and a Service. The node is named `relay`, so sites live at `/relay/<site>/`:
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/nemoNoboru/relay/main/deploy/kubernetes.yaml
-```
-
-The node serves HTTP on `:8080` with probes on `/healthz`. Expose it with TLS at the cluster edge by filling in your hostname in [`deploy/ingress.yaml`](./deploy/ingress.yaml) and applying it. Because Relay uses path-based addressing, the Ingress needs no wildcard host and no per-site certificate. Read the admin token with either of:
-
-```sh
-kubectl logs -n relay relay-0
 kubectl exec -n relay relay-0 -- cat /data/admin-token
 ```
 
+The node serves HTTP on `:8080` with probes on `/healthz`. For TLS, put your hostname in [`deploy/ingress.yaml`](https://github.com/nemoNoboru/relay/blob/main/deploy/ingress.yaml) and apply it. Path-based addressing means one host and one certificate cover every site.
+
 #### HTTPS
 
-Pass `--tls-cert` and `--tls-key` to serve HTTPS directly, or terminate TLS at a reverse proxy (Caddy, Nginx) in front of the node.
+Pass `--tls-cert` and `--tls-key` to serve HTTPS directly, or put Caddy or Nginx in front. Testing with a self-signed certificate? Add `--insecure` to `relay deploy` and `relay rollback`.
 
 ### Further reading
 
-- [`REVIEW.md`](./REVIEW.md) — the consolidated design review: decisions, open questions, what is not finished
-- [`docs/api-contract.md`](./docs/api-contract.md) and [`docs/architecture.md`](./docs/architecture.md) — the wire contract and the backend design
-- [`docs/keys.md`](./docs/keys.md) — ownership keys: the deed to an address
+- [Source on GitHub](https://github.com/nemoNoboru/relay): code, issues, and the [user's guide](https://github.com/nemoNoboru/relay/blob/main/users-guide.md)
+- [`REVIEW.md`](https://github.com/nemoNoboru/relay/blob/main/REVIEW.md): the design review, with locked decisions and open questions
+- [API contract](https://github.com/nemoNoboru/relay/blob/main/docs/api-contract.md) and [backend architecture](https://github.com/nemoNoboru/relay/blob/main/docs/architecture.md): the wire protocol and how the node is built
+- [Ownership keys](https://github.com/nemoNoboru/relay/blob/main/docs/keys.md): how a key becomes the deed to an address

@@ -124,6 +124,7 @@
 
   /* ---------- self-serve / deploy ---------- */
   .deploysec{padding:96px 0;border-top:6px solid var(--red)}
+  .deploysec + .deploysec{border-top:4px solid var(--ink);background:var(--paper-2)}
   .deploy-lead{font-size:1.08rem;font-weight:300;max-width:62ch;margin-top:22px}
   .deploy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:4px solid var(--ink);margin-top:40px;background:var(--ink)}
   .deploy-grid.two{grid-template-columns:repeat(2,1fr)}
@@ -139,8 +140,8 @@
   .dcard .actions{margin-top:14px;gap:10px}
   .dcard .actions .btn{padding:12px 16px;font-size:.68rem}
   .dcard .foot{margin-top:auto;font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;opacity:.7;padding-top:18px}
-  .deploysec .sub{margin-top:34px;font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;text-align:center}
-  .deploysec .meta{text-align:center}
+  .deploysec .sub{margin-top:34px;font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-align:center}
+  .deploysec code{font-family:var(--mono);font-size:.82em;background:var(--ink);color:var(--paper);padding:1px 6px}
   @media(max-width:900px){.deploy-grid,.deploy-grid.two{grid-template-columns:1fr}.dcard{border-right:0;border-bottom:4px solid var(--ink)}.dcard:last-child{border-bottom:0}}
 
   /* ---------- footer ---------- */
@@ -194,8 +195,6 @@
 .prose ol>li::before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:9px;font-family:var(--display);font-size:1.35rem;color:var(--red)}
 .prose ul>li{padding:8px 0 8px 26px;position:relative;font-weight:300;border-bottom:1px dashed rgba(20,18,16,.22)}
 .prose ul>li::before{content:"→";position:absolute;left:0;color:var(--red)}
-.prose ul.future>li{padding-left:30px}
-.prose ul.future>li::before{content:"✦"}
 .prose pre{font-family:var(--mono);font-size:.72rem;line-height:1.5;background:var(--ink);color:var(--paper);padding:20px;overflow:auto;margin:24px 0}
 .prose hr{border:0;height:6px;background:var(--ink);margin:32px 0}
 

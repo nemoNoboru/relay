@@ -4,50 +4,50 @@
 
 ### The problem
 
-Making a website is easy now. Putting one online is not. You can have a finished site and still have nothing — a folder is not a website, it is a draft. Until someone can type an address and see it, you have made a very nice thing for yourself.
+Making a website has never been easier. Putting one online still is hard. A finished site that sits in a folder isn't a website yet, just a draft, and it stays that way until someone can type an address and see it.
 
-The web has landlords now. What began as a decentralized commons became a handful of walled gardens on three clouds, and the deal is the ancient one: you make the thing, they keep it, and you pay to reach it. And even a server at home is invisible — behind a router, on a dynamic IP, unreachable by the world.
+The web has landlords now. What began as a commons is now a handful of platforms running on three clouds, and the deal hasn't changed: you make the thing, they keep it, and you pay to reach it. A server at home doesn't escape that. It sits behind a router on a dynamic IP, out of reach of the world.
 
 > Making things got easy.
 > Shipping them never did.
 
 ### What Relay is
 
-Relay is not a language, a framework, or a platform. It is the last mile: it takes what you built and gives it a home on the open web, without asking a platform for permission and without handing over the keys. Build by hand, with a framework, or with an assistant — we take no side in how you got there.
+Relay is the last mile. It isn't a language, a framework, or a platform. It gives what you built a home on the open web, without asking anyone's permission and without handing over the keys. Write it by hand, use a framework, or describe it to an assistant: Relay doesn't care how it was made.
 
-- **A home** — point Relay at a folder and it gets a real address. No build step, no server to babysit, no account.
-- **A way in** — the computer on your desk can serve the world from behind a home router. No port forwarding, no static IP.
-- **A memory** — your site can keep what people give it, in a file you own and can carry anywhere.
-- **People and numbers, if you want them** — opt-in login and stats, with no central account and no tracker.
-- **Just the wire** — already run your own server? Relay fronts it and makes it reachable, with the name and the key still yours.
+- **A home.** Upload a folder and it has a real address. No build step, no server to babysit, no account.
+- **A way in.** The computer on your desk serves the world from behind a home router. No port forwarding, no static IP.
+- **A memory.** Your site keeps what people give it, in a file you own and can carry anywhere.
+- **People and numbers, if you want them.** Opt-in logins and stats, with no central account and no tracker.
+- **Just the wire.** Already run a server? Relay makes it reachable, and the name stays yours.
+
+Hosting is live today; the rest is the roadmap. The [technicals](./technicals.html) say exactly which is which.
 
 ### The network
 
-Not three clouds: a constellation of independently run Relay nodes — the modern descendant of the BBS sysop and the tilde community. Every node speaks the same small protocol, so a site can move between servers, and no single node can hold your digital presence hostage.
+Instead of three clouds, Relay is a constellation of nodes, each run by a person or a community, in the spirit of the BBS sysop and the tilde server. Every node speaks the same small protocol, so a site can move from one to another and no node can hold it hostage.
 
 ### Rules in the open
 
-Who decides what gets published? Not an unaccountable Terms of Service: a **published rule set, checked by small local models**, with a human review path for anything borderline. If you dislike a server's rules, read them, argue with them, or fork the server.
+Who decides what gets published? Every server publishes its rules in plain language. Small local models check new sites against them, and a human reviews anything borderline. Nothing is silently erased. If you don't like a server's rules, you can argue with them, or fork the server.
 
 ### Core Principles
 
-**You hold the key.** An address belongs to whoever holds its key. Ownership is a file you keep, not a permission somebody grants.
+**You hold the key.** An address belongs to whoever holds its key. Ownership is a file you keep, not a permission someone grants.
 
-**No central accounts.** Login is opt-in and lives in each site's own database. There is no Relay account, ever. Your people are yours.
+**No central accounts.** There is no Relay account, ever. Login is opt-in and lives in each site's own data. Your people are yours.
 
-**Your data belongs to you.** Exportable and portable. Leaving a server never means losing your users' information. Data that moves is data that lives.
+**Your data leaves with you.** Everything is exportable. Leaving a server never means losing your site or your users.
 
-**One-step deploy.** Shipping is not a separate discipline. It is one guided action, available to anyone.
+**One-step deploy.** Shipping isn't a separate discipline. It's one action, available to anyone.
 
-**Small, legible scope.** A few primitives, and another only when it clearly earns its place. Every feature is a tax on the people who didn't ask for it.
+**Small on purpose.** A few primitives, and a new one only when it earns its place. Every feature is a tax on the people who didn't ask for it.
 
-**Community owned.** Open source and federated. Communities run their own nodes, connect to others, or stay fully independent.
+**Community owned.** Open source and federated. Run a node, join others, or stay fully independent.
 
 ### Take it back
 
-The centralization of the web decides who gets heard — but none of it is destiny. Every site rescued from a folder on a laptop is proof that this was always possible, and every person who runs a node is a node in a web that serves people, not profit.
-
-Todo: work on a future for technology
+Who owns the web decides who gets heard. That isn't destiny. Every site rescued from a laptop folder proves another web was always possible, and every person who runs a node builds one that serves people, not profit.
 
 ---
 

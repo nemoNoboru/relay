@@ -259,7 +259,9 @@ tunnel worth starting.
       with two custom modules (`docs/architecture.md` §4); confirm to lift the
       ingress block. Stdlib/autocert remains the cheaper path for Stage 0.
 - [ ] **Deploy manifests are drafts** (no binary to build yet).
-- [x] **UI pages are real code** in `web/` (node, site, and operator consoles).
+- [ ] **UI pages are code** in `web/`, but only the operator console
+      (`admin.html`) talks to a real API. The node and site consoles still poll
+      draft endpoints (`/api/tunnels`, `/api/site/deploy`) that the node does not serve.
 - [ ] **Tunnel is unproven** — the riskiest primitive, still a sketch.
 - [ ] **No abuse/ToS posture** — keep servers invite-only until it exists.
 
