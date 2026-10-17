@@ -53,6 +53,14 @@ MINI_DIAGRAM = """<div class="mini" role="img" aria-label="A browser asks for a 
 </div>"""
 
 
+MANBACK = ('<div class="manback"><p>Read it, fork it, run a node. '
+           'The web belongs to the people who build it.</p>'
+           '<div class="actions">'
+           '<a class="btn solid" href="./index.html#deploy">Deploy a site</a>'
+           '<a class="btn" href="./index.html#node">Run a node</a>'
+           '</div></div>')
+
+
 def esc(s):
     return (s.replace("&", "&amp;").replace("<", "&lt;")
             .replace(">", "&gt;").replace('"', "&quot;"))
@@ -211,8 +219,7 @@ def render_block(b, section_title):
     if kind == "ol":
         return "<ol>" + "".join("<li>%s</li>" % inline(x) for x in b[1]) + "</ol>"
     if kind == "ul":
-        cls = ' class="future"' if section_title == "The Future We're Building" else ""
-        return "<ul%s>" % cls + "".join("<li>%s</li>" % inline(x) for x in b[1]) + "</ul>"
+        return "<ul>" + "".join("<li>%s</li>" % inline(x) for x in b[1]) + "</ul>"
     if kind == "table":
         return render_table(b[1])
     if kind == "fence":
@@ -232,55 +239,19 @@ def render_section(sec, manback=True):
         rows = [split_lead(inline(b[1])) for b in blocks if b[0] == "p"]
         return '<div class="principles">\n' + "\n".join("<div>%s</div>" % r for r in rows) + "\n</div>"
 
-    if title in ("Who This Is For", "Technical Foundation"):
-        items = []
-        for b in blocks:
-            if b[0] == "ul":
-                items.extend(b[1])
-            elif b[0] == "p":
-                items.append(b[1])
-        who = title == "Who This Is For"
-        tag = "div" if who else "span"
-        sep = " " if who else " · "
-        rows = []
-        for it in items:
-            html = inline(it)
-            m = re.match(r"^(?:<strong>(.*?)</strong>|<b>(.*?)</b>)\s*(.*)$", html)
-            if m:
-                name = m.group(1) or m.group(2)
-                rest = re.sub(r"^[—–-]\s*", "", m.group(3))
-                rows.append("<%s><b>%s</b>%s</%s>" % (tag, name, (sep + rest) if rest else "", tag))
-            else:
-                rows.append("<%s>%s</%s>" % (tag, html, tag))
-        return '<div class="%s">\n' % ("who" if who else "tech") + "\n".join(rows) + "\n</div>"
-
-    # generic
+    # generic; on the manifesto a closing `---` becomes the call to action,
+    # and the paragraph after it the sign-off line.
     out = []
     foot_open = False
-    manback_done = False
     for b in blocks:
-        if b[0] == "p":
-            raw = b[1]
-            if manback and raw.startswith("Todo:"):
-                if not manback_done:
-                    out.append('<div class="manback"><p>Read it, fork it, run a node. '
-                               'The web belongs to the people who build it.</p>'
-                               '<div class="actions">'
-                               '<a class="btn solid" href="./index.html#deploy">Host a site</a>'
-                               '<a class="btn" href="./index.html#network">Run a node</a>'
-                               '</div></div>')
-                    manback_done = True
-                foot_open = True
-                out.append('<div class="manfoot"><p>%s</p>' % inline(raw))
-                continue
-            if foot_open:
-                out.append('<p class="last">%s</p></div>' % inline(raw))
-                foot_open = False
-                continue
-            out.append("<p>%s</p>" % inline(raw))
-        elif b[0] == "hr":
-            if not foot_open:
-                out.append("<hr>")
+        if b[0] == "p" and foot_open:
+            out.append('<p class="last">%s</p></div>' % inline(b[1]))
+            foot_open = False
+        elif b[0] == "p":
+            out.append("<p>%s</p>" % inline(b[1]))
+        elif b[0] == "hr" and manback:
+            out.append(MANBACK + '<div class="manfoot">')
+            foot_open = True
         else:
             out.append(render_block(b, title))
     if foot_open:

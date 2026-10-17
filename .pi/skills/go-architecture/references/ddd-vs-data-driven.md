@@ -176,8 +176,7 @@ without a database.
 - **Start data-driven, extract on the second invariant.** It is fine to ship the first
   slice as plain CRUD if the model isn't settled; the moment a rule is written twice,
   extract the type. Never the reverse on a whim: don't pre-build rich models for features
-  that are still mockups (`node-ui.html`, `metrics.html` are drafts — don't design their
-  domain before the spec exists).
+  whose spec does not exist yet — design their domain when the spec lands, not before.
 - **A "service layer" is not a cure.** Adding an `internal/services` package around a
   data-driven design produces "an overly complicated onion with fundamentally the same
   design" (see *From CRUD to DDD*). The fix is moving rules into types, not adding layers.

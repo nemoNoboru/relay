@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relay — The Web Belongs to All</title>
-<meta name="description" content="Relay is the last mile for independent websites: static hosting, an easy database, and reachability for machines behind NAT. Own your address. Keep your data.">
+<title>Relay — Put your folder on the web</title>
+<meta name="description" content="Relay turns a folder into a website with one upload. No account, no build step, no platform — just a key from the node you deploy to.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -16,12 +16,11 @@
   <div class="wrap">
     <a class="brand" href="#top"><span class="mark">R</span> RELAY</a>
     <nav class="main">
+      <a href="#deploy">Deploy</a>
+      <a href="#node">Run a node</a>
       <a href="./manifesto.html">Manifesto</a>
       <a href="./technicals.html">Technicals</a>
-      <a href="#primitives">Primitives</a>
-      <a href="#network">Network</a>
-      <a href="#deploy">Deploy</a>
-      <a href="./_relay/admin.html">Admin</a>
+      <a href="./_relay/admin.html">Console</a>
     </nav>
     <span class="stamp">Open · Federated</span>
   </div>
@@ -33,15 +32,14 @@
   <section class="hero">
     <div class="wrap">
       <div class="hero-copy">
-        <span class="kicker">The hard part was never building it</span>
-        <h1>The web<br><span class="rev">belongs</span><br><span class="red">to all</span></h1>
-        <p class="lead"><b>Building a website is easy now. Putting one online is not.</b> The web has landlords now, and the deal is the old one: you make the thing, they keep it, and you pay to reach it. Relay is the last mile — static hosting, an easy database, reachability, and opt-in login and stats — so the thing you made can actually be seen.</p>
+        <span class="kicker">Static hosting without landlords</span>
+        <h1>Your folder<br><span class="rev">is a</span><br><span class="red">website</span></h1>
+        <p class="lead"><b>Building a site is easy now. Getting it online shouldn't be the hard part.</b> Upload a folder to a Relay node and it's live at a real address — no account, no build step, no platform in between.</p>
         <div class="actions">
-          <a class="btn solid" href="#deploy">Host a site</a>
-          <a class="btn" href="#network">Run a node</a>
-          <a class="btn" href="./manifesto.html">Read the manifesto</a>
+          <a class="btn solid" href="#deploy">Deploy a site</a>
+          <a class="btn" href="#node">Run a node</a>
         </div>
-        <p class="meta">No central accounts · No permission slips · Your files come with you</p>
+        <p class="meta">One upload · Live instantly · Rollback built in</p>
       </div>
       <div class="art" aria-hidden="true">
         <div class="frame"></div>
@@ -55,239 +53,121 @@
     </div>
   </section>
 
-  <!-- BAND -->
-  <div class="band" aria-hidden="true">
-    <div class="track">
-      <span>Static hosting</span><span>Easy database</span><span>Reachability</span><span>Site-level login</span><span>Private stats</span><span>Runs in Docker</span><span>Deploy in one step</span><span>Own your address</span><span>Keep your data</span>
-      <span>Static hosting</span><span>Easy database</span><span>Reachability</span><span>Site-level login</span><span>Private stats</span><span>Runs in Docker</span><span>Deploy in one step</span><span>Own your address</span><span>Keep your data</span>
-    </div>
-  </div>
-
-  <!-- PROBLEM -->
-  <section id="manifesto">
-    <div class="wrap">
-      <span class="kick">01 — The problem</span>
-      <h2>A graveyard<br>of localhosts</h2>
-      <div class="rule"></div>
-      <div class="cols">
-        <div>
-          <p>Let's say you made something. An afternoon's work, maybe less. And now it sits in a folder — untracked, unbacked-up, seen by no one. Loved, and effectively <b>indeployable by a normal person.</b></p>
-          <p>Even the ones served from home are invisible: behind a router, behind NAT, on a dynamic IP, on a machine nobody can reach.</p>
-        </div>
-        <div>
-          <p>The web has been captured. What began as a decentralized commons became five websites owned by five companies, all hosted on three clouds — the plague of landlords, now digital.</p>
-          <p>Making things got easy. <b>Shipping them never did.</b></p>
-        </div>
-      </div>
-      <p class="pull">A folder is not a website.<br>It's a draft. <em>Relay gives it an address.</em></p>
-    </div>
-  </section>
-
-  <!-- PRIMITIVES -->
-  <section id="primitives">
-    <div class="wrap">
-      <span class="kick">02 — The building blocks</span>
-      <h2>Three primitives.<br>No more.</h2>
-      <div class="rule"></div>
-      <div class="prims">
-        <article class="prim">
-          <span class="num">01</span>
-          <h3>Static hosting</h3>
-          <p>Point Relay at a folder and it gets an address. No build step, no server to babysit, no database to provision before page one. Files are light — which is why one cheap machine can hold thousands of them.</p>
-          <span class="foot">Thousands of sites · one machine</span>
-        </article>
-        <article class="prim">
-          <span class="num">02</span>
-          <h3>An easy database</h3>
-          <p>Your site remembers. One uniform store, on every server. Export the file and it travels: data that moves is data that lives.</p>
-          <span class="foot">Portable · yours to carry</span>
-        </article>
-        <article class="prim">
-          <span class="num">03</span>
-          <h3>Reachability</h3>
-          <p>An outbound connection to a public friend. No port forwarding, no static IP, no dynamic DNS. It fronts a folder you point it at — or the server you already run. The world comes in through the wire you opened.</p>
-          <span class="foot">NAT is not a wall</span>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- OPT-INS -->
-  <section id="optins">
-    <div class="wrap">
-      <span class="kick">03 — The opt-ins</span>
-      <h2>Login and stats.<br>Only if you ask.</h2>
-      <div class="rule"></div>
-      <div class="doors">
-        <div class="door">
-          <span class="tag">Opt-in login</span>
-          <h3>Accounts you host</h3>
-          <p>Turn it on and your site's users live in your site's own database — sign-up, sign-in, sessions — with no Relay account anywhere. Export the site and its people come with it.</p>
-        </div>
-        <div class="door">
-          <span class="tag">Private stats</span>
-          <h3>Numbers, not surveillance</h3>
-          <p>Your node already served every request. It can show you views, referrers, and top pages — first-party, cookieless, aggregate, and yours alone. No tracker follows your visitors.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- NETWORK -->
-  <section class="network" id="network">
-    <div class="wrap">
-      <span class="kick">04 — The network</span>
-      <h2>Every node is the same.<br>Some are public.</h2>
-      <div class="rule"></div>
-      <div class="diagram">
-        <div class="flow">
-          <div class="net-row">
-            <div class="node"><b>Visitors</b>a browser asks for<small>relay.cloudpunk.org/raspberry/docs/</small></div>
-          </div>
-          <div class="flow-link"><span class="flow-label">HTTPS request</span><span class="wire"></span></div>
-          <div class="net-row">
-            <div class="node pub">
-              <b>Public node</b>relay.cloudpunk.org
-              <span class="friend-list">
-                <span><em>/raspberry/</em> &rarr; its outbound WebSocket</span>
-                <span><em>/bookshelf/</em> &rarr; its outbound WebSocket</span>
-              </span>
-            </div>
-          </div>
-          <div class="flow-link"><span class="flow-label">relayed down the matching tunnel</span><span class="wire"></span></div>
-          <div class="net-row">
-            <div class="node priv"><b>Raspberry Pi</b>behind NAT<small>/raspberry/</small></div>
-            <div class="node priv"><b>Laptop</b>behind NAT<small>/bookshelf/</small></div>
-          </div>
-        </div>
-        <p class="net-note">
-          The friend nodes dial <em>out</em> to the public node — one WebSocket each — so no port forwarding
-          is ever needed. The public node keeps the list, routes each request to the right friend by its path
-          prefix, and the answer travels back up the same wire. The same wire fronts a folder of files or an app
-          you already run — so it is also a tunnel service you own. A boring trick with a boring name; it is the
-          reason the computer under your desk can be a web server.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- DOORS -->
-  <section>
-    <div class="wrap">
-      <span class="kick">05 — The doors</span>
-      <h2>Open or private</h2>
-      <div class="rule"></div>
-      <div class="doors">
-        <div class="door">
-          <span class="tag">Open servers</span>
-          <h3>Free deployments</h3>
-          <p>Anyone can publish, within the server's published rules. Personal sites, community pages, and experiments live here.</p>
-        </div>
-        <div class="door">
-          <span class="tag">Private servers</span>
-          <h3>By invitation</h3>
-          <p>The owner issues a token; only sites bearing it can deploy. Families, clubs, and small businesses get a space gated by trust, not by somebody's account system.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- KEY -->
-  <section class="keysec">
-    <div class="wrap">
-      <div class="keybig">KEY</div>
-      <div>
-        <span class="kick">06 — The deed</span>
-        <h2>One address,<br>one key</h2>
-        <div class="rule"></div>
-        <p style="margin-top:22px;font-weight:300;font-size:1.08rem">The first time you deploy a name, Relay hands you a <b>key</b> — a small text file. That key is the deed. Update, move, or leave: the name stays yours. No landlord can claim your domain, overwrite your files, or impersonate your site. There is no password reset and no support ticket. That's the deal, and it's a good one.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- RULES / COMPUTE -->
-  <section style="padding-bottom:0">
-    <div class="split">
-      <div>
-        <span class="kick">07 — The rules</span>
-        <h2>Rules in the open</h2>
-        <p>What a server will and won't host is published, and checked by small local classifier models. Compliant sites deploy themselves. The rest wait for a human, not a platform.</p>
-        <ul>
-          <li>Read the rules</li>
-          <li>Argue with them</li>
-          <li>Fork the server</li>
-        </ul>
-      </div>
-      <div>
-        <span class="kick">08 — Next</span>
-        <h2>Compute, soon</h2>
-        <p>Backend functions, sandboxed in a tiny QuickJS engine and rate-limited per site. A few hundred nodes lending spare cycles become a backend nobody owns. We already built the wire — compute is the next thing we send down it.</p>
-        <ul>
-          <li>Functions beside your site</li>
-          <li>Memory &amp; time caps per call</li>
-          <li>One sandbox, a thousand tenants</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- DEPLOY / SELF-SERVE -->
+  <!-- DEPLOY -->
   <section class="deploysec" id="deploy">
     <div class="wrap">
-      <span class="kick">09 — Self-serve</span>
-      <h2>Deploy a site.<br>Run a node.<br>Take the web back.</h2>
+      <span class="kick">Deploy</span>
+      <h2>Live in three steps</h2>
       <div class="rule"></div>
-      <p class="deploy-lead">Everything below works right now, on this node — no central account, no sign-up, no permission slip. A folder becomes a website, one command installs a node, and the admin page hands out the keys.</p>
+      <p class="deploy-lead">All you need is a deploy key from this node. Your site goes live at <code>/&lt;node&gt;/&lt;site&gt;/</code> the moment the upload finishes.</p>
 
       <div class="deploy-grid">
         <article class="dcard">
           <span class="dnum">01</span>
-          <h3>Deploy a static site</h3>
-          <p>Ask the operator for a <b>deploy key</b> — or issue one yourself on the admin page. Tar your folder, upload it, and the site goes live at <code>/&lt;node&gt;/&lt;site&gt;/</code>.</p>
-<pre>tar -C ./site-folder -cf site.tar .
-curl -X POST \
-  -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
-  -H "Content-Type: application/x-tar" \
-  --data-binary @site.tar \
-  "$RELAY_ORIGIN/_relay/v1/sites/docs/deploy"</pre>
-          <p class="dnote"><code>$RELAY_ORIGIN</code> is this node's address · <code>$RELAY_DEPLOY_TOKEN</code> is your deploy key</p>
+          <h3>Get a key</h3>
+          <p>Ask whoever runs this node for a <b>deploy key</b>. If it's your node, make one yourself in the operator console. You won't need an account.</p>
           <div class="actions">
-            <a class="btn solid" href="./_relay/deploy.html">Full upload guide</a>
-            <a class="btn" href="./_relay/skills/relay-deploy/SKILL.md">Agent skill</a>
+            <a class="btn solid" href="./_relay/admin.html">Operator console</a>
           </div>
-          <span class="foot">One request · atomic · rollback kept</span>
+          <span class="foot">One key per person</span>
         </article>
 
         <article class="dcard">
           <span class="dnum">02</span>
-          <h3>Run a node</h3>
-          <p>Relay is one binary. Install it, then start a node — the same code runs public or private, at home or in a cluster.</p>
-<pre>curl --proto '=https' --tlsv1.2 -sSfL \
-  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
-
-relay node --data /var/lib/relay --listen :8080</pre>
-          <div class="actions">
-            <a class="btn" href="./technicals.html#docker">Docker</a>
-            <a class="btn" href="./technicals.html#kubernetes">Kubernetes</a>
-            <a class="btn" href="./technicals.html#deployment">All options</a>
-          </div>
-          <span class="foot">Binary · Docker · Swarm · Kubernetes</span>
+          <h3>Pack the folder</h3>
+          <p>Archive what's <b>inside</b> the folder, not the folder itself. Keep links relative.</p>
+<pre>tar -C ./dist -cf site.tar .</pre>
+          <span class="foot">Up to 256 MiB · 65,536 files</span>
         </article>
 
         <article class="dcard">
           <span class="dnum">03</span>
-          <h3>Operate</h3>
-          <p>The node prints an <b>admin token</b> on first start. It unlocks the operator console — issue and revoke deploy keys, list sites, and roll a deploy back.</p>
+          <h3>Upload</h3>
+<pre>curl -X POST \
+  -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
+  -H "Content-Type: application/x-tar" \
+  --data-binary @site.tar \
+  "$RELAY_ORIGIN/_relay/v1/sites/mysite/deploy"</pre>
+          <p class="dnote"><code>$RELAY_ORIGIN</code> is this node's address · <code>$RELAY_DEPLOY_TOKEN</code> is your key · <code>mysite</code> is your site's name</p>
           <div class="actions">
-            <a class="btn solid" href="./_relay/admin.html">Open the admin page</a>
-            <a class="btn" href="./_relay/node.html">Node console</a>
+            <a class="btn" href="./_relay/deploy.html">Full guide</a>
+            <a class="btn" href="./_relay/skills/relay-deploy/SKILL.md">Agent skill</a>
           </div>
-          <span class="foot">Admin console at /_relay/admin.html</span>
+          <span class="foot">Each upload replaces the whole site · last 10 kept</span>
         </article>
       </div>
 
-      <p class="sub">Of the web · by the web · for the web</p>
-      <p class="meta">Binary · Docker · Docker Swarm · Kubernetes</p>
+      <p class="sub">Have the relay binary? It's one line: <code>relay deploy --origin $RELAY_ORIGIN --site mysite ./dist</code></p>
+    </div>
+  </section>
+
+  <!-- RUN A NODE -->
+  <section class="deploysec" id="node">
+    <div class="wrap">
+      <span class="kick">Run a node</span>
+      <h2>Host your own</h2>
+      <div class="rule"></div>
+      <p class="deploy-lead">A node is one binary and one data directory. It serves sites, hands out deploy keys, and keeps every byte on a disk you control.</p>
+
+      <div class="deploy-grid two">
+        <article class="dcard">
+          <span class="dnum">01</span>
+          <h3>Binary</h3>
+<pre>curl --proto '=https' --tlsv1.2 -sSfL \
+  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+
+relay node --name mynode --data /var/lib/relay --listen :8080</pre>
+          <span class="foot">Linux · macOS · amd64 · arm64</span>
+        </article>
+
+        <article class="dcard">
+          <span class="dnum">02</span>
+          <h3>Docker</h3>
+<pre>docker run -d -p 8080:8080 -v relay-data:/data \
+  ghcr.io/nemonoboru/relay:latest --name mynode</pre>
+          <p>Prefer Kubernetes? It's a single <code>kubectl apply</code>.</p>
+          <div class="actions">
+            <a class="btn" href="./technicals.html#docker">Docker</a>
+            <a class="btn" href="./technicals.html#kubernetes">Kubernetes</a>
+          </div>
+          <span class="foot">Runs unprivileged · state in /data</span>
+        </article>
+      </div>
+
+      <p class="sub">The node prints an admin token on first start. Use it to sign in at <code>/_relay/admin.html</code> and issue keys.</p>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section id="why">
+    <div class="wrap">
+      <span class="kick">Why Relay</span>
+      <h2>The web belongs to all</h2>
+      <div class="rule"></div>
+      <div class="prims">
+        <article class="prim">
+          <span class="num">01</span>
+          <h3>Nothing to sign up for</h3>
+          <p>No platform account, no billing page, no terms that change overnight. A node and a key are all it takes.</p>
+          <span class="foot">Live today</span>
+        </article>
+        <article class="prim">
+          <span class="num">02</span>
+          <h3>Take it with you</h3>
+          <p>Your site is a folder, so moving it means copying it. Every node runs the same open code, which leaves nothing to be locked into.</p>
+          <span class="foot">Live today</span>
+        </article>
+        <article class="prim">
+          <span class="num">03</span>
+          <h3>Serve from home</h3>
+          <p>Next up: a node behind your router dials out to a public friend, so the computer under your desk can serve the world without port forwarding.</p>
+          <span class="foot">On the roadmap</span>
+        </article>
+      </div>
+      <div class="actions">
+        <a class="btn" href="./manifesto.html">Read the manifesto</a>
+        <a class="btn" href="./technicals.html">How it works</a>
+      </div>
     </div>
   </section>
 
@@ -297,9 +177,8 @@ relay node --data /var/lib/relay --listen :8080</pre>
   <div class="wrap">
     <p class="big">The web was built by people, <em>for people.</em> Let's take it back.</p>
     <p class="fine">
-      Relay — an open, federated hosting network<br>
-      Deploy in one step · Own your address · Keep your data<br>
-      <a href="./manifesto.html">Read the manifesto</a> · <a href="./technicals.html">Technicals</a> · <a href="./_relay/admin.html">Admin</a> · <a href="./_relay/deploy.html">Deploy a site</a>
+      Relay — open, federated static hosting<br>
+      <a href="./manifesto.html">Manifesto</a> · <a href="./technicals.html">Technicals</a> · <a href="./_relay/deploy.html">Upload guide</a> · <a href="https://github.com/nemoNoboru/relay">Source</a>
     </p>
   </div>
 </footer>

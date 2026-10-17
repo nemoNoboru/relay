@@ -3,81 +3,58 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Upload — Relay</title>
+    <title>Upload a site — Relay</title>
     <link rel="stylesheet" href="./shared/styles.css" />
   </head>
   <body>
     <header class="bar">
       <div class="wrap">
-        <a class="brand" href="./node.html"><span class="mark">R</span> RELAY</a>
+        <a class="brand" href="../"><span class="mark">R</span> RELAY</a>
         <nav class="main">
-          <a href="./node.html">Node</a>
+          <a href="../">Home</a>
+          <a href="./admin.html">Console</a>
           <a href="./deploy.html">Upload</a>
         </nav>
-        <span class="stamp">Upload docs</span>
+        <span class="stamp">Upload guide</span>
       </div>
     </header>
 
     <main class="wrap">
       <div class="prose" style="padding: 72px 0 90px">
         <span class="kick">Relay · static hosting</span>
-        <h2>Upload a static site</h2>
+        <h2>Upload a site</h2>
 
         <p>
-          Relay serves a site folder at <code>/&lt;node&gt;/&lt;site&gt;/</code>.
-          To put a site there, upload a <code>tar</code> archive of the folder
-          to the node. One request, and the site is live — atomically replacing
-          whatever was there before.
+          Send a <code>tar</code> archive of your folder with your
+          <b>deploy key</b>, and the site goes live at
+          <code>/&lt;node&gt;/&lt;site&gt;/</code>. You get a deploy key
+          from whoever runs this node; if that's you, issue one in the
+          <a href="./admin.html">operator console</a>.
         </p>
 
-        <h3>The endpoint</h3>
-        <pre>POST /_relay/v1/sites/{site}/deploy
-Authorization: Bearer {token}
-Content-Type: application/x-tar</pre>
-        <p>
-          The body is the raw tar bytes of the site folder's <b>contents</b>
-          (not the folder itself). <code>{site}</code> is a lowercase name:
-          letters, digits, and interior hyphens, 1–63 characters.
-        </p>
-
-        <h3>Example</h3>
-        <pre>tar -C ./site-folder -cf site.tar .
+        <h3>Upload</h3>
+        <pre>tar -C ./dist -cf site.tar .
 curl -X POST \
   -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
   -H "Content-Type: application/x-tar" \
   --data-binary @site.tar \
-  "https://relay.example.org/_relay/v1/sites/docs/deploy"</pre>
-        <p>The response names where the site is live:</p>
-        <pre>{"site":"docs","files":3,"bytes":5120,"url":"/mynode/docs/"}</pre>
-
-        <h3>Credentials: admin token vs deploy keys</h3>
+  "$RELAY_ORIGIN/_relay/v1/sites/mysite/deploy"</pre>
+        <p>The response tells you where the site is live:</p>
+        <pre>{"site":"mysite","files":3,"bytes":5120,"url":"/mynode/mysite/"}</pre>
         <p>
-          There are two credentials. The <b>admin token</b> is the operator's
-          master credential — generated into <code>&lt;data&gt;/admin-token</code>
-          (mode 0600) on first run, or set with
-          <code>relay node --admin-token</code>. It unlocks the operator
-          console at <code>/_relay/admin.html</code>, not uploads.
-          <b>Deploy keys</b> are per-user upload credentials the operator
-          creates on that console. The console lists each user's keys (grouped
-          by user) and can reveal and copy a token at any time. Upload with a
-          deploy key's token as a bearer token — never in a URL, never
-          committed, never logged.
-        </p>
-
-        <h3>The key</h3>
-        <p>
-          Relay's permanent identity is an <b>Ed25519 key</b> — the deed to a
-          name. <code>relay key new</code> generates one. For this MVP the
-          token is what authorizes uploads; keys and signed deploys arrive
-          with the control API. See <code>docs/keys.md</code> in the source.
+          Site names use lowercase letters, digits, and hyphens in the
+          middle, up to 63 characters. Keep asset paths relative so the site
+          works under its path. If you have the <code>relay</code> binary, the
+          same upload is one line:
+          <code>relay deploy --origin $RELAY_ORIGIN --site mysite ./dist</code>.
         </p>
 
         <h3>Archive rules</h3>
         <ul>
-          <li>Relative paths only — no <code>..</code>, no absolute paths, no symlinks or hard links.</li>
-          <li>Regular files and directories only.</li>
-          <li>At most 65536 files and 256 MiB per upload.</li>
-          <li>Every upload is a full replacement — send the whole site each time.</li>
+          <li>Archive what's inside the folder (<code>tar -C ./dist … .</code>), not the folder itself.</li>
+          <li>Relative paths only. No <code>..</code>, no absolute paths, no symlinks or hard links.</li>
+          <li>Up to 65,536 files and 256 MiB per upload.</li>
+          <li>Each upload replaces the whole site, so include every file each time.</li>
         </ul>
 
         <h3>Errors</h3>
@@ -86,34 +63,34 @@ curl -X POST \
             <tr><th>code</th><th>HTTP</th><th>Meaning</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>bad_token</code></td><td>401</td><td>missing or wrong token</td></tr>
-            <tr><td><code>bad_name</code></td><td>400</td><td>the site path segment is invalid</td></tr>
-            <tr><td><code>bad_archive</code></td><td>400</td><td>not a tar, or an entry breaks the rules</td></tr>
-            <tr><td><code>too_large</code></td><td>413</td><td>archive over the size cap</td></tr>
+            <tr><td><code>bad_token</code></td><td>401</td><td>the deploy key is missing, wrong, or revoked</td></tr>
+            <tr><td><code>bad_name</code></td><td>400</td><td>the site name isn't valid</td></tr>
+            <tr><td><code>bad_archive</code></td><td>400</td><td>not a tar archive, or an entry breaks the rules</td></tr>
+            <tr><td><code>too_large</code></td><td>413</td><td>the archive is over the size limit</td></tr>
           </tbody>
         </table>
 
         <h3>Rollback</h3>
         <p>
-          Deploys keep the last 10 versions. The operator can roll a site back
-          to a previous version from the console or with
-          <code>relay rollback --origin … --site …</code>. The current live
-          site is snapshotted first, so nothing is lost.
+          The node keeps the last 10 versions of every site. The operator
+          rolls back with the admin token:
+          <code>relay rollback --origin $RELAY_ORIGIN --site mysite</code>.
+          Rolling back saves the current version first, so nothing is lost.
         </p>
 
-        <h3>The CLI</h3>
+        <h3>Keep your key secret</h3>
         <p>
-          The node's own <code>relay</code> binary drives both sides:
-          <code>relay deploy --origin … --site … ./dist</code> uploads a
-          folder, and <code>relay rollback --origin … --site …</code> rolls it
-          back.
+          Send it only in the <code>Authorization</code> header. Never put
+          it in a URL, a commit, or a log. If it leaks, ask the operator to
+          rotate it. The admin token is separate and only for the operator.
+          You never need it to upload.
         </p>
 
-        <h3>For agents</h3>
+        <h3>Deploy with an agent</h3>
         <p>
-          Point your agent at the hosted skill — the same contract as
-          machine-readable instructions:
-          <a href="./skills/relay-deploy/SKILL.md"><code>./skills/relay-deploy/SKILL.md</code></a>.
+          Give your agent the node's address, your deploy key, and the
+          <a href="./skills/relay-deploy/SKILL.md">deploy skill</a>. It
+          covers the same steps in a form agents can follow.
         </p>
       </div>
     </main>
