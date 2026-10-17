@@ -7,7 +7,8 @@ description: Upload a static website into a Relay node. Use when the task is to 
 
 Upload a finished static site — any folder of files — to a Relay node, where it
 is served live at `/<node>/<site>/`. This skill covers the current (MVP) upload
-endpoint: one signed-in upload with a per-user deploy key (a bearer token).
+endpoint: one HTTP request, authenticated with a per-user deploy key sent as a
+bearer token.
 
 ## What you need before you start
 
@@ -115,9 +116,9 @@ curl -X POST \
 
 Then check that `"$RELAY_ORIGIN$url"` returns the site.
 
-If the `relay` binary is available, the same upload is one command:
+If the `relay` binary is available, the same upload is one command (it reads
+the token from `$RELAY_DEPLOY_TOKEN`):
 
 ```sh
-RELAY_DEPLOY_TOKEN="$RELAY_DEPLOY_TOKEN" relay deploy \
-  --origin "$RELAY_ORIGIN" --site "$RELAY_SITE" ./dist
+relay deploy --origin "$RELAY_ORIGIN" --site "$RELAY_SITE" ./dist
 ```

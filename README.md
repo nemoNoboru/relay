@@ -1,12 +1,13 @@
 # Relay
 
-**The last mile for independent websites.** A folder becomes a website — one
-command, no account, no platform. An address is owned by the key you hold, not
-by a platform's permission.
+**Put a folder on the web.** One upload and your site is live at a real
+address: no account, no build step, and no platform in between. Relay is
+open, federated static hosting that anyone can run.
 
 ## Deploy a site
 
-On any Relay node (try one you know, or run your own):
+You need a Relay node's address (`$RELAY_ORIGIN`) and a deploy key from the
+person who runs it (`$RELAY_DEPLOY_TOKEN`):
 
 ```sh
 tar -C ./dist -cf site.tar .
@@ -17,53 +18,59 @@ curl -X POST \
   "$RELAY_ORIGIN/_relay/v1/sites/mysite/deploy"
 ```
 
-Live at `{origin}/{node}/mysite/`. A deploy key comes from the node's
-operator — or from the console at `/_relay/admin.html` on your own node. The
-full flow is in [`users-guide.md`](users-guide.md).
+Your site is now live at `$RELAY_ORIGIN/<node>/mysite/`. With the `relay`
+binary, the same upload is
+`relay deploy --origin $RELAY_ORIGIN --site mysite ./dist`.
 
 ## Run a node
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSfL \
   https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
-relay node --data /var/lib/relay --listen :8080
+relay node --name mynode --data /var/lib/relay --listen :8080
 ```
 
-Or with Docker / Kubernetes — one command each in
-[`docs/technicals.md`](docs/technicals.md). Every node also hosts this
-project's landing page at its root. First start prints the **admin token**;
-it unlocks the operator console at `/_relay/admin.html`, where deploy keys
-are issued, sites are listed, and deploys are rolled back.
+Docker and Kubernetes each take one command; see
+[`docs/technicals.md`](docs/technicals.md). On first start the node prints
+an **admin token**. Use it to sign in to the operator console at
+`/_relay/admin.html`, where you issue deploy keys and see who last
+deployed each site. Every node also serves this project's landing page at `/`.
 
-## Documentation
+## Docs
 
-| Doc | What it is |
+| Doc | What's in it |
 |---|---|
-| [`users-guide.md`](users-guide.md) | Run a node, issue keys, upload, roll back — start here |
-| [`docs/vision.md`](docs/vision.md) | Why Relay exists (source of `manifesto.html`) |
-| [`docs/technicals.md`](docs/technicals.md) | How it works + deployment (source of `technicals.html`) |
-| [`REVIEW.md`](REVIEW.md) | The design review: locked decisions, open questions. **Read before writing code.** |
-| [`docs/keys.md`](docs/keys.md) · [`docs/api-contract.md`](docs/api-contract.md) · [`docs/architecture.md`](docs/architecture.md) | Ownership keys, the wire contract, the backend design |
-| [`web/README.md`](web/README.md) | The owner UI (Svelte + Vite, embedded in the node binary) |
+| [`users-guide.md`](users-guide.md) | **Start here.** Run a node, issue keys, upload, and roll back |
+| [`docs/technicals.md`](docs/technicals.md) | How it works, what's built, and every way to deploy a node |
+| [`docs/vision.md`](docs/vision.md) | Why Relay exists |
+| [`REVIEW.md`](REVIEW.md) | The design review, with locked decisions and open questions. **Read it before writing code.** |
+| [`docs/keys.md`](docs/keys.md) · [`docs/api-contract.md`](docs/api-contract.md) · [`docs/architecture.md`](docs/architecture.md) | Ownership keys, the wire contract, and the backend design |
+| [`web/README.md`](web/README.md) | The owner UI (Svelte + Vite, embedded in the binary) |
 
 ## Develop
 
 ```sh
-make check   # site in sync + web gates + Go gates (gofmt, vet, staticcheck, test -race)
+make check   # every gate: site in sync, web build + tests, gofmt/vet/staticcheck/test -race
 make test    # go test -race ./...
 make build   # owner UI first, then the relay binary
 ```
 
-`index.html` is hand-written; `manifesto.html` and `technicals.html` are
-generated — edit their `docs/*.md` sources and run `python3 tools/build.py`
-(`make check` fails when they drift). Engineering standards live in
-[`.pi/skills/`](.pi/skills) (Go, frontend, and the deploy skill, also hosted
-by every node at `/_relay/skills/relay-deploy/SKILL.md`).
+`index.html` is written by hand. `manifesto.html` and `technicals.html` are
+generated from `docs/vision.md` and `docs/technicals.md`. Edit the Markdown,
+then run `python3 tools/build.py`; `make check` fails if they drift.
+Engineering standards for Go and the frontend live in [`.pi/skills/`](.pi/skills),
+alongside the deploy skill that every node serves at
+`/_relay/skills/relay-deploy/SKILL.md`.
 
 ## Status
 
-**Stage 0 (MVP).** Built: static hosting at `/<node>/<site>/`, tar uploads
-with per-user deploy keys, atomic deploys with the last 10 versions kept for
-rollback, the operator console, native HTTPS, and the `relay` CLI
-(`deploy`, `rollback`, `key new`, `node`). Not built yet: NAT tunnels,
-per-site databases, login/stats, signed deploys. See [`REVIEW.md`](REVIEW.md).
+**Stage 0 (MVP).** Built:
+
+- static hosting at `/<node>/<site>/`
+- `tar` uploads authenticated with per-user deploy keys
+- atomic deploys that keep the last 10 versions for rollback
+- the operator console and native HTTPS
+- the `relay` CLI: `node`, `deploy`, `rollback`, `key new`
+
+Not built yet: NAT tunnels, per-site ownership and signed deploys, per-site
+databases, and login and stats. See [`REVIEW.md`](REVIEW.md).

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Relay Technicals — How It Works and How to Deploy It</title>
-<meta name="description" content="How Relay works, what it is built on, and how to run it — as a binary, in Docker, on Docker Swarm, or on Kubernetes.">
+<meta name="description" content="How Relay works, what is built today, and how to run a node — as a binary, in Docker, or on Kubernetes.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
       <a href="./index.html#deploy">Deploy</a>
       <a href="./index.html#node">Run a node</a>
       <a href="./manifesto.html">Manifesto</a>
-      <a href="./_relay/admin.html">Admin</a>
+      <a href="./_relay/admin.html">Console</a>
     </nav>
     <span class="stamp">Technicals</span>
   </div>
@@ -32,10 +32,10 @@
     <div class="wrap">
       <span class="kicker">How It Works and How to Deploy It</span>
       <h1>The<br><em>Technicals</em></h1>
-      <p class="lead">How Relay works, what it is built on, and how to run it — as a single binary, in Docker, on Docker Swarm, or on Kubernetes.</p>
+      <p class="lead">How Relay works, what's built today, and how to run a node: one binary, one container, or one kubectl apply.</p>
       <div class="actions">
-        <a class="btn solid" href="./manifesto.html">Read the vision</a>
-        <a class="btn" href="./index.html#deploy">Host a site</a>
+        <a class="btn solid" href="./index.html#deploy">Deploy a site</a>
+        <a class="btn" href="./manifesto.html">Read the manifesto</a>
       </div>
     </div>
   </section>
@@ -45,17 +45,23 @@
     <aside class="toc">
 <h4>Contents</h4>
 <a href="#how-it-works">How it works</a>
-<a href="#the-stack">The stack</a>
-<a href="#deploy-a-site">Deploy a site</a>
+<a href="#what-s-built">What's built</a>
+<a href="#reachability-planned">Reachability (planned)</a>
 <a href="#run-a-node">Run a node</a>
 <a href="#further-reading">Further reading</a>
     </aside>
 
     <article class="prose">
 <h2 id="how-it-works">How it works</h2>
-<p>Relay is a <strong>single Go binary</strong>; every node runs the same code, and the only difference is whether a node is public. Every site lives at a <strong>path</strong> under one host — one hostname, one TLS certificate, no wildcards:</p>
+<p>Relay is a <strong>single Go binary</strong>. Every node runs the same code. Sites live at <strong>paths</strong> under one host, so a node needs one hostname and one TLS certificate, with no wildcards and no per-site certs:</p>
 <pre class="ascii">https://relay.example.org/&lt;node&gt;/&lt;site&gt;/</pre>
-<p>A machine behind NAT cannot accept inbound connections, so a private node opens one <strong>outbound WebSocket</strong> to a public friend and registers its path prefixes. The public node routes each request by its first path segment down the matching tunnel, and the answer travels back up the same wire. No port forwarding, no static IP, no dynamic DNS.</p>
+<p>Uploading a site is one <code>POST</code> of a <code>tar</code> archive, authenticated with a per-user <strong>deploy key</strong>. The upload is atomic: the new version replaces the old one all at once, and the previous 10 are kept for rollback. Everything a node knows (sites, versions, keys, the admin token) lives in <strong>one data directory</strong>. Back it up and you've backed up the node.</p>
+
+<h2 id="what-s-built">What's built</h2>
+<table><thead><tr><th>Piece</th><th>Choice</th><th>Status</th></tr></thead><tbody><tr><td>Static hosting</td><td>paths under one host</td><td><strong>live</strong></td></tr><tr><td>Uploads</td><td><code>tar</code> + per-user deploy key</td><td><strong>live</strong></td></tr><tr><td>Versions</td><td>atomic deploys, last 10 kept, rollback</td><td><strong>live</strong></td></tr><tr><td>Operator console</td><td>issue, reveal, revoke, rotate keys; sites by user</td><td><strong>live</strong></td></tr><tr><td>HTTPS</td><td>native (<code>--tls-cert</code>/<code>--tls-key</code>) or a reverse proxy</td><td><strong>live</strong></td></tr><tr><td>Reachability</td><td>outbound WebSocket tunnel to a public friend</td><td>planned</td></tr><tr><td>Ownership</td><td>Ed25519 key as the deed to an address; signed deploys</td><td>planned</td></tr><tr><td>Site data</td><td>one SQLite file per site, opt-in login and stats</td><td>planned</td></tr></tbody></table>
+
+<h2 id="reachability-planned">Reachability (planned)</h2>
+<p>A machine behind NAT can't accept inbound connections. So a private node will dial out: it opens one <strong>outbound WebSocket</strong> to a public friend and registers its path prefix. The public node routes each request by its first path segment down the matching tunnel. No port forwarding, no static IP, no dynamic DNS.</p>
 <div class="mini" role="img" aria-label="A browser asks for a path on one host; the public node routes the request down the matching outbound WebSocket to a friend node behind NAT.">
   <div class="flow">
     <div class="net-row"><div class="node"><b>Visitors</b>a browser asks for<small>relay.cloudpunk.org/raspberry/docs/</small></div></div>
@@ -75,40 +81,31 @@
     </div>
   </div>
 </div>
-<p>All node state — uploaded sites, the deploy-key store, the admin token — lives in <strong>one data directory</strong> you own. Mount it on a volume; without it, the node forgets everything.</p>
-<p><strong>Built today:</strong> static hosting, per-user deploy keys, atomic deploys with rollback, the operator console, native HTTPS. <strong>On the road:</strong> NAT tunnels, one SQLite file per site, opt-in login and stats, sandboxed functions. The full design review is in <a href="./REVIEW.md"><code>REVIEW.md</code></a>.</p>
-
-<h2 id="the-stack">The stack</h2>
-<table><thead><tr><th>Concern</th><th>Choice</th><th>Why</th></tr></thead><tbody><tr><td>Language</td><td><strong>Go</strong></td><td>one static binary, cheap concurrency</td></tr><tr><td>Addressing</td><td><strong>paths under one host</strong></td><td>one cert, identical code public and private</td></tr><tr><td>Tunnels</td><td><strong>outbound WebSocket</strong> (yamux)</td><td>no inbound ports on private nodes</td></tr><tr><td>Storage</td><td><strong>files now, SQLite per site next</strong></td><td>isolation, export, migration as a single file</td></tr><tr><td>Keys</td><td><strong>Ed25519</strong></td><td>signed challenges; the secret never travels</td></tr></tbody></table>
-
-<h2 id="deploy-a-site">Deploy a site</h2>
-<p>Uploading is one POST of a <code>tar</code> archive with a deploy key — the flow is on the <a href="./index.html#deploy">landing page</a>, in the <a href="./users-guide.md">user's guide</a>, and hosted on every node at <code>/_relay/deploy.html</code>.</p>
 
 <h2 id="run-a-node">Run a node</h2>
-<p>Relay is one binary, so it runs anywhere a process or a container runs. <strong>Public nodes</strong> need a stable address and ports 80/443; <strong>private nodes</strong> are outbound-only and need no inbound ports at all. On first start the node writes its <strong>admin token</strong> to <code>&lt;data&gt;/admin-token</code> (and prints it once to the log) — it unlocks the operator console at <code>/_relay/admin.html</code>.</p>
+<p>Every node needs a <strong>name</strong>, the first path segment of its sites (<code>--name mynode</code> serves <code>/mynode/&lt;site&gt;/</code>). On first start the node writes an <strong>admin token</strong> to <code>&lt;data&gt;/admin-token</code> and prints it once to the log. Use it to sign in to the operator console at <code>/_relay/admin.html</code> and issue deploy keys.</p>
 <h4 id="binary">Binary</h4>
-<p>Install the prebuilt binary (Linux or macOS, amd64/arm64):</p>
+<p>Linux or macOS, amd64 or arm64:</p>
 <pre class="ascii">curl --proto '=https' --tlsv1.2 -sSfL \
-  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh</pre>
-<p>Then run a node:</p>
-<pre class="ascii">relay node --data /var/lib/relay --listen :8080</pre>
+  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+
+relay node --name mynode --data /var/lib/relay --listen :8080</pre>
 <h4 id="docker">Docker</h4>
-<p>The image is published to GitHub Packages, runs unprivileged, and keeps all state under <code>/data</code>:</p>
+<p>The image runs unprivileged and keeps all state in <code>/data</code>. Flags after the image name are passed to <code>relay node</code>:</p>
 <pre class="ascii">docker run -d --name relay --restart unless-stopped \
-  -p 8080:8080 \
-  -v relay-data:/data \
-  ghcr.io/nemonoboru/relay:latest</pre>
+  -p 8080:8080 -v relay-data:/data \
+  ghcr.io/nemonoboru/relay:latest --name mynode</pre>
+<p>Read the admin token with <code>docker logs relay</code>.</p>
 <h4 id="kubernetes">Kubernetes</h4>
-<p>One command installs a <code>relay</code> namespace, a one-replica StatefulSet with a persistent volume, and a Service:</p>
-<pre class="ascii">kubectl apply -f https://raw.githubusercontent.com/nemoNoboru/relay/main/deploy/kubernetes.yaml</pre>
-<p>The node serves HTTP on <code>:8080</code> with probes on <code>/healthz</code>. Expose it with TLS at the cluster edge by filling in your hostname in <a href="./deploy/ingress.yaml"><code>deploy/ingress.yaml</code></a> and applying it. Because Relay uses path-based addressing, the Ingress needs no wildcard host and no per-site certificate. Read the admin token with either of:</p>
-<pre class="ascii">kubectl logs -n relay relay-0
+<p>One command installs a <code>relay</code> namespace, a single-replica StatefulSet with a persistent volume, and a Service. The node is named <code>relay</code>, so sites live at <code>/relay/&lt;site&gt;/</code>:</p>
+<pre class="ascii">kubectl apply -f https://raw.githubusercontent.com/nemoNoboru/relay/main/deploy/kubernetes.yaml
 kubectl exec -n relay relay-0 -- cat /data/admin-token</pre>
+<p>The node serves HTTP on <code>:8080</code> with probes on <code>/healthz</code>. For TLS, put your hostname in <a href="https://github.com/nemoNoboru/relay/blob/main/deploy/ingress.yaml"><code>deploy/ingress.yaml</code></a> and apply it. Path-based addressing means one host and one certificate cover every site.</p>
 <h4 id="https">HTTPS</h4>
-<p>Pass <code>--tls-cert</code> and <code>--tls-key</code> to serve HTTPS directly, or terminate TLS at a reverse proxy (Caddy, Nginx) in front of the node.</p>
+<p>Pass <code>--tls-cert</code> and <code>--tls-key</code> to serve HTTPS directly, or put Caddy or Nginx in front. Testing with a self-signed certificate? Add <code>--insecure</code> to <code>relay deploy</code> and <code>relay rollback</code>.</p>
 
 <h2 id="further-reading">Further reading</h2>
-<ul><li><a href="./REVIEW.md"><code>REVIEW.md</code></a> — the consolidated design review: decisions, open questions, what is not finished</li><li><a href="./docs/api-contract.md"><code>docs/api-contract.md</code></a> and <a href="./docs/architecture.md"><code>docs/architecture.md</code></a> — the wire contract and the backend design</li><li><a href="./docs/keys.md"><code>docs/keys.md</code></a> — ownership keys: the deed to an address</li></ul>
+<ul><li><a href="https://github.com/nemoNoboru/relay">Source on GitHub</a>: code, issues, and the <a href="https://github.com/nemoNoboru/relay/blob/main/users-guide.md">user's guide</a></li><li><a href="https://github.com/nemoNoboru/relay/blob/main/REVIEW.md"><code>REVIEW.md</code></a>: the design review, with locked decisions and open questions</li><li><a href="https://github.com/nemoNoboru/relay/blob/main/docs/api-contract.md">API contract</a> and <a href="https://github.com/nemoNoboru/relay/blob/main/docs/architecture.md">backend architecture</a>: the wire protocol and how the node is built</li><li><a href="https://github.com/nemoNoboru/relay/blob/main/docs/keys.md">Ownership keys</a>: how a key becomes the deed to an address</li></ul>
     </article>
 
   </div>
@@ -120,7 +117,7 @@ kubectl exec -n relay relay-0 -- cat /data/admin-token</pre>
     <p class="big">The web was built by people, <em>for people.</em> Let's take it back.</p>
     <p class="fine">
       Relay — an open, federated hosting network<br>
-      <a href="./index.html">Home</a> · <a href="./manifesto.html">Manifesto</a> · <a href="./technicals.html">Technicals</a>
+      <a href="./index.html">Home</a> · <a href="./manifesto.html">Manifesto</a> · <a href="https://github.com/nemoNoboru/relay">Source</a>
     </p>
   </div>
 </footer>

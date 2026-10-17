@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Relay Manifesto — The Last Mile for Independent Websites</title>
-<meta name="description" content="The Relay vision: a simple way to put what you make online, and keep it yours. Static sites, a database, reachability, opt-in login — open and federated.">
+<meta name="description" content="Why Relay exists: a simple way to put what you make online and keep it yours, on an open, federated network with no landlords.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
       <a href="./index.html#deploy">Deploy</a>
       <a href="./index.html#node">Run a node</a>
       <a href="./technicals.html">Technicals</a>
-      <a href="./_relay/admin.html">Admin</a>
+      <a href="./_relay/admin.html">Console</a>
     </nav>
     <span class="stamp">The Manifesto</span>
   </div>
@@ -32,7 +32,7 @@
     <div class="wrap">
       <span class="kicker">The Last Mile for Independent Websites</span>
       <h1>The<br><em>Manifesto</em></h1>
-      <p class="lead">Relay is not a language and not a platform — it is a simple way to put what you make online, and keep it yours.</p>
+      <p class="lead">Relay isn't a language or a platform. It's a simple way to put what you make online, and keep it yours.</p>
       <div class="actions">
         <a class="btn solid" href="./index.html#deploy">Deploy a site</a>
         <a class="btn" href="./index.html#node">Run a node</a>
@@ -54,34 +54,34 @@
 
     <article class="prose">
 <h2 id="the-problem">The problem</h2>
-<p>Making a website is easy now. Putting one online is not. You can have a finished site and still have nothing — a folder is not a website, it is a draft. Until someone can type an address and see it, you have made a very nice thing for yourself.</p>
-<p>The web has landlords now. What began as a decentralized commons became a handful of walled gardens on three clouds, and the deal is the ancient one: you make the thing, they keep it, and you pay to reach it. And even a server at home is invisible — behind a router, on a dynamic IP, unreachable by the world.</p>
+<p>Making a website has never been easier. Putting one online still is hard. A finished site that sits in a folder isn't a website yet, just a draft, and it stays that way until someone can type an address and see it.</p>
+<p>The web has landlords now. What began as a commons is now a handful of platforms running on three clouds, and the deal hasn't changed: you make the thing, they keep it, and you pay to reach it. A server at home doesn't escape that. It sits behind a router on a dynamic IP, out of reach of the world.</p>
 <p class="pq">Making things got easy.<br>Shipping them never did.</p>
 
 <h2 id="what-relay-is">What Relay is</h2>
-<p>Relay is not a language, a framework, or a platform. It is the last mile: it takes what you built and gives it a home on the open web, without asking a platform for permission and without handing over the keys. Build by hand, with a framework, or with an assistant — we take no side in how you got there.</p>
-<ul><li><strong>A home</strong> — point Relay at a folder and it gets a real address. No build step, no server to babysit, no account.</li><li><strong>A way in</strong> — the computer on your desk can serve the world from behind a home router. No port forwarding, no static IP.</li><li><strong>A memory</strong> — your site can keep what people give it, in a file you own and can carry anywhere.</li><li><strong>People and numbers, if you want them</strong> — opt-in login and stats, with no central account and no tracker.</li><li><strong>Just the wire</strong> — already run your own server? Relay fronts it and makes it reachable, with the name and the key still yours.</li></ul>
+<p>Relay is the last mile. It isn't a language, a framework, or a platform. It gives what you built a home on the open web, without asking anyone's permission and without handing over the keys. Write it by hand, use a framework, or describe it to an assistant: Relay doesn't care how it was made.</p>
+<ul><li><strong>A home.</strong> Upload a folder and it has a real address. No build step, no server to babysit, no account.</li><li><strong>A way in.</strong> The computer on your desk serves the world from behind a home router. No port forwarding, no static IP.</li><li><strong>A memory.</strong> Your site keeps what people give it, in a file you own and can carry anywhere.</li><li><strong>People and numbers, if you want them.</strong> Opt-in logins and stats, with no central account and no tracker.</li><li><strong>Just the wire.</strong> Already run a server? Relay makes it reachable, and the name stays yours.</li></ul>
+<p>Hosting is live today; the rest is the roadmap. The <a href="./technicals.html">technicals</a> say exactly which is which.</p>
 
 <h2 id="the-network">The network</h2>
-<p>Not three clouds: a constellation of independently run Relay nodes — the modern descendant of the BBS sysop and the tilde community. Every node speaks the same small protocol, so a site can move between servers, and no single node can hold your digital presence hostage.</p>
+<p>Instead of three clouds, Relay is a constellation of nodes, each run by a person or a community, in the spirit of the BBS sysop and the tilde server. Every node speaks the same small protocol, so a site can move from one to another and no node can hold it hostage.</p>
 
 <h2 id="rules-in-the-open">Rules in the open</h2>
-<p>Who decides what gets published? Not an unaccountable Terms of Service: a <strong>published rule set, checked by small local models</strong>, with a human review path for anything borderline. If you dislike a server's rules, read them, argue with them, or fork the server.</p>
+<p>Who decides what gets published? Every server publishes its rules in plain language. Small local models check new sites against them, and a human reviews anything borderline. Nothing is silently erased. If you don't like a server's rules, you can argue with them, or fork the server.</p>
 
 <h2 id="core-principles">Core Principles</h2>
 <div class="principles">
-<div><b>You hold the key.</b> An address belongs to whoever holds its key. Ownership is a file you keep, not a permission somebody grants.</div>
-<div><b>No central accounts.</b> Login is opt-in and lives in each site's own database. There is no Relay account, ever. Your people are yours.</div>
-<div><b>Your data belongs to you.</b> Exportable and portable. Leaving a server never means losing your users' information. Data that moves is data that lives.</div>
-<div><b>One-step deploy.</b> Shipping is not a separate discipline. It is one guided action, available to anyone.</div>
-<div><b>Small, legible scope.</b> A few primitives, and another only when it clearly earns its place. Every feature is a tax on the people who didn't ask for it.</div>
-<div><b>Community owned.</b> Open source and federated. Communities run their own nodes, connect to others, or stay fully independent.</div>
+<div><b>You hold the key.</b> An address belongs to whoever holds its key. Ownership is a file you keep, not a permission someone grants.</div>
+<div><b>No central accounts.</b> There is no Relay account, ever. Login is opt-in and lives in each site's own data. Your people are yours.</div>
+<div><b>Your data leaves with you.</b> Everything is exportable. Leaving a server never means losing your site or your users.</div>
+<div><b>One-step deploy.</b> Shipping isn't a separate discipline. It's one action, available to anyone.</div>
+<div><b>Small on purpose.</b> A few primitives, and a new one only when it earns its place. Every feature is a tax on the people who didn't ask for it.</div>
+<div><b>Community owned.</b> Open source and federated. Run a node, join others, or stay fully independent.</div>
 </div>
 
 <h2 id="take-it-back">Take it back</h2>
-<p>The centralization of the web decides who gets heard — but none of it is destiny. Every site rescued from a folder on a laptop is proof that this was always possible, and every person who runs a node is a node in a web that serves people, not profit.</p>
-<div class="manback"><p>Read it, fork it, run a node. The web belongs to the people who build it.</p><div class="actions"><a class="btn solid" href="./index.html#deploy">Deploy a site</a><a class="btn" href="./index.html#node">Run a node</a></div></div>
-<div class="manfoot"><p>Todo: work on a future for technology</p>
+<p>Who owns the web decides who gets heard. That isn't destiny. Every site rescued from a laptop folder proves another web was always possible, and every person who runs a node builds one that serves people, not profit.</p>
+<div class="manback"><p>Read it, fork it, run a node. The web belongs to the people who build it.</p><div class="actions"><a class="btn solid" href="./index.html#deploy">Deploy a site</a><a class="btn" href="./index.html#node">Run a node</a></div></div><div class="manfoot">
 <p class="last"><em>The web was built by people, for people. Let's take it back.</em></p></div>
     </article>
 

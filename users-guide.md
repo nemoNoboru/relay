@@ -1,59 +1,52 @@
 # Relay — User's Guide
 
-Host a static site on a Relay node in three steps: run the node, issue a
-deploy key, upload a tar archive. Sites go live at `{origin}/{node}/{site}/`.
+Put a static site online with Relay: run a node, give someone a deploy key,
+and they upload a folder. Sites are served at `{origin}/{node}/{site}/`.
 
-| Piece | URL / value |
-|---|---|
-| Operator console | `{origin}/_relay/admin.html` |
-| Upload endpoint | `POST {origin}/_relay/v1/sites/{site}/deploy` |
-| Hosted upload docs | `{origin}/_relay/deploy.html` |
+Relay uses **two credentials**. Don't mix them up:
 
-There are **two credentials**, and they are not interchangeable:
-
-| Credential | Held by | Unlocks |
+| Credential | Who holds it | What it does |
 |---|---|---|
-| **Admin token** | the operator | the console: issue, revoke, rotate deploy keys |
-| **Deploy key** | each uploader | uploading a site (bearer token) |
+| **Admin token** | the node's operator | signs in to the console, issues and revokes deploy keys, rolls sites back |
+| **Deploy key** | each person who uploads | uploads sites |
 
----
-
-## 1. Run the node (operator)
-
-**Docker:**
+## 1. Run a node (operator)
 
 ```sh
+# Docker. Flags after the image name go to `relay node`.
 docker run -d --name relay -p 8080:8080 -v relay-data:/data \
-  ghcr.io/nemonoboru/relay:latest
+  ghcr.io/nemonoboru/relay:latest --name mynode
+
+# or the binary
+relay node --name mynode --data /var/lib/relay --listen :8080
 ```
 
-**Binary:** `relay node --name mynode --data /var/lib/relay --listen :8080`
-
-On first start the node writes the **admin token** to `<data>/admin-token`
-and prints it once to the log (`docker logs relay`). Set your own with
-`--admin-token`. For HTTPS, pass `--tls-cert`/`--tls-key` or put a reverse
-proxy in front. More options: [`docs/technicals.md`](docs/technicals.md).
+`--name` is the first path segment of every site on this node. On first
+start the node writes the **admin token** to `<data>/admin-token` and prints
+it once to the log (`docker logs relay`). To choose your own, pass
+`--admin-token`. For HTTPS, pass `--tls-cert` and `--tls-key`, or run a
+reverse proxy in front. Kubernetes and the other options are in
+[`docs/technicals.md`](docs/technicals.md).
 
 ## 2. Issue a deploy key (operator)
 
 1. Open `{origin}/_relay/admin.html` and sign in with the admin token.
-2. Enter the user's name, press **Create key**, and **copy the token**
-   (the console can reveal and copy it again later).
-3. Send the user, over a secure channel (Signal, a password manager — never
-   email or a commit):
-   - the **origin** — e.g. `https://relay.example.org`
-   - their **deploy key token**
+2. Type the person's name (letters, digits, `.`, `_`, `-`) and press **Create key**.
+3. Send them two things over a secure channel, like Signal or a password manager (never email or a commit):
+   - the **origin**, e.g. `https://relay.example.org`
+   - their **deploy key** token
 
-**Revoke** cuts future uploads instantly (deployed sites stay live);
-**Rotate** revokes and mints a fresh token for the same user.
+The console can reveal and copy a key again later. **Revoke** stops a key
+from uploading right away, and sites already deployed stay live. **Rotate**
+replaces a key with a fresh one for the same person.
 
-## 3. Upload a site (user)
+## 3. Upload a site
 
-You need the origin, a deploy key token, and a site name (lowercase letters,
-digits, interior hyphens, 1–63 chars). Keep asset paths relative.
+Pick a site name: lowercase letters, digits, and hyphens in the middle, up to
+63 characters. Keep links and asset paths relative.
 
 ```sh
-tar -C ./dist -cf site.tar .          # archive the *contents* of the folder
+tar -C ./dist -cf site.tar .        # archive what's inside the folder
 
 curl -X POST \
   -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
@@ -66,45 +59,58 @@ curl -X POST \
 { "site": "mysite", "files": 3, "bytes": 5120, "url": "/mynode/mysite/" }
 ```
 
-The site is live immediately at `{origin}{url}`. With the `relay` binary the
-same upload is `relay deploy --origin … --site mysite ./dist`.
-
-## 4. Roll back
-
-Deploys keep the last 10 versions; the live site is snapshotted first, so
-nothing is lost. Use the console, or:
+The site is live at `{origin}{url}` as soon as the upload finishes. If you
+have the `relay` binary, the same upload takes one line (the token comes from
+`$RELAY_DEPLOY_TOKEN`):
 
 ```sh
-RELAY_ADMIN_TOKEN=… relay rollback --origin … --site mysite [--to <version-id>]
+relay deploy --origin https://relay.example.org --site mysite ./dist
 ```
 
-## Archive rules (the node rejects anything else)
+## 4. Roll back (operator)
 
-- Relative paths only — no `..`, no absolute paths, no symlinks or hard links.
-- Regular files and directories only; at most 65536 files and 256 MiB.
-- Every upload **atomically replaces the whole site** — send everything, every time.
+Every deploy keeps the last 10 versions. Rolling back saves the current live
+version first, so you can always go forward again.
+
+```sh
+export RELAY_ADMIN_TOKEN=…
+relay rollback --origin https://relay.example.org --site mysite            # previous version
+relay rollback --origin https://relay.example.org --site mysite --to <id>  # a specific version
+```
+
+To list a site's version ids, send
+`GET /_relay/v1/admin/sites/mysite/versions` with the admin token.
+
+## Archive rules
+
+The node rejects any upload that breaks these:
+
+- Relative paths only. No `..`, no absolute paths, no symlinks or hard links.
+- Regular files and directories only, up to 65,536 files and 256 MiB.
+- Every upload **replaces the whole site**, so include every file each time.
 
 ## Errors
 
+Failed uploads return `{ "error": { "code", "message" } }`. Check the `code`
+before retrying.
+
 | `code` | HTTP | Meaning |
 |---|---|---|
-| `bad_token` | 401 | Missing, wrong, or revoked token. |
-| `bad_name` | 400 | Invalid site name. |
-| `bad_archive` | 400 | Not a tar, or an entry breaks the rules. |
-| `too_large` | 413 | Archive over the size cap. |
+| `bad_token` | 401 | The token is missing, wrong, or revoked. |
+| `bad_name` | 400 | The site name isn't valid. |
+| `bad_archive` | 400 | The body isn't a tar archive, or an entry breaks the archive rules. |
+| `too_large` | 413 | The archive is over the size limit. |
 
-Failures return `{ "error": { "code", "message" } }` — read the `code`, don't
-retry blindly.
+## Keep credentials safe
 
-## Safety
+- The **admin token** controls the whole node. Keep it out of shell
+  history, logs, and chat. If it leaks, restart the node with a new
+  `--admin-token`.
+- A **deploy key** is also a secret. In this early version, any deploy key
+  can overwrite *any* site on the node, so only give keys to people you
+  trust. Per-site ownership is planned.
 
-- The **admin token** is the master key to the node. Keep it out of history,
-  logs, and chat; if it leaks, restart with a new `--admin-token`.
-- A **deploy key** is a secret too — hand it out over a secure channel and
-  rotate it if it leaks. In this MVP a deploy key can upload to *any* site on
-  the node; per-site ownership arrives with the control API.
+## Deploy with an agent
 
-## Agents
-
-Point the agent at the hosted skill and hand it the origin and token:
+Give the agent the origin, a deploy key, and this skill:
 `{origin}/_relay/skills/relay-deploy/SKILL.md`.
