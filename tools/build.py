@@ -34,10 +34,10 @@ PAGES = [
 
 MINI_DIAGRAM = """<div class="mini" role="img" aria-label="A browser asks for a path on one host; the public node routes the request down the matching outbound WebSocket to a friend node behind NAT.">
   <div class="flow">
-    <div class="net-row"><div class="node"><b>Visitors</b>a browser asks for<small>relay.cloudpunk.org/raspberry/docs/</small></div></div>
+    <div class="net-row"><div class="node"><b>Visitors</b>a browser asks for<small>relay.example.org/raspberry/docs/</small></div></div>
     <div class="flow-link"><span class="flow-label">HTTPS request</span><span class="wire"></span></div>
     <div class="net-row">
-      <div class="node pub"><b>Public node</b>relay.cloudpunk.org
+      <div class="node pub"><b>Public node</b>relay.example.org
         <span class="friend-list">
           <span><em>/raspberry/</em> &rarr; its outbound WebSocket</span>
           <span><em>/bookshelf/</em> &rarr; its outbound WebSocket</span>
