@@ -17,10 +17,10 @@
   <div class="wrap">
     <a class="brand" href="./index.html"><span class="mark">R</span> RELAY</a>
     <nav class="main">
-      <a href="./manifesto.html">Manifesto</a>
-      <a href="./technicals.html">Technicals</a>
-      <a href="./index.html#network">Network</a>
       <a href="./index.html#deploy">Deploy</a>
+      <a href="./index.html#node">Run a node</a>
+      <a href="./technicals.html">Technicals</a>
+      <a href="./_relay/admin.html">Admin</a>
     </nav>
     <span class="stamp">The Manifesto</span>
   </div>
@@ -34,8 +34,8 @@
       <h1>The<br><em>Manifesto</em></h1>
       <p class="lead">Relay is not a language and not a platform — it is a simple way to put what you make online, and keep it yours.</p>
       <div class="actions">
-        <a class="btn solid" href="./index.html#deploy">Host a site</a>
-        <a class="btn" href="./index.html#network">Run a node</a>
+        <a class="btn solid" href="./index.html#deploy">Deploy a site</a>
+        <a class="btn" href="./index.html#node">Run a node</a>
       </div>
     </div>
   </section>
@@ -44,105 +44,43 @@
 
     <aside class="toc">
 <h4>Contents</h4>
-<a href="#the-promise-finally-kept">The Promise, Finally Kept</a>
-<a href="#the-problem">The Problem</a>
-<a href="#what-relay-is-and-what-it-isn-t">What Relay Is — and What It Isn't</a>
-<a href="#what-relay-gives-you">What Relay Gives You</a>
-<a href="#the-revolutionary-server-network">The Revolutionary Server Network</a>
-<a href="#rules-without-gatekeepers-classifier-governance">Rules Without Gatekeepers: Classifier Governance</a>
+<a href="#the-problem">The problem</a>
+<a href="#what-relay-is">What Relay is</a>
+<a href="#the-network">The network</a>
+<a href="#rules-in-the-open">Rules in the open</a>
 <a href="#core-principles">Core Principles</a>
-<a href="#who-this-is-for">Who This Is For</a>
-<a href="#why-this-matters">Why This Matters</a>
-<a href="#the-future-we-re-building">The Future We're Building</a>
-<a href="#a-call-to-action">A Call to Action</a>
+<a href="#take-it-back">Take it back</a>
     </aside>
 
     <article class="prose">
-<h2 id="the-promise-finally-kept">The Promise, Finally Kept</h2>
-<p>For seventy years we were told a story about computers: that you would talk to the machine in human language, that it would adapt to you, and that with your guidance it would help you solve your own problems — in English, on your terms. That was the promise. For most of computing history it stayed a promise.</p>
-<p>Today it's kept, and we're glad. Write your site by hand, or let a framework do the heavy lifting, or describe it to an assistant and watch it appear — we take no side in how you got there. The hard part is no longer making the thing.</p>
-<p>The hard part is putting it somewhere.</p>
-<p>Because here's the trick nobody mentions: you can have a finished website and still have nothing. A folder is not a website. It's a draft. Until someone can type an address and see it, you've made a very nice thing for yourself.</p>
+<h2 id="the-problem">The problem</h2>
+<p>Making a website is easy now. Putting one online is not. You can have a finished site and still have nothing — a folder is not a website, it is a draft. Until someone can type an address and see it, you have made a very nice thing for yourself.</p>
+<p>The web has landlords now. What began as a decentralized commons became a handful of walled gardens on three clouds, and the deal is the ancient one: you make the thing, they keep it, and you pay to reach it. And even a server at home is invisible — behind a router, on a dynamic IP, unreachable by the world.</p>
+<p class="pq">Making things got easy.<br>Shipping them never did.</p>
 
-<h2 id="the-problem">The Problem</h2>
-<p>The web has been captured. What started as a decentralized network for sharing human knowledge has become a handful of walled gardens controlled by mega-corporations. Today's internet is really just 5 websites owned by 5 companies, all hosted on 3 cloud providers.</p>
-<p>For decades, building a real website was a job for funded companies and technical elites. Everyone else got a page on somebody's platform and liked it. Millions of creators, communities, and independent voices were pushed to the sidelines, forced to build their digital presence on land they don't own.</p>
-<p>The web has landlords now. The business is simple and ancient: you make the thing, they keep it, and you pay to reach it. The plague of landlords infests the earth; it has learned to run on servers.</p>
-<p class="pq">Making a website is easy now.<br>Putting one online is not.</p>
-<p>Let's say you made something. An afternoon's work, maybe less. And now it sits in a folder, seen by no one. It is real, and it is loved, and it is effectively <strong>undeployable by a normal person</strong>. Close the laptop and it's gone from the world.</p>
-<p>And even if you serve it from home, nobody can reach it. You can run a perfectly good web server in your living room and the world still cannot knock on the door.</p>
-<p>So the thing you made is free, and the place to put it is not. Building costs nothing. <em>Shipping</em>, <em>hosting</em>, and <em>being reachable</em> still belong to the people who charge rent.</p>
+<h2 id="what-relay-is">What Relay is</h2>
+<p>Relay is not a language, a framework, or a platform. It is the last mile: it takes what you built and gives it a home on the open web, without asking a platform for permission and without handing over the keys. Build by hand, with a framework, or with an assistant — we take no side in how you got there.</p>
+<ul><li><strong>A home</strong> — point Relay at a folder and it gets a real address. No build step, no server to babysit, no account.</li><li><strong>A way in</strong> — the computer on your desk can serve the world from behind a home router. No port forwarding, no static IP.</li><li><strong>A memory</strong> — your site can keep what people give it, in a file you own and can carry anywhere.</li><li><strong>People and numbers, if you want them</strong> — opt-in login and stats, with no central account and no tracker.</li><li><strong>Just the wire</strong> — already run your own server? Relay fronts it and makes it reachable, with the name and the key still yours.</li></ul>
 
-<h2 id="what-relay-is-and-what-it-isn-t">What Relay Is — and What It Isn't</h2>
-<p>Relay is not a programming language. It is not a framework, a runtime, or a syntax to learn. That question is settled: people can already make things, by hand or with whatever tools they choose. Writing another language now would be solving a problem that no longer exists.</p>
-<p>Relay is the last mile. It takes what you built and gives it a home on the open web — without asking a platform for permission, and without handing over the keys.</p>
+<h2 id="the-network">The network</h2>
+<p>Not three clouds: a constellation of independently run Relay nodes — the modern descendant of the BBS sysop and the tilde community. Every node speaks the same small protocol, so a site can move between servers, and no single node can hold your digital presence hostage.</p>
 
-<h2 id="what-relay-gives-you">What Relay Gives You</h2>
-<p><strong>A home for what you make.</strong> Point Relay at a folder and it becomes a real website, with a real address. No build step, no server to babysit, no account to open.</p>
-<p><strong>A memory for your site.</strong> A guestbook, a catalog, a set of orders — your site can keep what people give it, in a form you own and can carry anywhere.</p>
-<p><strong>A way in, from anywhere.</strong> The computer on your desk can serve the world, even behind a home router. You open one door outward; the web comes in through it.</p>
-<p><strong>Your people and your numbers, if you want them.</strong> Logins and visitor stats are there when you need them, off when you don't. No central account, no tracker, nothing that follows anyone.</p>
-<p>And you don't have to move anything to use it. If you already run your own server — your own database, your own login, your own stack — Relay can be <strong>just the wire</strong>. Point it at the app you already have and that app becomes reachable, with the name and the key still yours.</p>
-<p>Everything else — the design, the logic, the app itself — you build however you like, with whatever tools you like. Relay gives your work a home and a wire. The protocol asks nothing of your politics. This document has opinions; the wire does not.</p>
-
-<h2 id="the-revolutionary-server-network">The Revolutionary Server Network</h2>
-<p>We want a few hundred revolutionaries to run the places where people host their websites. Not three clouds. Not one company's edge network. A distributed constellation of independently maintained Relay servers, each run by a person or community who decided the web should belong to the people on it.</p>
-<p>This is the modern descendant of the BBS sysop and the tilde community: individuals who keep a machine running and invite others in. A revolutionary server is not a business. It is a public utility kept alive by someone who cares. It gives away its disk, its bandwidth, its idle cycles. Nothing remains for it, and so it continues pure.</p>
-<p>Because every node speaks the same small protocol, a site can move between servers. Outgrow an open server and migrate. Outlive the person running one and your site finds a new home. No single node can hold your digital presence hostage.</p>
-
-<h2 id="rules-without-gatekeepers-classifier-governance">Rules Without Gatekeepers: Classifier Governance</h2>
-<p>Open hosting raises an obvious question: who decides what gets published? The corporate answer is an unaccountable Terms of Service and a moderation queue. Our answer is a <strong>published rule set, checked by small local models</strong>.</p>
-<p>Each server publishes its rules in the open, in plain language. Small classifiers — running on the server itself, not in a distant cloud — check a new site against those rules. A site that follows them goes live on its own. A site that doesn't waits for a human, and is never silently erased.</p>
-<p>If you disagree with a server's rules, read them, argue about them, or start your own server with a different set. The rules are visible, the classifiers are open, and governance is a conversation between neighbours instead of an edict from a platform.</p>
+<h2 id="rules-in-the-open">Rules in the open</h2>
+<p>Who decides what gets published? Not an unaccountable Terms of Service: a <strong>published rule set, checked by small local models</strong>, with a human review path for anything borderline. If you dislike a server's rules, read them, argue with them, or fork the server.</p>
 
 <h2 id="core-principles">Core Principles</h2>
 <div class="principles">
-<div><b>We Host What You Build.</b> Relay takes no position on how a site is made — by hand, with a framework, or with an assistant. We provide the home and the wire, not a gate that only one kind of creator may pass.</div>
-<div><b>No Tool Is Required.</b> Relay must never require an AI assistant, a framework, or any particular workflow. A creator who writes raw HTML in a text editor is as welcome as one who describes a site and lets a tool draft it. The commons belongs to everyone, including the people who want nothing to do with the tools we happen to use.</div>
-<div><b>Small, Legible Scope.</b> We start with a few primitives and add another only when it clearly earns its place. Login and stats are opt-in, and off by default. Every feature is a tax on the people who didn't ask for it.</div>
-<div><b>One-Step Deploy.</b> Shipping is not a separate discipline. It is one guided action, available to anyone, whether they build by hand or by description.</div>
-<div><b>Your Web in Your Computer.</b> You can serve your site from the machine on your desk, and people across the globe can reach it, because a public friend relays the world in.</div>
-<div><b>Your Data Belongs to You.</b> Your site's data is exportable and portable. Leaving a server should never mean losing your users' information. Data that moves is data that lives.</div>
-<div><b>You Hold the Key.</b> An address belongs to whoever holds its key. A server can host your site, but it cannot seize your name or lock you out of it. Ownership is a file you keep, not a permission somebody grants.</div>
-<div><b>Community Owned.</b> The Relay network is open source and federated. Communities run their own nodes, connect to others, or stay fully independent. No single company controls the infrastructure.</div>
-<div><b>Rules in the Open.</b> What a server will and won't host is published, checked in the open, and forkable. No secret moderation, no terms that change while you sleep.</div>
-<div><b>No Central Accounts.</b> Login is opt-in and lives in each site's own database. There is no Relay account, no master user table, and nothing that can log every site's users out at once. Your people are yours.</div>
-<div><b>No Lock-In, Ever.</b> Uniform protocols and portable data mean any site can move to any server at any time.</div>
+<div><b>You hold the key.</b> An address belongs to whoever holds its key. Ownership is a file you keep, not a permission somebody grants.</div>
+<div><b>No central accounts.</b> Login is opt-in and lives in each site's own database. There is no Relay account, ever. Your people are yours.</div>
+<div><b>Your data belongs to you.</b> Exportable and portable. Leaving a server never means losing your users' information. Data that moves is data that lives.</div>
+<div><b>One-step deploy.</b> Shipping is not a separate discipline. It is one guided action, available to anyone.</div>
+<div><b>Small, legible scope.</b> A few primitives, and another only when it clearly earns its place. Every feature is a tax on the people who didn't ask for it.</div>
+<div><b>Community owned.</b> Open source and federated. Communities run their own nodes, connect to others, or stay fully independent.</div>
 </div>
 
-<h2 id="who-this-is-for">Who This Is For</h2>
-<div class="who">
-<div><b>Everyone with an orphaned site</b> the thousands whose finished work is trapped on a laptop, one step away from a real address</div>
-<div><b>Coders and crafters</b> people who want to build by hand, without a corporate platform's permission</div>
-<div><b>Home labs and self-hosters</b> people with a machine and no way to make it reachable</div>
-<div><b>Local libraries</b> who want to catalog books without paying subscription fees to corporate platforms</div>
-<div><b>Neighborhood groups</b> organizing events without surrendering data to social media giants</div>
-<div><b>Independent artists</b> selling work without platform fees eating their profits</div>
-<div><b>Small nonprofits</b> building tools without enterprise software budgets</div>
-<div><b>Student organizations</b> creating websites without IT department approval</div>
-<div><b>Hobby communities</b> sharing knowledge without algorithmic interference</div>
-<div><b>Local businesses</b> connecting with customers without advertising monopolies</div>
-<div><b>Activists and organizers</b> communicating without corporate censorship</div>
-</div>
-
-<h2 id="why-this-matters">Why This Matters</h2>
-<p>The centralization of the web isn't only a technical problem. It decides who gets heard. When only corporations can afford to build digital tools, only corporate voices get amplified. When all hosting flows through three cloud providers, we have three points of failure for human communication.</p>
-<p>And there is a newer failure underneath: a generation that can build anything and publish almost nothing, because the last two steps — hosting and reachability — still run through accounts, billing, and platforms they don't own. Making things got easy. Having somewhere to put them did not.</p>
-<p>We are watching the digital commons get fenced, piece by piece. The landlords of the web keep what we make in a savings account: safe, out of reach, and never truly lived. Platform fees take a cut of everything. Feeds decide what spreads. A change to the terms of service can end a community overnight. None of this is a conspiracy; it is just what happens when the ground under everyone's feet belongs to a few companies.</p>
-<p>But none of it is destiny. The same infrastructure that concentrated the web can distribute it again — if we build the right tools and if enough people run them.</p>
-
-<h2 id="the-future-we-re-building">The Future We're Building</h2>
-<p>Imagine a web where:</p>
-<ul class="future"><li>Anyone can build a site — by hand or with an assistant — and put it online the same afternoon</li><li>The computer on your desk is a legitimate place to host, reachable by everyone</li><li>A few hundred revolutionary servers replace the three clouds as the home of independent sites</li><li>Communities own their digital infrastructure instead of renting it from Big Tech</li><li>Your users' data lives in a file you can carry, not in a platform's backend</li><li>An address is yours because you hold its key, not because a platform allows you to keep it</li><li>Sites can offer real logins without an account anywhere else</li><li>Owners can see how their site is used without a tracker following anyone</li><li>The software you already run can get a public address without being rewritten</li><li>The rules of a place are public, checked in the open, and up for debate</li><li>Every server that shares its spare capacity makes the whole network a little harder to enclose</li><li>The internet serves human flourishing, not just corporate profit</li><li>Diversity of voices leads to diversity of solutions</li></ul>
-<p>This isn't nostalgia for the past — it's a vision for a better digital future. One where technology serves democracy instead of undermining it.</p>
-
-<h2 id="a-call-to-action">A Call to Action</h2>
-<p>The web belongs to all of us, but we have to keep it that way. Every community that builds a site and hosts it itself, instead of surrendering to platform capitalism, is a win for digital independence.</p>
-<p>Every person who runs a Relay node is a node in a web that serves people, not profit.</p>
-<p>Every site rescued from a folder on a laptop is proof that this was always possible.</p>
-<p>The future of the internet isn't decided yet. We can still choose decentralization over consolidation, community ownership over corporate control, human agency over algorithmic manipulation.</p>
-<p>But we need tools that make the choice practical, not just noble. Relay is one of them.</p>
-<div class="manback"><p>Read it, fork it, run a node. The web belongs to the people who build it.</p><div class="actions"><a class="btn solid" href="./index.html#deploy">Host a site</a><a class="btn" href="./index.html#network">Run a node</a></div></div>
+<h2 id="take-it-back">Take it back</h2>
+<p>The centralization of the web decides who gets heard — but none of it is destiny. Every site rescued from a folder on a laptop is proof that this was always possible, and every person who runs a node is a node in a web that serves people, not profit.</p>
+<div class="manback"><p>Read it, fork it, run a node. The web belongs to the people who build it.</p><div class="actions"><a class="btn solid" href="./index.html#deploy">Deploy a site</a><a class="btn" href="./index.html#node">Run a node</a></div></div>
 <div class="manfoot"><p>Todo: work on a future for technology</p>
 <p class="last"><em>The web was built by people, for people. Let's take it back.</em></p></div>
     </article>

@@ -2,49 +2,23 @@
 
 ## How It Works and How to Deploy It
 
-### How Relay Is Built
+### How it works
 
-Relay is a **single Go binary** that runs as either a public node or a private node — the same code, one flag. It leans on proven parts instead of inventing new ones.
-
-| Concern | Choice | Why |
-|---|---|---|
-| Language | **Go** | one static binary; Caddy is embeddable; goroutines for many tunnels |
-| TLS + HTTP | **Caddy** (embedded) | one certificate, HTTP/2+3, reverse proxy, static files |
-| Addressing | **paths under one host** | one cert, no wildcards, identical code public and private |
-| Storage | **SQLite**, one file per site | isolation, export, and migration as a single file |
-| Compute sandbox | **QuickJS** via Wazero | tiny, memory- and CPU-cappable, speaks JavaScript |
-| Keys | **Ed25519** | signed challenges; the secret never travels |
-| Federation | a published **registry list** | discovery without an authority |
-
-The reasoning behind each is in [`REVIEW.md`](./REVIEW.md).
-
-### Addressing
-
-Every site lives at a **path** under one host:
+Relay is a **single Go binary**; every node runs the same code, and the only difference is whether a node is public. Every site lives at a **path** under one host — one hostname, one TLS certificate, no wildcards:
 
 ```
-https://relay.cloudpunk.org/<node>/<site>/
+https://relay.example.org/<node>/<site>/
 ```
 
-- One hostname per public node, **one TLS certificate**, renewed automatically.
-- No wildcards, no per-site certificates, no on-demand TLS.
-- The router reads the first path segment, finds that node's tunnel, and forwards the rest.
-- Reserved paths: `/_relay/` for the control API; `_relay` inside a site for its runtime API.
-- The node root serves Relay's own landing page — `index.html`, `manifesto.html`, `technicals.html`, and `styles.css` — embedded in the binary.
-
-**The trade-off, stated plainly.** Sites share one browser origin, so the browser does not isolate them from each other. Relay compensates in code: path-scoped cookies (`SameSite=Strict`, `HttpOnly`, `Secure`), a per-site CSRF token on mutations, and a `Referer`-prefix check. Absolute-path assets are handled with a `<base>` prefix or the `X-Forwarded-Prefix` header. The full analysis is in [`REVIEW.md`](./REVIEW.md).
-
-### Reachability
-
-A machine behind NAT cannot accept inbound connections. Relay fixes this with one rule: **every node runs the same code; the only difference is whether the node is public.**
+A machine behind NAT cannot accept inbound connections, so a private node opens one **outbound WebSocket** to a public friend and registers its path prefixes. The public node routes each request by its first path segment down the matching tunnel, and the answer travels back up the same wire. No port forwarding, no static IP, no dynamic DNS.
 
 ```
         Visitors
-            │  relay.cloudpunk.org/raspberry/docs/
+            │  relay.example.org/raspberry/docs/
             ▼
    ┌──────────────────────────────┐
    │         Public node          │
-   │      relay.cloudpunk.org     │
+   │      relay.example.org       │
    │                              │
    │  friend list:                │
    │    /raspberry/ ──────────────┼──┐
@@ -59,76 +33,31 @@ A machine behind NAT cannot accept inbound connections. Relay fixes this with on
                         └───────────┘  └───────────┘
 ```
 
-- A private node opens an **outbound WebSocket** to a public friend: no port forwarding, no static IP, no dynamic DNS, no firewall rule.
-- It registers the **path prefixes** it serves (`/raspberry/`). The public node keeps the list and hands back nothing but a route.
-- Requests are relayed by the first path segment down the matching tunnel; responses travel the same way.
-- A node may hold several public friends and fail over between them, ordered by round-trip time.
+All node state — uploaded sites, the deploy-key store, the admin token — lives in **one data directory** you own. Mount it on a volume; without it, the node forgets everything.
 
-The same tunnel also fronts an app you already run — Relay as a tunnel-only layer. Details are in [`REVIEW.md`](./REVIEW.md).
+**Built today:** static hosting, per-user deploy keys, atomic deploys with rollback, the operator console, native HTTPS. **On the road:** NAT tunnels, one SQLite file per site, opt-in login and stats, sandboxed functions. The full design review is in [`REVIEW.md`](./REVIEW.md).
 
-### Storage
+### The stack
 
-- **One SQLite file per site.** Natural isolation, trivial export, no cluster to run.
-- Static files are stored as content-addressed blobs (BLAKE3) and deduplicated on deploy.
-- The unit of migration is the file. Moving a site is copying its file and keeping its key.
+| Concern | Choice | Why |
+|---|---|---|
+| Language | **Go** | one static binary, cheap concurrency |
+| Addressing | **paths under one host** | one cert, identical code public and private |
+| Tunnels | **outbound WebSocket** (yamux) | no inbound ports on private nodes |
+| Storage | **files now, SQLite per site next** | isolation, export, migration as a single file |
+| Keys | **Ed25519** | signed challenges; the secret never travels |
 
-### Login and Stats
+### Deploy a site
 
-Both are **opt-in and per site**, and both are rows in the site's own database — there is no network-level account.
+Uploading is one POST of a `tar` archive with a deploy key — the flow is on the [landing page](./index.html#deploy), in the [user's guide](./users-guide.md), and hosted on every node at `/_relay/deploy.html`.
 
-- Users and sessions live inside the site's SQLite file.
-- Passwords are hashed with **Argon2id**; sessions are opaque, hashed at rest, and carried in a path-scoped cookie.
-- An optional **Ed25519 key login** replaces passwords for sites that want it.
-- **Stats** are counted by the node that served the request: aggregate, cookieless, with a daily-salted visitor count, visible only to the key holder and exportable with the site.
+### Run a node
 
-### Compute
+Relay is one binary, so it runs anywhere a process or a container runs. **Public nodes** need a stable address and ports 80/443; **private nodes** are outbound-only and need no inbound ports at all. On first start the node writes its **admin token** to `<data>/admin-token` (and prints it once to the log) — it unlocks the operator console at `/_relay/admin.html`.
 
-- Backend functions run in a **QuickJS** sandbox (via Wazero), deployed beside the site.
-- Per-site limits: max memory, max CPU-milliseconds, max calls per minute, and an allow-list of outbound hosts.
-- Functions bind to the same per-site database. Which node executes one is an implementation detail.
+#### Binary
 
-### Governance
-
-- Each server **publishes its rule set**; small local classifiers score a candidate deploy against it.
-- In-rule deploys go live automatically; borderline ones are **held for a human**, never silently erased.
-- Rules are files: readable, forkable, and debatable.
-
-### Using Relay
-
-1. **Build** — by hand, with a framework, or by describing what you want. Any stack will do.
-2. **Preview** — see the static site locally, exactly as it will be served.
-3. **Deploy** — one step: choose a server, get an address and your key.
-4. **Store** — connect the site to its database so it can remember what users give it.
-5. **Know your people** — turn on site-level login and read your own stats; both stay in the site's own data.
-6. **Serve from anywhere** — run it on your own machine and let a public friend relay the world in.
-7. **Move** — export your data, point at another server, and take your site with you.
-
-### Technical Foundation
-
-- **Static Hosting** — any folder of files becomes a live website
-- **Path-Based Addressing** — one host per public node; each node a path prefix, each site a path under it
-- **Outbound-Only WebSocket Tunnels** — no port forwarding, no static IP required
-- **One Node, One Codebase** — public and private nodes run identical software
-- **Ownership Keys** — a text-file key controls and protects each deployed address
-- **Per-Site SQLite** — portable, exportable, one file per site
-- **Site-Level Login** — opt-in accounts and sessions in the site's own database
-- **Cookieless Metrics** — first-party, aggregate usage stats the owner can export
-- **Tunnel-Only Mode** — point Relay at a server you already run and use it purely as reachability
-- **Federation** — thousands of independent servers, one open protocol
-- **Classifier-Based Rules** — local models, published rule sets, transparent moderation
-- **Backend Compute (planned)** — functions sandboxed in QuickJS and rate-limited per site
-
-### Deployment
-
-Relay is one binary, so it deploys anywhere a container or a process runs. **Public nodes** need a stable address and ports 80/443; **private nodes** are outbound-only and need no inbound ports at all.
-
-All node state — keys, site files, per-site SQLite — lives under one data directory. Mount it on a volume; without it, the node forgets everything.
-
-#### As a binary
-
-Install the prebuilt binary (Linux or macOS, amd64/arm64) with the installer
-script, or build it from source with `make build` (see
-[`install.sh`](./install.sh) and the [`Makefile`](./Makefile)):
+Install the prebuilt binary (Linux or macOS, amd64/arm64):
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSfL \
@@ -141,13 +70,9 @@ Then run a node:
 relay node --data /var/lib/relay --listen :8080
 ```
 
-Put Caddy (or any reverse proxy) in front for :80/:443, or let the embedded Caddy handle TLS directly.
-
 #### Docker
 
-The node ships as a single container image published to GitHub Packages —
-`ghcr.io/nemonoboru/relay` — built from the [`Dockerfile`](./Dockerfile) at
-the repository root:
+The image is published to GitHub Packages, runs unprivileged, and keeps all state under `/data`:
 
 ```sh
 docker run -d --name relay --restart unless-stopped \
@@ -156,98 +81,27 @@ docker run -d --name relay --restart unless-stopped \
   ghcr.io/nemonoboru/relay:latest
 ```
 
-The image runs unprivileged and keeps all state under `/data`.
-
-#### Docker Compose
-
-A Compose file for a single node, with its data on a named volume:
-
-```yaml
-services:
-  relay:
-    build: .
-    # image: ghcr.io/nemonoboru/relay:latest
-    command: ["node", "--data", "/data", "--listen", ":8080"]
-    ports:
-      - "80:8080"
-      - "443:8443"
-    volumes:
-      - relay-data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "/relay", "health"]
-      interval: 30s
-
-volumes:
-  relay-data:
-```
-
-#### Docker Swarm
-
-A Swarm stack — a public node on a manager, plus private nodes that dial out to it:
-
-```yaml
-services:
-  relay-public:
-    image: ghcr.io/nemonoboru/relay:latest
-    command: ["node", "--public", "--data", "/data", "--listen", ":8080"]
-    ports:
-      - target: 8080
-        published: 80
-        protocol: tcp
-      - target: 8443
-        published: 443
-        protocol: tcp
-    volumes:
-      - relay-data:/data
-    deploy:
-      replicas: 1
-      placement:
-        constraints: ["node.role == manager"]
-
-  relay-private:
-    image: ghcr.io/nemonoboru/relay:latest
-    command: ["node", "--friend", "relay-public:8080", "--data", "/data"]
-    volumes:
-      - relay-data:/data
-    deploy:
-      replicas: 2
-
-volumes:
-  relay-data:
-```
-
-The public node needs a stable address; the private nodes only dial out, so they can run on any worker.
-
 #### Kubernetes
 
-A one-command install lives in
-[`deploy/kubernetes.yaml`](./deploy/kubernetes.yaml) — a `relay` namespace, a
-one-replica StatefulSet with a persistent volume, and a ClusterIP Service:
+One command installs a `relay` namespace, a one-replica StatefulSet with a persistent volume, and a Service:
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/nemoNoboru/relay/main/deploy/kubernetes.yaml
 ```
 
-The node serves HTTP on `:8080` with liveness and readiness probes on
-`/healthz`, and keeps all state in the `/data` volume. Expose it with TLS at
-the cluster edge using [`deploy/ingress.yaml`](./deploy/ingress.yaml) — fill in
-your hostname and TLS secret, then apply it. On first start the node writes its
-admin token to `/data/admin-token`; read it with either of:
+The node serves HTTP on `:8080` with probes on `/healthz`. Expose it with TLS at the cluster edge by filling in your hostname in [`deploy/ingress.yaml`](./deploy/ingress.yaml) and applying it. Because Relay uses path-based addressing, the Ingress needs no wildcard host and no per-site certificate. Read the admin token with either of:
 
 ```sh
 kubectl logs -n relay relay-0
 kubectl exec -n relay relay-0 -- cat /data/admin-token
 ```
 
-An Ingress (or a LoadBalancer Service) terminates TLS at the cluster edge and
-forwards to the Service. Because Relay uses path-based addressing, the Ingress
-needs no wildcard host and no per-site certificate — one host and one
-certificate is enough for every site on the node.
+#### HTTPS
 
-**A node is stateful; the edge is not.** Keep the data on a PersistentVolumeClaim, and keep TLS at the ingress or in the embedded Caddy. Scale private nodes freely; give a public node one stable address.
+Pass `--tls-cert` and `--tls-key` to serve HTTPS directly, or terminate TLS at a reverse proxy (Caddy, Nginx) in front of the node.
 
 ### Further reading
 
-- [`REVIEW.md`](./REVIEW.md) — the consolidated design review: decisions, open questions, and what is not finished yet
-- [`docs/vision.md`](docs/vision.md) — the vision behind Relay
+- [`REVIEW.md`](./REVIEW.md) — the consolidated design review: decisions, open questions, what is not finished
+- [`docs/api-contract.md`](./docs/api-contract.md) and [`docs/architecture.md`](./docs/architecture.md) — the wire contract and the backend design
+- [`docs/keys.md`](./docs/keys.md) — ownership keys: the deed to an address

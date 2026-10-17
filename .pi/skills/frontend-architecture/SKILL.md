@@ -6,9 +6,9 @@ description: Relay frontend standard for the node UI and the per-site owner cons
 # Frontend Architecture
 
 The engineering standard for Relay's frontend. The frontend is the owner-facing side of
-the node: `node-ui.html` (node admin — tunnels, sites, health) and `metrics.html`
-(per-site owner console — deploys, rollback, daily-salted metrics). Today these are static
-mockups; this skill is the standard they grow into. The Go side's decisions are locked in
+the node, built in `web/`: `node.html` (node admin — tunnels, sites, health), `site.html`
+(per-site owner console — deploys, rollback, metrics), and `admin.html` (operator
+console — deploy keys). The Go side's decisions are locked in
 `REVIEW.md` — the frontend must not contradict them (same-origin node API, domain
 vocabulary, Ed25519 ownership stays server-side).
 
