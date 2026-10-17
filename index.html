@@ -21,6 +21,7 @@
       <a href="#primitives">Primitives</a>
       <a href="#network">Network</a>
       <a href="#deploy">Deploy</a>
+      <a href="./_relay/admin.html">Admin</a>
     </nav>
     <span class="stamp">Open · Federated</span>
   </div>
@@ -230,17 +231,63 @@
     </div>
   </section>
 
-  <!-- CTA -->
-  <section class="cta" id="deploy">
-    <div class="wrap" style="padding:0 26px">
-      <h2>Run a node.<br>Bring a friend.<br>Take the web back.</h2>
-      <div class="actions">
-        <a class="btn" href="./manifesto.html">Read the manifesto</a>
-        <a class="btn" href="./technicals.html">Technical docs</a>
-        <a class="btn solid" href="#top">Start hosting</a>
+  <!-- DEPLOY / SELF-SERVE -->
+  <section class="deploysec" id="deploy">
+    <div class="wrap">
+      <span class="kick">09 — Self-serve</span>
+      <h2>Deploy a site.<br>Run a node.<br>Take the web back.</h2>
+      <div class="rule"></div>
+      <p class="deploy-lead">Everything below works right now, on this node — no central account, no sign-up, no permission slip. A folder becomes a website, one command installs a node, and the admin page hands out the keys.</p>
+
+      <div class="deploy-grid">
+        <article class="dcard">
+          <span class="dnum">01</span>
+          <h3>Deploy a static site</h3>
+          <p>Ask the operator for a <b>deploy key</b> — or issue one yourself on the admin page. Tar your folder, upload it, and the site goes live at <code>/&lt;node&gt;/&lt;site&gt;/</code>.</p>
+<pre>tar -C ./site-folder -cf site.tar .
+curl -X POST \
+  -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
+  -H "Content-Type: application/x-tar" \
+  --data-binary @site.tar \
+  "$RELAY_ORIGIN/_relay/v1/sites/docs/deploy"</pre>
+          <p class="dnote"><code>$RELAY_ORIGIN</code> is this node's address · <code>$RELAY_DEPLOY_TOKEN</code> is your deploy key</p>
+          <div class="actions">
+            <a class="btn solid" href="./_relay/deploy.html">Full upload guide</a>
+            <a class="btn" href="./_relay/skills/relay-deploy/SKILL.md">Agent skill</a>
+          </div>
+          <span class="foot">One request · atomic · rollback kept</span>
+        </article>
+
+        <article class="dcard">
+          <span class="dnum">02</span>
+          <h3>Run a node</h3>
+          <p>Relay is one binary. Install it, then start a node — the same code runs public or private, at home or in a cluster.</p>
+<pre>curl --proto '=https' --tlsv1.2 -sSfL \
+  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+
+relay node --data /var/lib/relay --listen :8080</pre>
+          <div class="actions">
+            <a class="btn" href="./technicals.html#docker">Docker</a>
+            <a class="btn" href="./technicals.html#kubernetes">Kubernetes</a>
+            <a class="btn" href="./technicals.html#deployment">All options</a>
+          </div>
+          <span class="foot">Binary · Docker · Swarm · Kubernetes</span>
+        </article>
+
+        <article class="dcard">
+          <span class="dnum">03</span>
+          <h3>Operate</h3>
+          <p>The node prints an <b>admin token</b> on first start. It unlocks the operator console — issue and revoke deploy keys, list sites, and roll a deploy back.</p>
+          <div class="actions">
+            <a class="btn solid" href="./_relay/admin.html">Open the admin page</a>
+            <a class="btn" href="./_relay/node.html">Node console</a>
+          </div>
+          <span class="foot">Admin console at /_relay/admin.html</span>
+        </article>
       </div>
+
       <p class="sub">Of the web · by the web · for the web</p>
-      <p class="meta" style="position:relative;margin-top:16px">Binary · Docker · Docker Swarm · Kubernetes</p>
+      <p class="meta">Binary · Docker · Docker Swarm · Kubernetes</p>
     </div>
   </section>
 
@@ -252,7 +299,7 @@
     <p class="fine">
       Relay — an open, federated hosting network<br>
       Deploy in one step · Own your address · Keep your data<br>
-      <a href="./manifesto.html">Read the manifesto</a> · <a href="./technicals.html">Technicals</a>
+      <a href="./manifesto.html">Read the manifesto</a> · <a href="./technicals.html">Technicals</a> · <a href="./_relay/admin.html">Admin</a> · <a href="./_relay/deploy.html">Deploy a site</a>
     </p>
   </div>
 </footer>
