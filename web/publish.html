@@ -42,10 +42,11 @@
           </div>
 
           <div class="drop" id="drop">
-            <b>Drop a folder, a Markdown file or a .tar</b>
+            <b>Drop your site here</b>
+            <span class="dropsub">Pages and pictures, or a single Markdown file</span>
             <span>
               or <label class="choose">choose files<input type="file" id="files" multiple hidden /></label>
-              · <label class="choose">choose a folder<input type="file" id="folder" webkitdirectory hidden /></label>
+              · <label class="choose">a whole site<input type="file" id="folder" webkitdirectory hidden /></label>
             </span>
           </div>
 
@@ -59,14 +60,14 @@
         <h3>For AI assistants</h3>
         <p class="copyask">
           Using Claude or another assistant? Copy this, paste it into the chat,
-          and tell it which folder is your site.
+          and tell it where your site is.
         </p>
         <button class="btn solid" id="copyai" type="button">Copy instructions for Claude</button>
         <p>
           You were sent a link to this page. The deploy key is the
           <code>key</code> value after <code>#</code> in that link; never
           print it or send it anywhere else. To publish, send a tar of the
-          site's folder to this server:
+          site to this server:
         </p>
         <pre>tar -cf - -C SITE_FOLDER . | curl --data-binary @- \
   -H "Authorization: Bearer KEY" \

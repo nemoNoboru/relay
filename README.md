@@ -1,6 +1,6 @@
 # Relay
 
-**Put a folder on the web.** One upload and your site is live at a real
+**Put your site on the web.** One upload and your site is live at a real
 address: no account, no build step, and no platform in between. Relay is
 free hosting software that any collective, club or neighbour can run, so the
 web stops being rented from a handful of companies.
@@ -8,9 +8,9 @@ web stops being rented from a handful of companies.
 ## Deploy a site
 
 The easy way: the operator copies an **invite link** from the keys page
-(`/_relay/admin.html`) and sends it to you. Open it, drop a folder, a Markdown
-file or a `.tar`, and press Publish. You can also hand the link to an AI
-assistant and ask it to publish your folder.
+(`/_relay/admin.html`) and sends it to you. Open it, drop your pages in, and
+press Publish. You can also hand the link to an AI
+assistant and ask it to publish your site.
 
 From a terminal:
 
