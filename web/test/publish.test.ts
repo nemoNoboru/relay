@@ -32,8 +32,30 @@ test("markdown is rendered to html", () =>
 test("a lone markdown file becomes the home page", () =>
   expect(toSite([file("notes.md")]).map((f) => f.path)).toEqual(["index.html"]));
 
+test("a lone html file becomes the home page", () =>
+  expect(toSite([file("about.html", "<html><body>hi</body></html>")]).map((f) => f.path)).toEqual(["index.html"]));
+
+test("several html files keep their names", () =>
+  expect(toSite([file("index.html", "<html></html>"), file("about.html", "<html></html>")]).map((f) => f.path)).toEqual([
+    "index.html",
+    "about.html",
+  ]));
+
 test("other markdown pages keep their name", () =>
   expect(toSite([file("index.html"), file("about.md")]).map((f) => f.path)).toEqual(["index.html", "about.html"]));
+
+test("an html page gets the relay bottom banner", () => {
+  const html = text(toSite([file("page.html", "<!doctype html><html><head></head><body><h1>Hi</h1></body></html>")])[0]!.data);
+  expect(html).toContain('class="relay-banner"');
+  expect(html).toContain("Where this page lives");
+  expect(html).toContain("Share this page");
+});
+
+test("an html page that already has the banner is left alone", () => {
+  const raw = '<html><body><footer class="relay-banner">mine</footer></body></html>';
+  expect(text(toSite([file("page.html", raw)])[0]!.data)).toContain("mine");
+  expect(text(toSite([file("page.html", raw)])[0]!.data).match(/relay-banner/g)?.length).toBe(1);
+});
 
 test("a dropped folder loses its own name", () =>
   expect(toSite([file("blog/index.html"), file("blog/img/a.png")]).map((f) => f.path)).toEqual(["index.html", "img/a.png"]));
