@@ -73,83 +73,211 @@ export const cardTitle = (md: string): string => {
   return m ? m[1]!.trim() : "A page on Relay";
 };
 
+const BAR = `
+<header class="relay-bar">
+  <a class="rbar-brand" href="/"><span class="rbar-mark">R</span> RELAY</a>
+  <a class="rbar-note" href="/">Hosted with Relay <span>· Know how</span></a>
+</header>`;
+
 const BANNER = `
 <footer class="relay-banner">
   <div class="rb-art" aria-hidden="true">
-    <div class="rb-frame"></div><div class="rb-circle"></div><div class="rb-wedge"></div>
+    <div class="rb-circle"></div><div class="rb-wedge"></div>
     <div class="rb-bar"></div><div class="rb-word">RELAY</div>
   </div>
   <div class="rb-body">
-    <p class="rb-tag">Hosted with Relay</p>
-    <p class="rb-sub">Your own corner of the web, on a server kept by people. <a href="/">Learn how</a>.</p>
+    <p class="rb-tag">Made by a person,<br><em>not a platform</em></p>
+    <p class="rb-sub">This page sits on a server kept by people, not rented from a company. Yours can too. <a href="/">Know how</a>.</p>
     <div class="rb-actions">
-      <button class="rb-btn" id="rb-share" type="button">Share</button>
+      <button class="rb-btn solid" id="rb-share" type="button">Share this page</button>
       <button class="rb-btn" id="rb-qr" type="button">QR code</button>
-      <button class="rb-btn" id="rb-card" type="button">Share card</button>
+      <button class="rb-btn" id="rb-card" type="button">Poster</button>
     </div>
     <div class="rb-pop" id="rb-pop" hidden></div>
   </div>
 </footer>`;
 
-const STYLE = `body{margin:0;background:#f0e6d2;color:#141210;font:18px/1.6 Georgia,serif}
-main{max-width:40rem;margin:0 auto;padding:3rem 1.25rem}
-h1,h2,h3{font-family:Impact,"Arial Narrow",sans-serif;line-height:1.1;text-transform:uppercase}
-h1{font-size:2.6rem;border-bottom:6px solid #c8202f;padding-bottom:.3rem}
-a{color:#c8202f}img{max-width:100%}
-pre{overflow:auto;background:#141210;color:#f0e6d2;padding:1rem}
-blockquote{margin:0;padding-left:1rem;border-left:4px solid #c8202f}`;
+const STYLE = `:root{--ink:#141210;--paper:#f0e6d2;--paper2:#e6dac0;--red:#ce1f2b;--ochre:#dfa32a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.65 Georgia,"Times New Roman",serif}
+main{max-width:40rem;margin:0 auto;padding:3.5rem 1.25rem 1rem;position:relative}
+h1,h2,h3,h4{font-family:Impact,"Haettenschweiler","Franklin Gothic Bold","Arial Black","Liberation Sans Narrow","DejaVu Sans Condensed","Arial Narrow",sans-serif;line-height:1;text-transform:uppercase;letter-spacing:.01em;font-weight:400}
+h1{font-size:clamp(2.4rem,7vw,3.8rem);margin:0 0 1.4rem;padding-bottom:.4rem;position:relative}
+h1::after{content:"";display:block;height:8px;background:var(--ink);margin-top:.5rem}
+h1::before{content:"";position:absolute;left:-2.6rem;top:.55em;width:1.7rem;height:1.1rem;background:var(--red);clip-path:polygon(0 0,100% 50%,0 100%)}
+h2{font-size:clamp(1.5rem,4vw,2rem);margin:2.6rem 0 .9rem}
+h2::after{content:"";display:block;width:3.4rem;height:5px;background:var(--red);margin-top:.45rem}
+h3{font-size:1.25rem;margin:2rem 0 .6rem;color:var(--red)}
+p{margin:0 0 1.1rem}
+a{color:var(--red);text-decoration:none;border-bottom:2px solid var(--red)}
+a:hover{background:var(--red);color:var(--paper)}
+img{max-width:100%;height:auto;border:3px solid var(--ink)}
+strong{font-weight:700}
+hr{border:0;height:6px;background:var(--ink);margin:2.5rem 0}
+pre{overflow:auto;background:var(--ink);color:var(--paper);padding:1.1rem;font-size:.85rem;line-height:1.5;border-left:8px solid var(--red)}
+code{font-family:ui-monospace,"Courier New",monospace;font-size:.88em;background:var(--ink);color:var(--paper);padding:1px 5px}
+pre code{background:none;color:inherit;padding:0}
+blockquote{margin:1.8rem 0;padding:1.1rem 1.3rem;background:var(--ink);color:var(--paper);font-family:Impact,"Haettenschweiler","Arial Black","Liberation Sans Narrow",sans-serif;text-transform:uppercase;font-size:clamp(1.1rem,3vw,1.5rem);line-height:1.15;transform:rotate(-.7deg)}
+blockquote p{margin:0}
+ul,ol{margin:0 0 1.2rem;padding:0;list-style:none}
+ul>li{position:relative;padding:.4rem 0 .4rem 1.7rem;border-bottom:1px dashed rgba(20,18,16,.25)}
+ul>li::before{content:"→";position:absolute;left:0;color:var(--red);font-family:ui-monospace,monospace}
+ol{counter-reset:n}
+ol>li{counter-increment:n;position:relative;padding:.4rem 0 .4rem 2.3rem;border-bottom:1px dashed rgba(20,18,16,.25)}
+ol>li::before{content:counter(n,decimal-leading-zero);position:absolute;left:0;top:.35rem;font-family:Impact,sans-serif;color:var(--red)}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.95rem}
+th{font-family:ui-monospace,monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;text-align:left;border-bottom:3px solid var(--ink);padding:.6rem .5rem;color:var(--red)}
+td{padding:.6rem .5rem;border-bottom:1px dashed rgba(20,18,16,.25)}
+@media(max-width:560px){h1::before{display:none}}`;
 
-const BANNER_CSS = `.relay-banner{margin:3rem auto 0;border-top:6px solid #141210;background:#f0e6d2;padding:1.5rem 1.25rem 2rem;display:flex;gap:1.5rem;align-items:center;max-width:37.5rem}
-.rb-art{position:relative;width:96px;height:96px;flex:none;border:4px solid #141210;background:#fff}
-.rb-circle{position:absolute;width:56%;aspect-ratio:1;border-radius:50%;border:4px solid #141210;top:12%;left:8%}
-.rb-circle::after{content:"";position:absolute;inset:20%;border-radius:50%;background:#dfa32a}
-.rb-wedge{position:absolute;width:110%;height:42%;background:#ce1f2b;left:-6%;top:32%;transform:rotate(-14deg);clip-path:polygon(0 0,100% 50%,0 100%)}
-.rb-bar{position:absolute;width:150%;height:8px;background:#141210;left:-25%;bottom:18%;transform:rotate(8deg)}
-.rb-word{position:absolute;right:-6%;top:4%;font-family:Impact,"Arial Narrow",sans-serif;font-size:1.05rem;letter-spacing:.04em;color:#141210;background:#f0e6d2;padding:1px 2px;border-top:3px solid #ce1f2b;border-bottom:3px solid #ce1f2b}
-.rb-tag{font-family:Impact,"Arial Narrow",sans-serif;text-transform:uppercase;font-size:1.5rem;line-height:1;margin:0 0 .3rem;color:#141210}
-.rb-sub{margin:0 0 .9rem;font-size:.95rem}
-.rb-sub a{color:#ce1f2b}
-.rb-actions{display:flex;gap:.6rem;flex-wrap:wrap}
-.rb-btn{font-family:ui-monospace,monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:.55rem .9rem;border:3px solid #141210;background:#f0e6d2;color:#141210;cursor:pointer}
-.rb-btn:hover{background:#ce1f2b;color:#f0e6d2;border-color:#141210}
-.rb-pop{margin-top:1rem}
-.rb-pop img,.rb-pop canvas{display:block;border:3px solid #141210;background:#fff;max-width:100%}
-@media(max-width:560px){.relay-banner{flex-direction:column;align-items:flex-start;gap:1rem}}`;
+const BANNER_CSS = `.relay-bar{position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  background:var(--ink);color:var(--paper);border-bottom:4px solid var(--red);padding:.6rem 1.1rem;font-family:ui-monospace,monospace}
+.rbar-brand{display:flex;align-items:center;gap:.5rem;font-family:Impact,"Arial Narrow",sans-serif;font-size:1.2rem;letter-spacing:.06em;
+  color:var(--paper);border:0;text-decoration:none}
+.rbar-brand:hover{background:none;color:var(--paper)}
+.rbar-mark{display:grid;place-items:center;width:1.55rem;height:1.55rem;background:var(--red);color:var(--paper);font-size:1.05rem}
+.rbar-note{font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;color:var(--paper);border:0;text-decoration:none;
+  border-bottom:2px solid var(--red);padding-bottom:2px}
+.rbar-note:hover{background:var(--red);color:var(--paper)}
+.rbar-note span{color:var(--ochre)}
+@media(max-width:460px){.rbar-note span{display:none}}
+
+.relay-banner{margin:4rem auto 0;background:var(--ink);color:var(--paper);border-top:8px solid var(--red);
+  padding:2rem 1.25rem 2.2rem;display:flex;gap:1.8rem;align-items:center;justify-content:center;flex-wrap:wrap}
+.rb-art{position:relative;width:118px;height:118px;flex:none;border:4px solid var(--paper);background:var(--paper2)}
+.rb-circle{position:absolute;width:58%;aspect-ratio:1;border-radius:50%;border:4px solid var(--ink);top:12%;left:8%}
+.rb-circle::after{content:"";position:absolute;inset:18%;border-radius:50%;background:var(--ochre)}
+.rb-wedge{position:absolute;width:120%;height:42%;background:var(--red);left:-8%;top:32%;transform:rotate(-14deg);clip-path:polygon(0 0,100% 50%,0 100%)}
+.rb-bar{position:absolute;width:160%;height:9px;background:var(--ink);left:-30%;bottom:17%;transform:rotate(8deg)}
+.rb-word{position:absolute;right:4%;top:4%;font-family:Impact,"Arial Narrow",sans-serif;font-size:1rem;letter-spacing:.03em;
+  color:var(--ink);background:var(--paper);padding:1px 3px;border-top:3px solid var(--red);border-bottom:3px solid var(--red)}
+.rb-body{max-width:26rem}
+.rb-tag{font-family:Impact,"Arial Narrow",sans-serif;text-transform:uppercase;font-size:1.75rem;line-height:1;margin:0 0 .5rem}
+.rb-tag em{font-style:normal;color:var(--red)}
+.rb-sub{margin:0 0 1rem;font-size:.95rem;font-family:Georgia,serif}
+.rb-sub a{color:var(--ochre);border-bottom:2px solid var(--red)}
+.rb-sub a:hover{background:var(--red);color:var(--paper)}
+.rb-actions{display:flex;gap:.55rem;flex-wrap:wrap}
+.rb-btn{font-family:ui-monospace,monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;padding:.6rem 1rem;
+  border:3px solid var(--paper);background:transparent;color:var(--paper);cursor:pointer;transition:transform .1s}
+.rb-btn.solid{background:var(--red);border-color:var(--red)}
+.rb-btn:hover{background:var(--paper);color:var(--ink);border-color:var(--paper);transform:translate(-2px,-2px)}
+.rb-pop{margin-top:1.2rem;flex-basis:100%;display:flex;flex-direction:column;align-items:center;gap:.7rem}
+.rb-pop img,.rb-pop canvas{display:block;border:4px solid var(--paper);background:var(--paper);max-width:100%;height:auto}
+.rb-hint{font-family:ui-monospace,monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ochre);margin:0}
+@media(max-width:560px){.relay-banner{flex-direction:column;align-items:flex-start;gap:1.2rem}.rb-pop{align-items:flex-start}}`;
 
 const BANNER_JS = `(function(){
-var pop=document.getElementById('rb-pop');var url=location.href;
-function show(node){pop.hidden=false;pop.replaceChildren(node);}
-var title=document.querySelector('h1')?document.querySelector('h1').textContent:'A page on Relay';
+var INK='#141210',PAPER='#f0e6d2',RED='#ce1f2b',OCHRE='#dfa32a';
+var DISPLAY='Impact,"Haettenschweiler","Franklin Gothic Bold","Arial Black","Liberation Sans Narrow",sans-serif',MONO='ui-monospace,"Courier New",monospace';
+var pop=document.getElementById('rb-pop'),url=location.href;
+var h1=document.querySelector('h1');
+var title=h1?h1.textContent.trim():'A page on Relay';
+var host=location.host+location.pathname.replace(/\\/$/,'');
+
+function show(node,hint){
+  pop.hidden=false;pop.replaceChildren(node);
+  if(hint){var p=document.createElement('p');p.className='rb-hint';p.textContent=hint;pop.appendChild(p);}
+}
+function download(canvas,name,label){
+  var a=document.createElement('a');a.className='rb-btn';a.textContent=label;a.download=name;
+  canvas.toBlob(function(b){a.href=URL.createObjectURL(b);});
+  return a;
+}
+function qr(text){var q=QRCODE(0,'M');q.addData(text);q.make();return q;}
+
+/* QR drawn with square "pixels", a red registration eye and a paper quiet zone. */
+function drawQR(x,q,ox,oy,px){
+  var n=q.getModuleCount();
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+    if(!q.isDark(r,c))continue;
+    var eye=(r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7);
+    x.fillStyle=eye?RED:INK;
+    x.fillRect(ox+c*px,oy+r*px,px,px);
+  }
+}
+
 document.getElementById('rb-share').onclick=function(){
-  if(navigator.share){navigator.share({title:title,url:url}).catch(function(){});}
-  else if(navigator.clipboard){navigator.clipboard.writeText(url);this.textContent='Link copied';var b=this;setTimeout(function(){b.textContent='Share';},2000);}
+  var b=this;
+  if(navigator.share){navigator.share({title:title,url:url}).catch(function(){});return;}
+  if(navigator.clipboard){navigator.clipboard.writeText(url);b.textContent='Link copied';
+    setTimeout(function(){b.textContent='Share this page';},2000);}
 };
+
 document.getElementById('rb-qr').onclick=function(){
   if(typeof QRCODE==='undefined')return;
-  var q=QRCODE(0,'M');q.addData(url);q.make();
-  var n=q.getModuleCount();var size=8;var c=document.createElement('canvas');c.width=c.height=n*size;
-  var x=c.getContext('2d');x.fillStyle='#f0e6d2';x.fillRect(0,0,c.width,c.height);x.fillStyle='#141210';
-  for(var r=0;r<n;r++)for(var col=0;col<n;col++)if(q.isDark(r,col))x.fillRect(col*size,r*size,size,size);
-  c.style.width='200px';c.style.height='200px';show(c);
+  var q=qr(url),n=q.getModuleCount(),px=10,pad=px*4,size=n*px+pad*2;
+  var c=document.createElement('canvas');c.width=size;c.height=size+88;
+  var x=c.getContext('2d');
+  x.fillStyle=PAPER;x.fillRect(0,0,c.width,c.height);
+  x.fillStyle=INK;x.fillRect(0,size,c.width,88);
+  drawQR(x,q,pad,pad,px);
+  x.fillStyle=PAPER;x.font='700 22px '+MONO;x.textAlign='center';x.textBaseline='middle';
+  x.fillText('SCAN TO READ',c.width/2,size+32);
+  x.fillStyle=OCHRE;x.font='16px '+MONO;
+  x.fillText(host.length>38?host.slice(0,37)+'…':host,c.width/2,size+60);
+  c.style.width='240px';
+  var wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:.7rem';
+  wrap.append(c,download(c,'relay-qr.png','Download QR'));
+  show(wrap,'Point a camera at it');
 };
+
 document.getElementById('rb-card').onclick=function(){
-  var c=document.createElement('canvas');c.width=1080;c.height=1350;var x=c.getContext('2d');
-  x.fillStyle='#f0e6d2';x.fillRect(0,0,1080,1350);
-  x.strokeStyle='#141210';x.lineWidth=6;
-  for(var i=0;i<=1080;i+=90){x.globalAlpha=.08;x.beginPath();x.moveTo(i,0);x.lineTo(i,1350);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(1080,i);x.stroke();}
+  var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;
+  var x=c.getContext('2d');
+
+  x.fillStyle=PAPER;x.fillRect(0,0,W,H);
+  x.strokeStyle=INK;x.lineWidth=2;x.globalAlpha=.10;
+  for(var i=0;i<=Math.max(W,H);i+=60){
+    x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke();
+    x.beginPath();x.moveTo(0,i);x.lineTo(W,i);x.stroke();
+  }
   x.globalAlpha=1;
-  x.fillStyle='#dfa32a';x.beginPath();x.arc(540,560,330,0,7);x.fill();
-  x.strokeStyle='#141210';x.lineWidth=10;x.beginPath();x.arc(540,560,430,0,7);x.stroke();
-  x.save();x.translate(540,620);x.rotate(-0.24);x.fillStyle='#ce1f2b';
-  x.beginPath();x.moveTo(-760,-90);x.lineTo(760,60);x.lineTo(-760,240);x.closePath();x.fill();x.restore();
-  x.fillStyle='#141210';x.save();x.translate(540,760);x.rotate(0.14);x.fillRect(-820,-14,1640,28);x.restore();
-  x.fillStyle='#141210';x.font='700 150px Impact,"Arial Narrow",sans-serif';x.textAlign='center';x.textBaseline='middle';
-  var t=title;var lines=[];var words=t.split(' ');var line='';
-  words.forEach(function(w){if((line+' '+w).trim().length>14&&line){lines.push(line);line=w;}else{line=(line+' '+w).trim();}});if(line)lines.push(line);
-  var y0=560-((lines.length-1)*80);lines.forEach(function(l,i){x.fillText(l.toUpperCase(),540,y0+i*160);});
-  x.fillStyle='#ce1f2b';x.font='700 44px ui-monospace,monospace';x.fillText('HOSTED WITH RELAY',540,1150);
-  c.toBlob(function(b){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='relay-card.png';a.click();
-    var img=document.createElement('img');img.src=c.toDataURL();show(img);});
+
+  /* ochre sun, its outline ring, the red wedge and the black bar */
+  x.fillStyle=OCHRE;x.beginPath();x.arc(700,430,250,0,7);x.fill();
+  x.strokeStyle=INK;x.lineWidth=9;x.beginPath();x.arc(700,430,320,0,7);x.stroke();
+  x.save();x.translate(0,470);x.rotate(-0.18);x.fillStyle=RED;
+  x.beginPath();x.moveTo(-60,-150);x.lineTo(880,10);x.lineTo(-60,180);x.closePath();x.fill();x.restore();
+  x.save();x.translate(540,600);x.rotate(0.1);x.fillStyle=INK;x.fillRect(-640,-11,1280,22);x.restore();
+
+  /* title: shrink until every line fits, then stack from the bottom block */
+  var max=W-160,size=132,lines=[];
+  for(;size>52;size-=6){
+    x.font='700 '+size+'px '+DISPLAY;
+    lines=[];var line='',words=title.toUpperCase().split(/\\s+/),ok=true;
+    for(var w=0;w<words.length;w++){
+      var t=(line?line+' ':'')+words[w];
+      if(x.measureText(t).width>max&&line){lines.push(line);line=words[w];}else{line=t;}
+      if(x.measureText(line).width>max){ok=false;break;}
+    }
+    if(line)lines.push(line);
+    /* the title band runs from the bar down to the keyline; keep inside it */
+    if(ok&&lines.length<=4&&lines.length*size*1.02<=380)break;
+  }
+  x.textAlign='left';x.textBaseline='alphabetic';
+  var lh=size*1.02,top=1010-(lines.length-1)*lh;
+  x.fillStyle=INK;
+  lines.forEach(function(l,i){x.fillText(l,80,top+i*lh);});
+
+  /* red keyline under the title, then the footer slab */
+  x.fillStyle=RED;x.fillRect(80,1040,W-160,12);
+  x.fillStyle=INK;x.fillRect(0,1150,W,200);
+
+  var q=qr(url),n=q.getModuleCount(),px=Math.floor(150/n),qs=n*px;
+  x.fillStyle=PAPER;x.fillRect(W-80-qs-16,1175-8,qs+32,qs+32);
+  drawQR(x,q,W-80-qs,1175,px);
+
+  x.fillStyle=PAPER;x.font='700 46px '+DISPLAY;x.textAlign='left';x.textBaseline='middle';
+  x.fillText('HOSTED WITH RELAY',80,1215);
+  x.fillStyle=OCHRE;x.font='24px '+MONO;
+  x.fillText(host.length>34?host.slice(0,33)+'…':host,80,1268);
+
+  var img=document.createElement('img');img.src=c.toDataURL();img.alt='Share poster for this page';
+  img.style.cssText='width:min(340px,100%)';
+  var wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:.7rem';
+  wrap.append(img,download(c,'relay-poster.png','Download poster'));
+  show(wrap,'1080×1350 — fits Instagram and TikTok');
 };
 })();`;
 
@@ -157,7 +285,8 @@ const page = (md: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
   `<meta name="viewport" content="width=device-width, initial-scale=1">` +
   `<title>${escape(md.match(/^#\s+(.+)$/m)?.[1] ?? "Page")}</title><style>${STYLE}${BANNER_CSS}</style></head>` +
-  `<body><main>${marked.parse(md, { async: false })}</main>${BANNER}<script>${QR_GLOBAL};var QRCODE=qrcode;</script><script>${BANNER_JS}</script></body></html>`;
+  `<body>${BAR}<main>${marked.parse(md, { async: false })}</main>${BANNER}` +
+  `<script>${QR_GLOBAL};var QRCODE=qrcode;</script><script>${BANNER_JS}</script></body></html>`;
 
 /** Drop a folder and its own name is not part of the site. */
 const unwrap = (files: ReadonlyArray<SiteFile>) => {
