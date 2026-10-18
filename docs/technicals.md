@@ -25,7 +25,7 @@ Uploading a site is one `POST` of a `tar` archive, authenticated with a per-user
 | Ownership | Ed25519 key as the deed to an address; signed deploys | planned |
 | Site data | one SQLite file per site, opt-in login and stats | planned |
 
-### Reachability (planned)
+### Reachability (planned — not built yet)
 
 A machine behind NAT can't accept inbound connections. So a private node will dial out: it opens one **outbound WebSocket** to a public friend and registers its path prefix. The public node routes each request by its first path segment down the matching tunnel. No port forwarding, no static IP, no dynamic DNS.
 
@@ -50,7 +50,7 @@ A machine behind NAT can't accept inbound connections. So a private node will di
                         └───────────┘  └───────────┘
 ```
 
-### Run a node
+### Keep a server
 
 Every node needs a **name**, the first path segment of its sites (`--name mynode` serves `/mynode/<site>/`). On first start the node writes an **admin token** to `<data>/admin-token` and prints it once to the log. Use it to sign in to the operator console at `/_relay/admin.html` and issue deploy keys.
 
