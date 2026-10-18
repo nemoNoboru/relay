@@ -41,13 +41,19 @@ test("a dropped folder loses its own name", () =>
 test("a dropped tar is sent as it is", () =>
   expect(text(body([file("site.tar", "raw")]))).toBe("raw"));
 
+test("a rendered page carries the relay bar linking home", () => {
+  const html = text(toSite([file("p.md", "# Hi")])[0]!.data);
+  expect(html).toContain('class="relay-bar"');
+  expect(html).toContain("Know how");
+});
+
 test("a rendered page carries the relay banner", () => {
   const html = text(toSite([file("p.md", "# Hi")])[0]!.data);
   expect(html).toContain("Hosted with Relay");
   expect(html).toContain('class="relay-banner"');
-  expect(html).toContain("Share");
+  expect(html).toContain("Share this page");
   expect(html).toContain("QR code");
-  expect(html).toContain("Share card");
+  expect(html).toContain("Poster");
 });
 
 test("the card helper pulls the page title", () =>
