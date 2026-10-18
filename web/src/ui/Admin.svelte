@@ -166,7 +166,8 @@
                         </div>
                         <div class="keyactions">
                           {#if !k.revoked}
-                            <button class="btn solid" onclick={() => invite(k)}>{invited === k.id ? "Copied" : "Copy invite link"}</button>
+                            <button class="btn solid invite-long" onclick={() => invite(k)}>{invited === k.id ? "Copied" : "Copy invite link"}</button>
+                            <button class="btn solid invite-short" onclick={() => invite(k)}>{invited === k.id ? "Copied" : "Invite"}</button>
                             <button class="btn" onclick={() => onRotate(k.id)} disabled={$admin.busy}>Rotate</button>
                             <button class="btn" onclick={() => onRevoke(k.id)} disabled={$admin.busy}>Revoke</button>
                           {:else}
