@@ -409,6 +409,22 @@
   .stat{min-width:50%;border-bottom:2px solid var(--ink)}
 }
 
+/* the invite button shortens to "Invite" on small screens */
+.invite-short{display:none}
+
+/* compact key rows on small screens: meta on one line, buttons on one row */
+@media(max-width:640px){
+  .keyrow{padding:12px 0;gap:8px}
+  .keymeta{flex-direction:row;align-items:center;gap:8px;min-width:0;flex-basis:100%}
+  .keymeta code{align-self:auto}
+  .keytoken{min-width:0;flex:0 1 auto;gap:6px}
+  .keytoken .tokensecret{display:none}
+  .keytoken .btn,.keyactions .btn{padding:8px 12px;font-size:.62rem;letter-spacing:.05em}
+  .keyactions{flex-basis:100%;justify-content:flex-start;gap:6px}
+  .invite-long{display:none}
+  .invite-short{display:inline-block}
+}
+
 /* small screens: let tables scroll and long inline code wrap */
 @media(max-width:640px){
   .prose table{display:block;overflow-x:auto}
