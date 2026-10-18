@@ -381,6 +381,8 @@
 .pub{display:flex;flex-direction:column;gap:18px;align-items:flex-start}
 .assist{background:var(--ink);color:var(--paper);padding:28px 26px 12px;border-top:8px solid var(--red)}
 .assist h3{margin-top:0}
+.assist .copyask{font-weight:400;font-size:1rem}
+.assist #copyai{margin:0 0 22px}
 .assist p{font-size:.95rem}
 .assist code{background:var(--paper);color:var(--ink)}
 .assist pre{background:rgba(240,230,210,.08);margin:18px 0;white-space:pre-wrap;word-break:break-all}

@@ -21,6 +21,22 @@ export const readInvite = (hash: string) => {
   return { key: p.get("key") ?? "", site: p.get("site") ?? "" };
 };
 
+/** A message to paste into Claude or another assistant, ready to run. */
+export const assistantPrompt = (origin: string, key: string, site: string): string =>
+  [
+    "Please publish my website with Relay.",
+    "",
+    "Upload my site's folder as a tar archive with this command:",
+    "",
+    `tar -cf - -C SITE_FOLDER . | curl --data-binary @- -H "Authorization: Bearer ${key}" ${origin}/_relay/v1/sites/${site || "SITE_NAME"}/deploy`,
+    "",
+    "- SITE_FOLDER is the folder with my site; it should have an index.html. Turn any Markdown files into HTML pages first.",
+    site ? `- The site name is ${site}.` : "- Ask me for a site name: lowercase letters, numbers and hyphens.",
+    `- The JSON reply's "url" field is the address. Give me the full link: ${origin} followed by that url.`,
+    "- Every upload replaces the whole site.",
+    "- The key after Bearer is private. Don't repeat it back to me or put it anywhere else.",
+  ].join("\n");
+
 const octal = (n: number, width: number) => n.toString(8).padStart(width, "0") + "\0";
 
 const header = (path: string, size: number): Uint8Array => {
