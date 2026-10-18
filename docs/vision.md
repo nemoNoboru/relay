@@ -30,7 +30,7 @@ Now the distance between "I can write a page" and "I can put something real on t
 
 Bernard Stiegler spoke of proletarianisation: the loss of a know-how that once belonged to the people who worked. Publishing was such a know-how. A printing press, a duplicator, a radio transmitter, then a home page. It was handed over to experts and companies, and now it is rented back to us as a "service".
 
-Relay gives it back. It is a tool for independence, built to break the grip that a few corporations hold on the web, and made for people, not for venture-funded start-ups and multinationals. Not a platform, but one program that puts a folder of files on the web, on a server kept by people you know. No account. No feed. No one in the middle deciding what is seen.
+Relay gives it back. It is a tool for independence, built to break the grip that a few corporations hold on the web, and made for people, not for venture-funded start-ups and multinationals. Not a platform, but one program that puts what you make on the web, on a server kept by people you know. No account. No feed. No one in the middle deciding what is seen.
 
 ### The right to the web
 
@@ -42,7 +42,7 @@ A site on Relay is a dwelling, not a tenancy. The address is yours. The files ar
 
 Ivan Illich wrote that people need "not only to obtain things", but "above all the freedom to make things among which they can live". A convivial tool is one anyone can pick up and use without asking an expert or a company for permission.
 
-That is the whole test for Relay. If publishing needs a developer, an account, or a monthly bill, we have failed. Today it is an invite link and a folder dropped onto a page.
+That is the whole test for Relay. If publishing needs a developer, an account, or a monthly bill, we have failed. Today it is a link someone sends you, and your work dropped onto the page.
 
 ### Against the spectacle
 
@@ -72,7 +72,7 @@ There is no centre to capture. Every server runs the same free software. If one 
 
 ### Where we are going
 
-What works today is publishing: a folder goes up, a site comes out. The next version, Punk, goes further. None of this is built yet; it is where we are heading.
+What works today is publishing: you drop what you made, and it is online. The next version, Punk, goes further. None of this is built yet; it is where we are heading.
 
 **No server needed.** Every visitor helps carry the page. Opening a site is enough to help keep it online.
 

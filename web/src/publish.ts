@@ -31,11 +31,11 @@ export const assistantPrompt = (origin: string, key: string, site: string): stri
   [
     "Please publish my website with Relay.",
     "",
-    "Upload my site's folder as a tar archive with this command:",
+    "Upload my site as a tar archive with this command:",
     "",
     `tar -cf - -C SITE_FOLDER . | curl --data-binary @- -H "Authorization: Bearer ${key}" ${origin}/_relay/v1/sites/${site || "SITE_NAME"}/deploy`,
     "",
-    "- SITE_FOLDER is the folder with my site; it should have an index.html. Turn any Markdown files into HTML pages first.",
+    "- SITE_FOLDER is where my site is on this computer; it should have an index.html. Turn any Markdown files into HTML pages first.",
     site ? `- The site name is ${site}.` : "- Ask me for a site name: lowercase letters, numbers and hyphens.",
     `- The JSON reply's "url" field is the address. Give me the full link: ${origin} followed by that url.`,
     "- Every upload replaces the whole site.",
