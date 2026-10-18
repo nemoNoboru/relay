@@ -56,8 +56,8 @@ MINI_DIAGRAM = """<div class="mini" role="img" aria-label="A browser asks for a 
 MANBACK = ('<div class="manback"><p>Read it, copy it, keep a server. '
            'The web belongs to the people who make it.</p>'
            '<div class="actions">'
-           '<a class="btn solid" href="./index.html#publish">Publish a site</a>'
-           '<a class="btn" href="./index.html#keep">Keep a server</a>'
+           '<a class="btn solid" href="./index.html#run">Keep a server</a>'
+           '<a class="btn" href="./_relay/publish.html">Publish a site</a>'
            '</div></div>')
 
 

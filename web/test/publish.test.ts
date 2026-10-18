@@ -75,3 +75,9 @@ test("publish page can greet someone with an invite", () =>
 
 test("publish page tells assistants where to upload", () =>
   expect(readFileSync("publish.html", "utf8")).toContain("/_relay/v1/sites/"));
+
+test("publish page lets a guest invite the next person", () =>
+  expect(readFileSync("publish.html", "utf8")).toContain('id="invite"'));
+
+test("publish page explains what Relay is", () =>
+  expect(readFileSync("publish.html", "utf8")).toContain("What is Relay"));

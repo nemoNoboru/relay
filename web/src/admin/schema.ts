@@ -24,6 +24,8 @@ export const SiteOwner = Schema.Struct({
 export const AdminOverview = Schema.Struct({
   keys: Schema.Array(DeployKey),
   sites: Schema.Array(SiteOwner),
+  /** The node is still on the default admin token and must be given a new one. */
+  mustChangeToken: Schema.Boolean,
 });
 
 /** POST /_relay/v1/admin/keys and …/rotate — the one-time token is here. */
@@ -37,8 +39,14 @@ export const KeyUpdated = Schema.Struct({
   key: DeployKey,
 });
 
+/** POST /_relay/v1/admin/token — the admin token has been replaced. */
+export const TokenChanged = Schema.Struct({
+  changed: Schema.Boolean,
+});
+
 export type DeployKey = (typeof DeployKey)["Type"];
 export type SiteOwner = (typeof SiteOwner)["Type"];
 export type AdminOverview = (typeof AdminOverview)["Type"];
 export type KeyCreated = (typeof KeyCreated)["Type"];
 export type KeyUpdated = (typeof KeyUpdated)["Type"];
+export type TokenChanged = (typeof TokenChanged)["Type"];

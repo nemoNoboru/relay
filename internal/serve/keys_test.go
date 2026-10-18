@@ -69,6 +69,61 @@ func TestKeyStoreRevoke(t *testing.T) {
 	}
 }
 
+// TestKeyStoreInvite pins delegated invites: a live key mints a child key
+// whose label carries the chain.
+func TestKeyStoreInvite(t *testing.T) {
+	ks, err := serve.NewKeyStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice, _, err := ks.Create("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bob, key, err := ks.Invite(alice, "bob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key.User != "alice/bob" {
+		t.Fatalf("invited user = %q, want alice/bob", key.User)
+	}
+	if user, ok := ks.Authenticate(bob); !ok || user != "alice/bob" {
+		t.Fatalf("Authenticate(bob) = %q, %v; want alice/bob, true", user, ok)
+	}
+	if _, _, err := ks.Invite("wrong", "eve"); err != serve.ErrBadInviter {
+		t.Fatalf("Invite(wrong) err = %v, want ErrBadInviter", err)
+	}
+}
+
+// TestKeyStoreRevokeCascades pins that revoking a key revokes everyone it
+// invited, however deep the chain.
+func TestKeyStoreRevokeCascades(t *testing.T) {
+	ks, err := serve.NewKeyStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice, key, err := ks.Create("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bob, _, err := ks.Invite(alice, "bob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	carol, _, err := ks.Invite(bob, "carol")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := ks.Revoke(key.ID); err != nil {
+		t.Fatal(err)
+	}
+	for name, token := range map[string]string{"bob": bob, "carol": carol} {
+		if _, ok := ks.Authenticate(token); ok {
+			t.Fatalf("%s still authenticates after the inviter was revoked", name)
+		}
+	}
+}
+
 // TestKeyStoreRotate pins that rotation mints a new live token and kills the
 // old one, keeping the same user.
 func TestKeyStoreRotate(t *testing.T) {

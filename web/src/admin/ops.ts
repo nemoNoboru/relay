@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { ApiError, Client } from "../api/client";
-import { AdminOverview, KeyCreated, KeyUpdated } from "./schema";
+import { AdminOverview, KeyCreated, KeyUpdated, TokenChanged } from "./schema";
 
 /**
  * Operator admin operations. Each returns the Effect for one API call; the
@@ -30,4 +30,10 @@ export const rotateKey = (token: string, id: string): Effect.Effect<KeyCreated, 
   Effect.gen(function* () {
     const client = yield* Client;
     return yield* client.post(`/_relay/v1/admin/keys/${id}/rotate`, undefined, KeyCreated, token);
+  });
+
+export const changeToken = (token: string, next: string): Effect.Effect<TokenChanged, ApiError, Client> =>
+  Effect.gen(function* () {
+    const client = yield* Client;
+    return yield* client.post("/_relay/v1/admin/token", { token: next }, TokenChanged, token);
   });

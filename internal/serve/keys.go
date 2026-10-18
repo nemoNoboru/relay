@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -39,6 +40,10 @@ func tokenHash(token string) string {
 // names, not path segments, so the grammar is wider than a node/site name.
 var ErrBadUser = errors.New("invalid user label: must match [A-Za-z0-9._-]{1,63}")
 
+// ErrBadInviter is returned when an invite is offered by a token that is
+// unknown or already revoked.
+var ErrBadInviter = errors.New("unknown or revoked inviter key")
+
 // deployKey is one issued per-user deploy credential, as persisted. The
 // plaintext token is kept so the operator can copy it from the console; the
 // hash is what Authenticate compares against, in constant time.
@@ -49,6 +54,9 @@ type deployKey struct {
 	Hash    string    `json:"hash"`
 	Created time.Time `json:"created"`
 	Revoked bool      `json:"revoked,omitempty"`
+	// InvitedBy is the ID of the key that invited this one, empty for keys
+	// the operator issued. Revoking a key revokes everything below it.
+	InvitedBy string `json:"invitedBy,omitempty"`
 }
 
 // keyFile is the on-disk shape of the deploy-key store.
@@ -60,11 +68,12 @@ type keyFile struct {
 // KeyInfo is the view of a deploy key returned by the admin API. It carries
 // the plaintext token (for the operator console) but never the hash.
 type KeyInfo struct {
-	ID      string    `json:"id"`
-	User    string    `json:"user"`
-	Token   string    `json:"token"`
-	Created time.Time `json:"created"`
-	Revoked bool      `json:"revoked"`
+	ID        string    `json:"id"`
+	User      string    `json:"user"`
+	Token     string    `json:"token"`
+	Created   time.Time `json:"created"`
+	Revoked   bool      `json:"revoked"`
+	InvitedBy string    `json:"invitedBy,omitempty"`
 }
 
 // SiteOwner pairs a site with the user who last deployed it.
@@ -144,23 +153,13 @@ func (ks *KeyStore) persist() error {
 // is unknown or its key is revoked. The comparison runs over every key so
 // the timing does not reveal which key matched.
 func (ks *KeyStore) Authenticate(token string) (user string, ok bool) {
-	want := sha256.Sum256([]byte(token))
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
-	match := -1
-	for i := range ks.file.Keys {
-		sum, err := hex.DecodeString(ks.file.Keys[i].Hash)
-		if err != nil || len(sum) != len(want) {
-			continue
-		}
-		if subtle.ConstantTimeCompare(sum, want[:]) == 1 {
-			match = i
-		}
-	}
-	if match == -1 || ks.file.Keys[match].Revoked {
+	i := ks.indexOfToken(token)
+	if i == -1 || ks.file.Keys[i].Revoked {
 		return "", false
 	}
-	return ks.file.Keys[match].User, true
+	return ks.file.Keys[i].User, true
 }
 
 // Create mints a deploy key for user and returns the plaintext token
@@ -171,6 +170,29 @@ func (ks *KeyStore) Create(user string) (string, KeyInfo, error) {
 	if !validUser(user) {
 		return "", KeyInfo{}, ErrBadUser
 	}
+	return ks.mint(user, "")
+}
+
+// Invite mints a key on behalf of a key holder: anyone with a live key can
+// pass an invite on. The new label carries the chain ("alice/bob") and the
+// new key records its inviter, so revoking someone also revokes everyone
+// they brought in.
+func (ks *KeyStore) Invite(inviterToken, name string) (string, KeyInfo, error) {
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	if !validUser(name) {
+		return "", KeyInfo{}, ErrBadUser
+	}
+	i := ks.indexOfToken(inviterToken)
+	if i == -1 || ks.file.Keys[i].Revoked {
+		return "", KeyInfo{}, ErrBadInviter
+	}
+	return ks.mint(ks.file.Keys[i].User+"/"+name, ks.file.Keys[i].ID)
+}
+
+// mint appends a fresh key and persists it. Callers hold the write lock and
+// have already validated the label.
+func (ks *KeyStore) mint(user, invitedBy string) (string, KeyInfo, error) {
 	token, err := GenerateToken()
 	if err != nil {
 		return "", KeyInfo{}, err
@@ -179,7 +201,10 @@ func (ks *KeyStore) Create(user string) (string, KeyInfo, error) {
 	if err != nil {
 		return "", KeyInfo{}, err
 	}
-	k := deployKey{ID: id, User: user, Token: token, Hash: tokenHash(token), Created: time.Now().UTC()}
+	k := deployKey{
+		ID: id, User: user, Token: token, Hash: tokenHash(token),
+		Created: time.Now().UTC(), InvitedBy: invitedBy,
+	}
 	ks.file.Keys = append(ks.file.Keys, k)
 	if err := ks.persist(); err != nil {
 		ks.file.Keys = ks.file.Keys[:len(ks.file.Keys)-1]
@@ -188,8 +213,9 @@ func (ks *KeyStore) Create(user string) (string, KeyInfo, error) {
 	return token, keyInfo(k), nil
 }
 
-// Revoke marks a key as revoked. It is idempotent: revoking an already
-// revoked key succeeds. found=false means no such key.
+// Revoke marks a key, and everyone it invited, as revoked. It is
+// idempotent: revoking an already revoked key succeeds. found=false means
+// no such key.
 func (ks *KeyStore) Revoke(id string) (KeyInfo, bool, error) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
@@ -197,12 +223,12 @@ func (ks *KeyStore) Revoke(id string) (KeyInfo, bool, error) {
 	if i == -1 {
 		return KeyInfo{}, false, nil
 	}
-	if ks.file.Keys[i].Revoked {
-		return keyInfo(ks.file.Keys[i]), true, nil
+	before := slices.Clone(ks.file.Keys)
+	for _, j := range ks.descendants(id) {
+		ks.file.Keys[j].Revoked = true
 	}
-	ks.file.Keys[i].Revoked = true
 	if err := ks.persist(); err != nil {
-		ks.file.Keys[i].Revoked = false
+		ks.file.Keys = before
 		return KeyInfo{}, false, err
 	}
 	return keyInfo(ks.file.Keys[i]), true, nil
@@ -225,13 +251,23 @@ func (ks *KeyStore) Rotate(id string) (string, KeyInfo, bool, error) {
 	if err != nil {
 		return "", KeyInfo{}, false, err
 	}
-	user := ks.file.Keys[i].User
+	before := slices.Clone(ks.file.Keys)
+	old := ks.file.Keys[i]
 	ks.file.Keys[i].Revoked = true
-	k := deployKey{ID: newID, User: user, Token: token, Hash: tokenHash(token), Created: time.Now().UTC()}
+	// Invitees belong to the person, not the token, so they follow the key
+	// across a rotation and a later revoke still reaches them.
+	for j := range ks.file.Keys {
+		if ks.file.Keys[j].InvitedBy == id {
+			ks.file.Keys[j].InvitedBy = newID
+		}
+	}
+	k := deployKey{
+		ID: newID, User: old.User, Token: token, Hash: tokenHash(token),
+		Created: time.Now().UTC(), InvitedBy: old.InvitedBy,
+	}
 	ks.file.Keys = append(ks.file.Keys, k)
 	if err := ks.persist(); err != nil {
-		ks.file.Keys[i].Revoked = false
-		ks.file.Keys = ks.file.Keys[:len(ks.file.Keys)-1]
+		ks.file.Keys = before
 		return "", KeyInfo{}, false, err
 	}
 	return token, keyInfo(k), true, nil
@@ -276,8 +312,57 @@ func (ks *KeyStore) indexOf(id string) int {
 	return -1
 }
 
+// indexOfToken returns the position of the key a token belongs to, or -1.
+// The scan covers every key so the timing does not reveal which matched.
+// Callers hold the lock.
+func (ks *KeyStore) indexOfToken(token string) int {
+	want := sha256.Sum256([]byte(token))
+	match := -1
+	for i := range ks.file.Keys {
+		sum, err := hex.DecodeString(ks.file.Keys[i].Hash)
+		if err != nil || len(sum) != len(want) {
+			continue
+		}
+		if subtle.ConstantTimeCompare(sum, want[:]) == 1 {
+			match = i
+		}
+	}
+	return match
+}
+
+// descendants returns the positions of id and every key invited below it.
+// Callers hold the lock.
+func (ks *KeyStore) descendants(id string) []int {
+	children := map[string][]string{}
+	for _, k := range ks.file.Keys {
+		children[k.InvitedBy] = append(children[k.InvitedBy], k.ID)
+	}
+	found := map[string]bool{}
+	var walk func(string)
+	walk = func(id string) {
+		if found[id] {
+			return // also keeps a corrupted cycle from spinning
+		}
+		found[id] = true
+		for _, c := range children[id] {
+			walk(c)
+		}
+	}
+	walk(id)
+	var out []int
+	for i := range ks.file.Keys {
+		if found[ks.file.Keys[i].ID] {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
 func keyInfo(k deployKey) KeyInfo {
-	return KeyInfo{ID: k.ID, User: k.User, Token: k.Token, Created: k.Created, Revoked: k.Revoked}
+	return KeyInfo{
+		ID: k.ID, User: k.User, Token: k.Token,
+		Created: k.Created, Revoked: k.Revoked, InvitedBy: k.InvitedBy,
+	}
 }
 
 func validUser(s string) bool {

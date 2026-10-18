@@ -20,7 +20,7 @@ func newAdmin(t *testing.T) (*serve.Admin, *serve.KeyStore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewAdmin(adminToken, ks, serve.NewVersions(data), nil), ks
+	return serve.NewAdmin(adminToken, ks, serve.NewVersions(data), nil, nil), ks
 }
 
 // doJSON issues a request to the admin handler with an optional bearer token
@@ -109,6 +109,65 @@ func TestAdminOverview(t *testing.T) {
 	if len(ov.Sites) != 1 || ov.Sites[0].Site != "blog" || ov.Sites[0].User != "alice" {
 		t.Fatalf("sites = %+v, want blog->alice", ov.Sites)
 	}
+}
+
+// TestAdminChangeToken pins the first-login flow: a node left on the
+// default token says so, and changing the token swaps the credential and
+// saves it.
+func TestAdminChangeToken(t *testing.T) {
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved := ""
+	a := serve.NewAdmin(serve.DefaultAdminToken, ks, serve.NewVersions(data), nil, func(s string) error {
+		saved = s
+		return nil
+	})
+	if !mustChange(t, a, serve.DefaultAdminToken) {
+		t.Fatal("a node on the default token does not ask for a change")
+	}
+
+	rec := doJSON(t, a, http.MethodPost, "/_relay/v1/admin/token", serve.DefaultAdminToken, `{"token":"chosen-one"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("change = %d %s, want 200", rec.Code, rec.Body)
+	}
+	if saved != "chosen-one" {
+		t.Fatalf("saved = %q, want chosen-one", saved)
+	}
+	if rec := doJSON(t, a, http.MethodGet, "/_relay/v1/admin", serve.DefaultAdminToken, ""); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("old token still works = %d, want 401", rec.Code)
+	}
+	if mustChange(t, a, "chosen-one") {
+		t.Fatal("still asking for a change after the token was changed")
+	}
+}
+
+// TestAdminRejectsDefaultAsNewToken pins that the change must be a real
+// change, not the default again.
+func TestAdminRejectsDefaultAsNewToken(t *testing.T) {
+	a, _ := newAdmin(t)
+	rec := doJSON(t, a, http.MethodPost, "/_relay/v1/admin/token", adminToken, `{"token":"`+serve.DefaultAdminToken+`"}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rec.Code)
+	}
+}
+
+// mustChange reports the overview's mustChangeToken flag.
+func mustChange(t *testing.T, a *serve.Admin, token string) bool {
+	t.Helper()
+	rec := doJSON(t, a, http.MethodGet, "/_relay/v1/admin", token, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("overview = %d %s", rec.Code, rec.Body)
+	}
+	var ov struct {
+		MustChangeToken bool `json:"mustChangeToken"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &ov); err != nil {
+		t.Fatal(err)
+	}
+	return ov.MustChangeToken
 }
 
 // TestAdminCreateKey pins the create endpoint: 201 with a one-time token,
@@ -234,7 +293,7 @@ func newAdminNode(t *testing.T) (*serve.Admin, *serve.Registry, http.Handler, st
 		return err
 	}
 	up := serve.NewUploader("mynode", data, ks, versions, serve.MaxDeployBytes, reload)
-	return serve.NewAdmin(adminToken, ks, versions, reload), reg, up, token
+	return serve.NewAdmin(adminToken, ks, versions, reload, nil), reg, up, token
 }
 
 func deploySite(t *testing.T, up http.Handler, token, site, content string) {

@@ -15,8 +15,8 @@
       <div class="wrap">
         <a class="brand" href="../"><span class="mark">R</span> RELAY</a>
         <nav class="main">
-          <a href="../">Home</a>
-          <a href="./publish.html">Publish</a>
+          <a href="#pub">Publish</a>
+          <a href="#what">What is this</a>
           <a href="./deploy.html">Step by step</a>
         </nav>
         <span class="stamp">Publish</span>
@@ -53,6 +53,58 @@
           <iframe id="preview" class="preview" title="Preview of your home page" sandbox hidden></iframe>
           <button class="btn solid" id="go" disabled>Publish</button>
           <p class="result" id="status" role="status" hidden></p>
+        </form>
+      </section>
+
+      <section class="prose what" id="what">
+        <h2>What is Relay?</h2>
+        <p>
+          <b>Somewhere to put your website that nobody owns.</b> The page you
+          are on belongs to a server someone keeps running — a collective, a
+          club, a neighbour — not to a company. Drop your files above and they
+          are online. There is no account to make, nothing to install, and no
+          bill at the end of the month.
+        </p>
+        <h3>Why not just use a platform?</h3>
+        <p>
+          Because you would be renting. The big hosts own the ground your site
+          stands on: they set the terms, change them when it suits them, count
+          every visitor, and can take the whole thing down without telling you
+          why. What you built is only yours for as long as they allow it.
+        </p>
+        <p>
+          Here the arrangement is plain. Your site is a folder of files on a
+          machine a person you can actually talk to looks after. No tracking
+          sits between you and whoever reads it. If you ever want to move, you
+          take the same folder somewhere else — there is nothing to export and
+          nothing holding it.
+        </p>
+        <h3>What can I put here?</h3>
+        <p>
+          Pages, pictures, a zine, notes, a poster for something happening on
+          your street. If all you have is a single Markdown file, drop that:
+          it is turned into a page for you. Each upload replaces the whole
+          site, and the last ten versions are kept in case you want one back.
+        </p>
+        <p class="aside">
+          Want one of these servers of your own? <a href="../">Anyone can run
+          a node</a> — it is one program on any computer, an old laptop
+          included.
+        </p>
+      </section>
+
+      <section class="pubcard" id="invite" hidden>
+        <span class="wedge" aria-hidden="true"></span>
+        <h2>Pass it on</h2>
+        <p class="pubsub">Your invite is yours to share. Make a link for someone else and they get their own place on this server, on the same terms you did.</p>
+        <form id="inviteform" class="pub">
+          <div class="field">
+            <label for="guest">Who are you inviting?</label>
+            <input type="text" id="guest" required autocomplete="off" placeholder="their name"
+              pattern="[A-Za-z0-9._\-]{1,63}" title="Letters, numbers, dots, dashes and underscores" />
+          </div>
+          <button class="btn solid" id="makeinvite" type="submit">Make an invite link</button>
+          <p class="result" id="invitestatus" role="status" hidden></p>
         </form>
       </section>
 
