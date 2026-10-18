@@ -25,6 +25,7 @@ const invite = readInvite(location.hash);
 site.value = invite.site;
 key.value = invite.key;
 $("keyfield").hidden = !!invite.key;
+$("invited").hidden = !invite.key;
 key.addEventListener("change", () => {
   key.value = readInvite(key.value.split("#")[1] ?? "").key || key.value.trim();
 });
