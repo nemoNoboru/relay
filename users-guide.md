@@ -22,23 +22,23 @@ relay node --name mynode --data /var/lib/relay --listen :8080
 ```
 
 `--name` is the first path segment of every site on this node. On first
-start the node writes the **admin token** to `<data>/admin-token` and prints
-it once to the log (`docker logs relay`). To choose your own, pass
-`--admin-token`. For HTTPS, pass `--tls-cert` and `--tls-key`, or run a
-reverse proxy in front. Kubernetes and the other options are in
+start the admin password is **`relay`** (also written to
+`<data>/admin-token`). Sign in at the console and change it before issuing
+keys. To set one yourself from the start, pass `--admin-token`. For HTTPS,
+pass `--tls-cert` and `--tls-key`, or run a reverse proxy in front.
+Kubernetes and the other options are in
 [`docs/technicals.md`](docs/technicals.md).
 
 ## 2. Issue a deploy key (operator)
 
-1. Open `{origin}/_relay/admin.html` and sign in with the admin token.
-2. Type the person's name (letters, digits, `.`, `_`, `-`) and press **Create key**.
-3. Send them two things over a secure channel, like Signal or a password manager (never email or a commit):
-   - the **origin**, e.g. `https://relay.example.org`
-   - their **deploy key** token
+1. Open `{origin}/_relay/admin.html` and sign in (password `relay` on a fresh node).
+2. If asked, choose a new password (at least 8 characters).
+3. Type the person's name (letters, digits, `.`, `_`, `-`) and press **Create key**.
+4. Copy the **invite link** and send it over a secure channel (Signal, a password manager — never email or a commit).
 
-The console can reveal and copy a key again later. **Revoke** stops a key
-from uploading right away, and sites already deployed stay live. **Rotate**
-replaces a key with a fresh one for the same person.
+People with an invite can invite others from the publish page; those keys are
+labelled `name/guest`. **Revoke** stops a key and everyone it invited.
+**Rotate** replaces a key with a fresh one for the same person (their invitees stay attached).
 
 ## 3. Upload a site
 

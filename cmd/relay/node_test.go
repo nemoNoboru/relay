@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/nemoNoboru/relay/internal/serve"
 )
 
 func discardLogger() *slog.Logger {
@@ -36,21 +38,17 @@ func TestResolveAdminTokenExplicit(t *testing.T) {
 	}
 }
 
-func TestResolveAdminTokenGenerated(t *testing.T) {
+// TestResolveAdminTokenDefault pins the streamlined first run: with nothing
+// configured the node comes up on the well-known default token, which the
+// console then forces the operator to replace.
+func TestResolveAdminTokenDefault(t *testing.T) {
 	data := t.TempDir()
 	token, err := resolveAdminToken(data, "", discardLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(token) < 32 {
-		t.Fatalf("generated token too short: %q", token)
-	}
-	again, err := resolveAdminToken(data, "", discardLogger())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if token != again {
-		t.Fatalf("generated token not stable: %q vs %q", token, again)
+	if token != serve.DefaultAdminToken {
+		t.Fatalf("token = %q, want the default %q", token, serve.DefaultAdminToken)
 	}
 	if perm := tokenFilePerm(t, data); perm != 0o600 {
 		t.Fatalf("token file mode = %o, want 600", perm)

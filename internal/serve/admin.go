@@ -10,35 +10,50 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/nemoNoboru/relay/internal/domain"
 )
+
+// DefaultAdminToken is the credential a node comes up on when the operator
+// configured none, so running a node takes no more than one command. The
+// console refuses to do anything else until it has been changed.
+const DefaultAdminToken = "relay"
+
+// minAdminToken is the length floor on a replacement admin token. It sits
+// above len(DefaultAdminToken) so the default cannot be chosen again.
+const minAdminToken = 8
 
 // Admin is the operator-facing control surface: list, create, revoke, and
 // rotate per-user deploy keys; view sites by owner; and list or roll back a
 // site's versions. Every request is authenticated with the admin token (the
 // node's master credential).
 type Admin struct {
+	mu       sync.RWMutex
 	token    [sha256.Size]byte
 	ks       *KeyStore
 	versions *Versions
 	reload   func() error
+	save     func(string) error
 }
 
 // NewAdmin returns an admin handler that authorizes with token, operates on
-// ks and versions, and calls reload after a rollback.
-func NewAdmin(token string, ks *KeyStore, versions *Versions, reload func() error) *Admin {
+// ks and versions, calls reload after a rollback, and calls save to persist
+// a changed admin token. reload and save may be nil.
+func NewAdmin(token string, ks *KeyStore, versions *Versions, reload func() error, save func(string) error) *Admin {
 	return &Admin{
 		token:    sha256.Sum256([]byte(token)),
 		ks:       ks,
 		versions: versions,
 		reload:   reload,
+		save:     save,
 	}
 }
 
 // ServeHTTP routes the admin surface under /_relay/v1/admin:
 //
 //	GET  /_relay/v1/admin                          overview (keys + sites)
+//	POST /_relay/v1/admin/token                    change the admin token { "token": "…" }
 //	POST /_relay/v1/admin/keys                     create a key   { "user": "…" }
 //	POST /_relay/v1/admin/keys/{id}/revoke         revoke a key
 //	POST /_relay/v1/admin/keys/{id}/rotate         rotate a key
@@ -54,7 +69,9 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p := strings.TrimSuffix(r.URL.Path, "/")
 	switch {
 	case r.Method == http.MethodGet && p == "/_relay/v1/admin":
-		writeJSON(w, http.StatusOK, a.ks.Overview())
+		writeJSON(w, http.StatusOK, overview{Overview: a.ks.Overview(), MustChangeToken: a.mustChangeToken()})
+	case r.Method == http.MethodPost && p == "/_relay/v1/admin/token":
+		a.changeToken(w, r)
 	case r.Method == http.MethodPost && p == "/_relay/v1/admin/keys":
 		a.createKey(w, r)
 	case strings.HasPrefix(p, "/_relay/v1/admin/sites/"):
@@ -105,6 +122,13 @@ func (a *Admin) serveSite(w http.ResponseWriter, r *http.Request, rest string) {
 	}
 }
 
+// overview is the admin read view: the key store's plus whether the node is
+// still on the default credential.
+type overview struct {
+	Overview
+	MustChangeToken bool `json:"mustChangeToken"`
+}
+
 // authorized reports whether r carries the admin token as a bearer token.
 func (a *Admin) authorized(r *http.Request) bool {
 	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -112,7 +136,48 @@ func (a *Admin) authorized(r *http.Request) bool {
 		return false
 	}
 	got := sha256.Sum256([]byte(token))
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 	return subtle.ConstantTimeCompare(got[:], a.token[:]) == 1
+}
+
+// mustChangeToken reports whether the node is still on DefaultAdminToken.
+func (a *Admin) mustChangeToken() bool {
+	want := sha256.Sum256([]byte(DefaultAdminToken))
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return subtle.ConstantTimeCompare(want[:], a.token[:]) == 1
+}
+
+// changeToken replaces the node's admin credential. The caller is already
+// authenticated with the current token, so this is the first thing an
+// operator does on a node that came up on the default.
+func (a *Admin) changeToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "body must be JSON: "+err.Error())
+		return
+	}
+	// The length floor also rules out keeping DefaultAdminToken, which is
+	// deliberately shorter than anything acceptable here.
+	token := strings.TrimSpace(req.Token)
+	if len(token) < minAdminToken {
+		writeError(w, http.StatusBadRequest, "bad_request",
+			fmt.Sprintf("the new token must be at least %d characters", minAdminToken))
+		return
+	}
+	if a.save != nil {
+		if err := a.save(token); err != nil {
+			writeError(w, http.StatusInternalServerError, "internal", err.Error())
+			return
+		}
+	}
+	a.mu.Lock()
+	a.token = sha256.Sum256([]byte(token))
+	a.mu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]any{"changed": true})
 }
 
 func (a *Admin) createKey(w http.ResponseWriter, r *http.Request) {

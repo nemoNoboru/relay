@@ -35,6 +35,7 @@ const renderAdmin = (state: AdminState): PromiseLike<string> =>
       onRefresh: noop,
       onDismiss: noop,
       onLogout: noop,
+      onChangeToken: noop,
     },
   }).then((out) => out.body);
 
@@ -50,6 +51,7 @@ const OVERVIEW: AdminOverview = {
     { site: "zine", user: "alice" },
     { site: "bob-site", user: "bob" },
   ],
+  mustChangeToken: false,
 };
 
 const ready = (overview: AdminOverview, extra: Partial<AdminState> = {}): AdminState => ({
@@ -124,9 +126,21 @@ describe("Admin.svelte ready", () => {
   });
 
   it("renders the empty states", async () => {
-    const html = await renderAdmin(ready({ keys: [], sites: [] }));
+    const html = await renderAdmin(ready({ keys: [], sites: [], mustChangeToken: false }));
     expect(html).toContain("No keys issued.");
     expect(html).toContain("No sites deployed yet.");
+  });
+});
+
+describe("Admin.svelte first sign-in", () => {
+  it("demands a new password before showing the console", async () => {
+    const html = await renderAdmin(ready({ ...OVERVIEW, mustChangeToken: true }));
+    expect(html).toContain("Choose a password");
+    expect(html).not.toContain("Create key");
+  });
+
+  it("tells a new operator the default password", async () => {
+    expect(await renderAdmin(locked())).toContain("the password is");
   });
 });
 

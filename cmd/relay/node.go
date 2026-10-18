@@ -86,7 +86,10 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 		return err
 	}
 	uploader := serve.NewUploader(node, *data, keys, versions, serve.MaxDeployBytes, reload)
-	admin := serve.NewAdmin(token, keys, versions, reload)
+	tokenPath := filepath.Join(*data, "admin-token")
+	admin := serve.NewAdmin(token, keys, versions, reload, func(t string) error {
+		return writeTokenFile(tokenPath, t)
+	})
 	ui, err := serve.UIHandler()
 	if err != nil {
 		fmt.Fprintf(stderr, "relay: serving owner UI: %v\n", err)
@@ -97,6 +100,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.HandleFunc("/healthz", healthz)
 	mux.Handle("/_relay/v1/admin", admin)
 	mux.Handle("/_relay/v1/admin/", admin)
+	mux.Handle("/_relay/v1/invites", serve.NewInvites(keys))
 	mux.Handle("/_relay/v1/", uploader)
 	mux.Handle("/_relay/", ui)
 	// The node root serves the embedded landing page and its companions;
@@ -155,8 +159,9 @@ func healthz(w http.ResponseWriter, _ *http.Request) {
 
 // resolveAdminToken returns the node's admin token — the operator's master
 // credential. An explicit flag value wins and is persisted; otherwise the
-// token is read from <dataDir>/admin-token, or generated and persisted
-// (0600) if absent.
+// token is read from <dataDir>/admin-token, falling back to
+// serve.DefaultAdminToken so a node needs no setup to sign in to. The
+// console then refuses to go further until the default is replaced.
 func resolveAdminToken(dataDir, explicit string, logger *slog.Logger) (string, error) {
 	path := filepath.Join(dataDir, "admin-token")
 	if explicit != "" {
@@ -169,15 +174,12 @@ func resolveAdminToken(dataDir, explicit string, logger *slog.Logger) (string, e
 	if !errors.Is(err, fs.ErrNotExist) {
 		return "", fmt.Errorf("read %s: %w", path, err)
 	}
-	token, err := serve.GenerateToken()
-	if err != nil {
+	if err := writeTokenFile(path, serve.DefaultAdminToken); err != nil {
 		return "", err
 	}
-	if err := writeTokenFile(path, token); err != nil {
-		return "", err
-	}
-	logger.Info("generated admin token (shown once)", "token", token, "file", path)
-	return token, nil
+	logger.Warn("no admin token set; using the default — change it at /_relay/admin.html",
+		"token", serve.DefaultAdminToken, "file", path)
+	return serve.DefaultAdminToken, nil
 }
 
 func writeTokenFile(path, token string) error {

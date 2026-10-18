@@ -12,7 +12,7 @@ import type { Writable } from "svelte/store";
 
 import { Client } from "../api/client";
 import type { ApiError } from "../api/client";
-import { createKey, fetchOverview, revokeKey, rotateKey } from "../admin/ops";
+import { changeToken, createKey, fetchOverview, revokeKey, rotateKey } from "../admin/ops";
 import { initialAdmin } from "../admin/state";
 import type { AdminState } from "../admin/state";
 import AdminApp from "../ui/Admin.svelte";
@@ -116,6 +116,22 @@ const refresh = (): void => {
   );
 };
 
+/** Replace the node's admin token and carry the session over to the new one. */
+const change = (next: string): void => {
+  const tok = get(store).token;
+  const t = next.trim();
+  if (tok === "" || t === "") return;
+  set({ busy: true, actionError: undefined });
+  void run(changeToken(tok, t)).then(
+    () => {
+      sessionStorage.setItem(TOKEN_KEY, t);
+      set({ token: t, busy: false, actionError: undefined });
+      load(t);
+    },
+    (err: ApiError) => set({ busy: false, actionError: err.message }),
+  );
+};
+
 const dismiss = (): void => set({ newToken: undefined, notice: undefined });
 
 const logout = (): void => {
@@ -134,6 +150,7 @@ mount(AdminApp, {
     onRefresh: refresh,
     onDismiss: dismiss,
     onLogout: logout,
+    onChangeToken: change,
   },
 });
 

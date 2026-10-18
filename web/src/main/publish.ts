@@ -1,4 +1,4 @@
-import { assistantPrompt, body, readInvite, toSite, type SiteFile } from "../publish";
+import { assistantPrompt, body, inviteLink, readInvite, toSite, type SiteFile } from "../publish";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const site = $<HTMLInputElement>("site");
@@ -26,8 +26,48 @@ site.value = invite.site;
 key.value = invite.key;
 $("keyfield").hidden = !!invite.key;
 $("invited").hidden = !invite.key;
+$("invite").hidden = !invite.key;
 key.addEventListener("change", () => {
   key.value = readInvite(key.value.split("#")[1] ?? "").key || key.value.trim();
+  $("invite").hidden = !key.value;
+});
+
+const guest = $<HTMLInputElement>("guest");
+const invitestatus = $("invitestatus");
+const makeinvite = $<HTMLButtonElement>("makeinvite");
+const sayInvite = (...parts: Array<string | Node>) => {
+  invitestatus.hidden = false;
+  invitestatus.replaceChildren(...parts);
+};
+
+$("inviteform").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  makeinvite.disabled = true;
+  sayInvite("Making the invite…");
+  try {
+    const r = await fetch("/_relay/v1/invites", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key.value}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: guest.value.trim() }),
+    });
+    const reply = await r.json();
+    if (!r.ok) {
+      sayInvite(MESSAGES[reply.error?.code] ?? reply.error?.message ?? "Something went wrong.");
+      return;
+    }
+    const link = inviteLink(location.origin, reply.token);
+    const a = Object.assign(document.createElement("a"), { href: link, textContent: "Copy this invite link" });
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      void navigator.clipboard.writeText(link).then(() => (a.textContent = "Copied"));
+    });
+    sayInvite("Invite for ", guest.value.trim(), ": ", a);
+    guest.value = "";
+  } catch {
+    sayInvite("Couldn't reach the server. Try again.");
+  } finally {
+    makeinvite.disabled = false;
+  }
 });
 
 const copyai = $<HTMLButtonElement>("copyai");

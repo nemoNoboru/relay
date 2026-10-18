@@ -21,6 +21,7 @@
     onRefresh,
     onDismiss,
     onLogout,
+    onChangeToken,
   }: {
     admin: Writable<AdminState>;
     onConnect: (token: string) => void;
@@ -30,10 +31,12 @@
     onRefresh: () => void;
     onDismiss: () => void;
     onLogout: () => void;
+    onChangeToken: (token: string) => void;
   } = $props();
 
   let tokenInput = $state("");
   let userInput = $state("");
+  let newTokenInput = $state("");
   let revealed = $state<Record<string, boolean>>({});
 
   /** Sites grouped by owner. Pure. */
@@ -95,6 +98,7 @@
         <h3>Sign in</h3>
         <div class="panel-body">
           <p class="hint">Enter the node's admin token to manage deploy keys and sites.</p>
+          <p class="hint">On a node you have just started, the password is <code>relay</code> — you will be asked to change it.</p>
           <form onsubmit={(e) => { e.preventDefault(); onConnect(tokenInput); }}>
             <div class="field">
               <label for="admin-token">admin token</label>
@@ -109,6 +113,24 @@
       </section>
     {:else if $admin.phase === "loading"}
       <p class="hint">Loading…</p>
+    {:else if $admin.overview?.mustChangeToken}
+      <!-- The node came up on the default token; nothing else until it is replaced. -->
+      <section class="panel">
+        <h3>Choose a password</h3>
+        <div class="panel-body">
+          <p class="hint">This node is still on the password it ships with, so anyone who finds it could take it over. Pick your own to go on. Eight characters or more.</p>
+          <form onsubmit={(e) => { e.preventDefault(); onChangeToken(newTokenInput); newTokenInput = ""; }}>
+            <div class="field">
+              <label for="new-token">new password</label>
+              <input id="new-token" type="password" bind:value={newTokenInput} placeholder="…" autocomplete="new-password" disabled={$admin.busy} />
+              <button class="btn solid" type="submit" disabled={$admin.busy}>Save it</button>
+            </div>
+          </form>
+          {#if $admin.actionError}
+            <p class="warn">{$admin.actionError}</p>
+          {/if}
+        </div>
+      </section>
     {:else}
       {#if $admin.newToken}
         <section class="panel wide">
@@ -131,7 +153,7 @@
       <section class="panel wide">
         <h3>Deploy keys</h3>
         <div class="panel-body">
-          <p class="hint">Each key lets one person publish sites. Send them its invite link: they open it and drop their site. Rotate or revoke to cut someone off.</p>
+          <p class="hint">Each key lets one person publish sites. Send them its invite link: they open it and drop their site. They can invite others in turn, who appear here as <code>name/guest</code>. Revoking a key also revokes everyone below it.</p>
           <form onsubmit={(e) => { e.preventDefault(); onCreate(userInput); userInput = ""; }}>
             <div class="field">
               <label for="key-user">user</label>

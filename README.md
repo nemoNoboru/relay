@@ -39,10 +39,11 @@ relay node --name mynode --data /var/lib/relay --listen :8080
 ```
 
 Docker and Kubernetes each take one command; see
-[`docs/technicals.md`](docs/technicals.md). On first start the node prints
-an **admin token**. Use it to sign in to the operator console at
-`/_relay/admin.html`, where you issue deploy keys and see who last
-deployed each site. Every node also serves this project's landing page at `/`.
+[`docs/technicals.md`](docs/technicals.md). On first start the admin password is
+**`relay`**. Sign in at `/_relay/admin.html`, change it, then issue
+deploy keys (invite links). People you invite can invite others; revoke
+a key and everyone below it is cut off too. Every node also serves this
+project's landing page at `/`.
 
 ## Docs
 
