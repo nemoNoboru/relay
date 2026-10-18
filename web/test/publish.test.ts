@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { body, inviteLink, readInvite, tar, toSite } from "../src/publish";
+import { assistantPrompt, body, inviteLink, readInvite, tar, toSite } from "../src/publish";
 
 const enc = (s: string) => new TextEncoder().encode(s);
 const text = (b: Uint8Array) => new TextDecoder().decode(b);
@@ -40,6 +40,14 @@ test("a dropped folder loses its own name", () =>
 
 test("a dropped tar is sent as it is", () =>
   expect(text(body([file("site.tar", "raw")]))).toBe("raw"));
+
+test("assistant prompt carries the upload line with server, key and site", () =>
+  expect(assistantPrompt("https://r.org", "k1", "blog")).toContain(
+    '-H "Authorization: Bearer k1" https://r.org/_relay/v1/sites/blog/deploy',
+  ));
+
+test("assistant prompt asks for a site name when there is none", () =>
+  expect(assistantPrompt("https://r.org", "k1", "")).toContain("Ask me for a site name"));
 
 test("publish page can greet someone with an invite", () =>
   expect(readFileSync("publish.html", "utf8")).toContain('id="invited"'));

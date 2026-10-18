@@ -1,4 +1,4 @@
-import { body, readInvite, toSite, type SiteFile } from "../publish";
+import { assistantPrompt, body, readInvite, toSite, type SiteFile } from "../publish";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const site = $<HTMLInputElement>("site");
@@ -28,6 +28,13 @@ $("keyfield").hidden = !!invite.key;
 $("invited").hidden = !invite.key;
 key.addEventListener("change", () => {
   key.value = readInvite(key.value.split("#")[1] ?? "").key || key.value.trim();
+});
+
+const copyai = $<HTMLButtonElement>("copyai");
+copyai.addEventListener("click", async () => {
+  await navigator.clipboard.writeText(assistantPrompt(location.origin, key.value || "YOUR-KEY", site.value));
+  copyai.textContent = "Copied";
+  setTimeout(() => (copyai.textContent = "Copy instructions for Claude"), 2500);
 });
 
 const read = async (path: string, f: File): Promise<SiteFile> => ({ path, data: new Uint8Array(await f.arrayBuffer()) });
