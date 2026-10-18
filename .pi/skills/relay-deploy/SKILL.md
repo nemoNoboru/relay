@@ -21,6 +21,11 @@ bearer token.
    letters, digits, and interior hyphens, 1–63 characters, no leading or
    trailing hyphen (e.g. `docs`, `my-blog`, `zine-42`).
 
+If you were given an **invite link** such as
+`https://relay.example.org/_relay/publish.html#key=…`, its scheme and host are
+the origin, and the `key` value after `#` is the deploy key. The link may also
+carry `&site=…`; use that name. Never repeat the key back in your output.
+
 If any of these is missing, stop and ask for it — do not invent a name or
 guess a token.
 

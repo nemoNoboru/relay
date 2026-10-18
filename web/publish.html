@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Publish — Relay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./shared/styles.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="wrap">
+        <a class="brand" href="../"><span class="mark">R</span> RELAY</a>
+        <nav class="main">
+          <a href="../">Home</a>
+          <a href="./publish.html">Publish</a>
+          <a href="./deploy.html">Step by step</a>
+        </nav>
+        <span class="stamp">Publish</span>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="prose publishpage">
+        <span class="kick">Publish</span>
+        <h2>Drop it here</h2>
+
+        <form id="pub" class="pub">
+          <div class="field">
+            <label for="site">Site name</label>
+            <input type="text" id="site" required autocomplete="off" placeholder="my-site"
+              pattern="[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?" title="Lowercase letters, numbers and hyphens" />
+          </div>
+          <div class="field" id="keyfield">
+            <label for="key">Key or invite link</label>
+            <input type="password" id="key" required autocomplete="off" />
+          </div>
+
+          <div class="drop" id="drop">
+            <b>Drop a folder, a Markdown file or a .tar</b>
+            <span>
+              or <label class="choose">choose files<input type="file" id="files" multiple hidden /></label>
+              · <label class="choose">choose a folder<input type="file" id="folder" webkitdirectory hidden /></label>
+            </span>
+          </div>
+
+          <iframe id="preview" class="preview" title="Preview of your home page" sandbox hidden></iframe>
+          <button class="btn solid" id="go" disabled>Publish</button>
+          <p class="result" id="status" role="status" hidden></p>
+        </form>
+
+        <section id="assistants">
+          <h3>For AI assistants</h3>
+          <p>
+            You were sent a link to this page. The deploy key is the
+            <code>key</code> value after <code>#</code> in that link; never
+            print it or send it anywhere else. To publish, send a tar of the
+            site's folder to this server:
+          </p>
+          <pre>tar -cf - -C SITE_FOLDER . | curl --data-binary @- \
+  -H "Authorization: Bearer KEY" \
+  https://THIS-SERVER/_relay/v1/sites/SITE_NAME/deploy</pre>
+          <p>
+            <code>THIS-SERVER</code> is the host of the link. Site names are
+            lowercase letters, numbers and hyphens. The JSON reply's
+            <code>url</code> field is the site's address. Each upload replaces
+            the whole site. More detail:
+            <a href="./skills/relay-deploy/SKILL.md">the publishing instructions</a>.
+          </p>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="./src/main/publish.ts"></script>
+  </body>
+</html>
