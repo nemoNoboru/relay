@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { assistantPrompt, body, inviteLink, readInvite, tar, toSite } from "../src/publish";
+import { assistantPrompt, body, cardTitle, inviteLink, readInvite, tar, toSite } from "../src/publish";
 
 const enc = (s: string) => new TextEncoder().encode(s);
 const text = (b: Uint8Array) => new TextDecoder().decode(b);
@@ -40,6 +40,21 @@ test("a dropped folder loses its own name", () =>
 
 test("a dropped tar is sent as it is", () =>
   expect(text(body([file("site.tar", "raw")]))).toBe("raw"));
+
+test("a rendered page carries the relay banner", () => {
+  const html = text(toSite([file("p.md", "# Hi")])[0]!.data);
+  expect(html).toContain("Hosted with Relay");
+  expect(html).toContain('class="relay-banner"');
+  expect(html).toContain("Share");
+  expect(html).toContain("QR code");
+  expect(html).toContain("Share card");
+});
+
+test("the card helper pulls the page title", () =>
+  expect(cardTitle("# The Bakery\n\ntext")).toBe("The Bakery"));
+
+test("the card helper falls back to a default title", () =>
+  expect(cardTitle("no heading here")).toBe("A page on Relay"));
 
 test("assistant prompt carries the upload line with server, key and site", () =>
   expect(assistantPrompt("https://r.org", "k1", "blog")).toContain(
