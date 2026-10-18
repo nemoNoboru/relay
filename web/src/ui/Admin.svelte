@@ -135,7 +135,7 @@
           <form onsubmit={(e) => { e.preventDefault(); onCreate(userInput); userInput = ""; }}>
             <div class="field">
               <label for="key-user">user</label>
-              <input id="key-user" type="text" bind:value={userInput} placeholder="e.g. alice" disabled={$admin.busy} />
+              <input id="key-user" type="text" bind:value={userInput} placeholder="e.g. name" disabled={$admin.busy} />
               <button class="btn solid" type="submit" disabled={$admin.busy}>Create key</button>
             </div>
           </form>
