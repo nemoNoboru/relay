@@ -41,5 +41,8 @@ test("a dropped folder loses its own name", () =>
 test("a dropped tar is sent as it is", () =>
   expect(text(body([file("site.tar", "raw")]))).toBe("raw"));
 
+test("publish page can greet someone with an invite", () =>
+  expect(readFileSync("publish.html", "utf8")).toContain('id="invited"'));
+
 test("publish page tells assistants where to upload", () =>
   expect(readFileSync("publish.html", "utf8")).toContain("/_relay/v1/sites/"));

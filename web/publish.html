@@ -23,10 +23,12 @@
       </div>
     </header>
 
-    <main class="wrap">
-      <div class="prose publishpage">
-        <span class="kick">Publish</span>
-        <h2>Drop it here</h2>
+    <main class="wrap publishpage">
+      <section class="pubcard">
+        <span class="wedge" aria-hidden="true"></span>
+        <p class="invited" id="invited" hidden>You're invited to publish</p>
+        <h1>Drop it <span>here</span></h1>
+        <p class="pubsub">Your site goes live the moment you press Publish. No account, nothing to install.</p>
 
         <form id="pub" class="pub">
           <div class="field">
@@ -51,27 +53,27 @@
           <button class="btn solid" id="go" disabled>Publish</button>
           <p class="result" id="status" role="status" hidden></p>
         </form>
+      </section>
 
-        <section id="assistants">
-          <h3>For AI assistants</h3>
-          <p>
-            You were sent a link to this page. The deploy key is the
-            <code>key</code> value after <code>#</code> in that link; never
-            print it or send it anywhere else. To publish, send a tar of the
-            site's folder to this server:
-          </p>
-          <pre>tar -cf - -C SITE_FOLDER . | curl --data-binary @- \
+      <aside class="prose assist" id="assistants">
+        <h3>For AI assistants</h3>
+        <p>
+          You were sent a link to this page. The deploy key is the
+          <code>key</code> value after <code>#</code> in that link; never
+          print it or send it anywhere else. To publish, send a tar of the
+          site's folder to this server:
+        </p>
+        <pre>tar -cf - -C SITE_FOLDER . | curl --data-binary @- \
   -H "Authorization: Bearer KEY" \
   https://THIS-SERVER/_relay/v1/sites/SITE_NAME/deploy</pre>
-          <p>
-            <code>THIS-SERVER</code> is the host of the link. Site names are
-            lowercase letters, numbers and hyphens. The JSON reply's
-            <code>url</code> field is the site's address. Each upload replaces
-            the whole site. More detail:
-            <a href="./skills/relay-deploy/SKILL.md">the publishing instructions</a>.
-          </p>
-        </section>
-      </div>
+        <p>
+          <code>THIS-SERVER</code> is the host of the link. Site names are
+          lowercase letters, numbers and hyphens. The JSON reply's
+          <code>url</code> field is the site's address. Each upload replaces
+          the whole site. More detail:
+          <a href="./skills/relay-deploy/SKILL.md">the publishing instructions</a>.
+        </p>
+      </aside>
     </main>
     <script type="module" src="./src/main/publish.ts"></script>
   </body>
