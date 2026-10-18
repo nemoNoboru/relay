@@ -88,4 +88,4 @@ They took the land from under our feet. They are taking the ground under our wor
 
 ---
 
-Of the web · by the web · for the web.
+Keep a server. Publish what you like. Answer to no one.
