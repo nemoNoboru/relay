@@ -4,8 +4,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Relay Manifesto — The Last Mile for Independent Websites</title>
-<meta name="description" content="Why Relay exists: a simple way to put what you make online and keep it yours, on an open, federated network with no landlords.">
+<title>The Relay Manifesto — Theses against cloud rent</title>
+<meta name="description" content="Why Relay exists: the web was common land, and it can be again. Put what you make online and keep it yours.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -17,10 +17,10 @@
   <div class="wrap">
     <a class="brand" href="./index.html"><span class="mark">R</span> RELAY</a>
     <nav class="main">
-      <a href="./index.html#deploy">Deploy</a>
-      <a href="./index.html#node">Run a node</a>
+      <a href="./index.html#publish">Publish</a>
+      <a href="./index.html#keep">Keep a server</a>
       <a href="./technicals.html">Technicals</a>
-      <a href="./_relay/admin.html">Console</a>
+      <a href="./_relay/admin.html">Keys</a>
     </nav>
     <span class="stamp">The Manifesto</span>
   </div>
@@ -30,12 +30,12 @@
 
   <section class="man-hero">
     <div class="wrap">
-      <span class="kicker">The Last Mile for Independent Websites</span>
+      <span class="kicker">Theses against cloud rent</span>
       <h1>The<br><em>Manifesto</em></h1>
-      <p class="lead">Relay isn't a language or a platform. It's a simple way to put what you make online, and keep it yours.</p>
+      <p class="lead">A tool, not a platform. Put what you make online, on a server kept by people instead of shareholders.</p>
       <div class="actions">
-        <a class="btn solid" href="./index.html#deploy">Deploy a site</a>
-        <a class="btn" href="./index.html#node">Run a node</a>
+        <a class="btn solid" href="./index.html#publish">Publish a site</a>
+        <a class="btn" href="./index.html#keep">Keep a server</a>
       </div>
     </div>
   </section>
@@ -44,44 +44,72 @@
 
     <aside class="toc">
 <h4>Contents</h4>
-<a href="#the-problem">The problem</a>
-<a href="#what-relay-is">What Relay is</a>
-<a href="#the-network">The network</a>
-<a href="#rules-in-the-open">Rules in the open</a>
-<a href="#core-principles">Core Principles</a>
+<a href="#where-we-stand">Where we stand</a>
+<a href="#rent-not-profit">Rent, not profit</a>
+<a href="#the-magic-we-lost">The magic we lost</a>
+<a href="#what-was-taken-from-us">What was taken from us</a>
+<a href="#the-right-to-the-web">The right to the web</a>
+<a href="#convivial-tools">Convivial tools</a>
+<a href="#against-the-spectacle">Against the spectacle</a>
+<a href="#presses-that-cannot-be-bought">Presses that cannot be bought</a>
+<a href="#what-we-promise">What we promise</a>
+<a href="#where-we-are-going">Where we are going</a>
 <a href="#take-it-back">Take it back</a>
     </aside>
 
     <article class="prose">
-<h2 id="the-problem">The problem</h2>
-<p>Making a website has never been easier. Putting one online still is hard. A finished site that sits in a folder isn't a website yet, just a draft, and it stays that way until someone can type an address and see it.</p>
-<p>The web has landlords now. What began as a commons is now a handful of platforms running on three clouds, and the deal hasn't changed: you make the thing, they keep it, and you pay to reach it. A server at home doesn't escape that. It sits behind a router on a dynamic IP, out of reach of the world.</p>
-<p class="pq">Making things got easy.<br>Shipping them never did.</p>
+<h2 id="where-we-stand">Where we stand</h2>
+<p>The web has been captured. What began as a network for sharing what people know has become a handful of walled gardens. Today's internet is five websites, owned by five companies, hosted on three clouds.</p>
+<p>This was not an accident. The web began as common land: anyone could put up a page, and anyone could read it. In twenty years it was fenced off, the way the fields were fenced before it. Marx wrote that the history of enclosure is written &quot;in letters of blood and fire&quot;. Ours is written in terms of service.</p>
+<p class="pq">You make the thing.<br>They keep it.<br>You pay to reach it.</p>
 
-<h2 id="what-relay-is">What Relay is</h2>
-<p>Relay is the last mile. It isn't a language, a framework, or a platform. It gives what you built a home on the open web, without asking anyone's permission and without handing over the keys. Write it by hand, use a framework, or describe it to an assistant: Relay doesn't care how it was made.</p>
-<ul><li><strong>A home.</strong> Upload a folder and it has a real address. No build step, no server to babysit, no account.</li><li><strong>A way in.</strong> The computer on your desk serves the world from behind a home router. No port forwarding, no static IP.</li><li><strong>A memory.</strong> Your site keeps what people give it, in a file you own and can carry anywhere.</li><li><strong>People and numbers, if you want them.</strong> Opt-in logins and stats, with no central account and no tracker.</li><li><strong>Just the wire.</strong> Already run a server? Relay makes it reachable, and the name stays yours.</li></ul>
-<p>Hosting is live today; the rest is the roadmap. The <a href="./technicals.html">technicals</a> say exactly which is which.</p>
+<h2 id="rent-not-profit">Rent, not profit</h2>
+<p>Yanis Varoufakis calls it technofeudalism. The great platforms live less on what they sell than on rent: they own the land, and everyone who builds on it, posts on it, or sells on it pays a tithe in money, in attention, or in data. You bring in the harvest; the lord keeps it. Your friends are tenants too.</p>
+<p>Leaving is meant to feel impossible. Your words, your photos, your audience, all of it stays behind when you go. That is not a bug in their design. It is the design.</p>
 
-<h2 id="the-network">The network</h2>
-<p>Instead of three clouds, Relay is a constellation of nodes, each run by a person or a community, in the spirit of the BBS sysop and the tilde server. Every node speaks the same small protocol, so a site can move from one to another and no node can hold it hostage.</p>
+<h2 id="the-magic-we-lost">The magic we lost</h2>
+<p>There was a time when anyone could write an HTML file, add a little PHP, upload it to a server and have a living website. It was clumsy and it was ours.</p>
+<p>Now the distance between &quot;I can write a page&quot; and &quot;I can put something real on the web&quot; is a chasm, filled with frameworks, build tools, pipelines and databases that take a team of specialists and a company budget. Millions of people, communities and independent voices have been pushed to the side, and told to build on platforms they do not control.</p>
 
-<h2 id="rules-in-the-open">Rules in the open</h2>
-<p>Who decides what gets published? Every server publishes its rules in plain language. Small local models check new sites against them, and a human reviews anything borderline. Nothing is silently erased. If you don't like a server's rules, you can argue with them, or fork the server.</p>
+<h2 id="what-was-taken-from-us">What was taken from us</h2>
+<p>Bernard Stiegler spoke of proletarianisation: the loss of a know-how that once belonged to the people who worked. Publishing was such a know-how. A printing press, a duplicator, a radio transmitter, then a home page. It was handed over to experts and companies, and now it is rented back to us as a &quot;service&quot;.</p>
+<p>Relay gives it back. It is a tool for independence, built to break the grip that a few corporations hold on the web, and made for people, not for venture-funded start-ups and multinationals. Not a platform, but one program that puts a folder of files on the web, on a server kept by people you know. No account. No feed. No one in the middle deciding what is seen.</p>
 
-<h2 id="core-principles">Core Principles</h2>
+<h2 id="the-right-to-the-web">The right to the web</h2>
+<p>Henri Lefebvre wrote that the right to the city &quot;cannot be conceived of as a simple visiting right&quot;. The same is true of the web. The right to the web is not the right to scroll through what others built. It is the right to make a place there, to shape it, to change it, and to keep it.</p>
+<p>A site on Relay is a dwelling, not a tenancy. The address is yours. The files are yours. You can pack them and move to another server whenever you like, and nobody can hold them hostage.</p>
+
+<h2 id="convivial-tools">Convivial tools</h2>
+<p>Ivan Illich wrote that people need &quot;not only to obtain things&quot;, but &quot;above all the freedom to make things among which they can live&quot;. A convivial tool is one anyone can pick up and use without asking an expert or a company for permission.</p>
+<p>That is the whole test for Relay. If publishing needs a developer, an account, or a monthly bill, we have failed. Today it is an invite link and a folder dropped onto a page.</p>
+
+<h2 id="against-the-spectacle">Against the spectacle</h2>
+<p>Guy Debord opened <em>The Society of the Spectacle</em> with this: &quot;all of life presents itself as an immense accumulation of spectacles.&quot; The feed is that sentence made into software. It turns everything you do into something for others to watch, and turns watching into a job you do for free.</p>
+<p>A website of your own is the opposite. It does not rank you, measure you, or sell you. It is something you make, for the people around you: the football club, the bakery, the village archive, the band, the union, your grandmother's recipes.</p>
+
+<h2 id="presses-that-cannot-be-bought">Presses that cannot be bought</h2>
+<p>Walter Benjamin asked writers not only to fill the apparatus of publishing, but to change it. A Relay server is a small piece of that apparatus, in the hands of the people who use it. A collective keeps one running for its members. A neighbourhood keeps one for its street. Each one is a printing press that no investor can buy and no shareholder can shut down.</p>
+<p>There is no centre to capture. Every server runs the same free software. If one closes, the sites move to another.</p>
+
+<h2 id="what-we-promise">What we promise</h2>
 <div class="principles">
-<div><b>You hold the key.</b> An address belongs to whoever holds its key. Ownership is a file you keep, not a permission someone grants.</div>
-<div><b>No central accounts.</b> There is no Relay account, ever. Login is opt-in and lives in each site's own data. Your people are yours.</div>
-<div><b>Your data leaves with you.</b> Everything is exportable. Leaving a server never means losing your site or your users.</div>
-<div><b>One-step deploy.</b> Shipping isn't a separate discipline. It's one action, available to anyone.</div>
-<div><b>Small on purpose.</b> A few primitives, and a new one only when it earns its place. Every feature is a tax on the people who didn't ask for it.</div>
-<div><b>Community owned.</b> Open source and federated. Run a node, join others, or stay fully independent.</div>
+<div><b>You hold the key.</b> An address belongs to whoever holds its key, not to whoever runs the server.</div>
+<div><b>No accounts, ever.</b> There is no Relay account and there never will be. Nobody keeps a list of everyone.</div>
+<div><b>Your work leaves with you.</b> Everything can be packed and carried to another server. Nothing is kept hostage.</div>
+<div><b>No tracking, no feed.</b> No algorithm decides who sees your site. No one follows your visitors.</div>
+<div><b>Small on purpose.</b> Every feature is a tax on the people who did not ask for it. We add one only when it earns its place.</div>
+<div><b>Owned by no one.</b> Free software, kept alive by the people who run it. No venture capital, no growth plan, no exit.</div>
 </div>
 
+<h2 id="where-we-are-going">Where we are going</h2>
+<p>What works today is publishing: a folder goes up, a site comes out. The next version, Punk, goes further. None of this is built yet; it is where we are heading.</p>
+<p><strong>No server needed.</strong> Every visitor helps carry the page. Opening a site is enough to help keep it online.</p>
+<p><strong>Every page can be edited and copied.</strong> An editor in the browser, so anyone can change a page or start their own from someone else's.</p>
+<p><strong>Simple or as complex as you like.</strong> Markdown for a page of text, small scripts for something that moves. You open a site and start, with nothing to install.</p>
+
 <h2 id="take-it-back">Take it back</h2>
-<p>Who owns the web decides who gets heard. That isn't destiny. Every site rescued from a laptop folder proves another web was always possible, and every person who runs a node builds one that serves people, not profit.</p>
-<div class="manback"><p>Read it, fork it, run a node. The web belongs to the people who build it.</p><div class="actions"><a class="btn solid" href="./index.html#deploy">Deploy a site</a><a class="btn" href="./index.html#node">Run a node</a></div></div><div class="manfoot">
+<p>None of this is destiny. The machines that fenced the web can unfence it, if enough people keep a server running and enough people put their work there instead of in someone else's field.</p>
+<div class="manback"><p>Read it, copy it, keep a server. The web belongs to the people who make it.</p><div class="actions"><a class="btn solid" href="./index.html#publish">Publish a site</a><a class="btn" href="./index.html#keep">Keep a server</a></div></div><div class="manfoot">
 <p class="last">Of the web · by the web · for the web.</p></div>
     </article>
 
@@ -93,8 +121,8 @@
   <div class="wrap">
     <p class="big">The web was built by people, <em>for people.</em> Let's take it back.</p>
     <p class="fine">
-      Relay — an open, federated hosting network<br>
-      Deploy in one step · Own your address · Keep your data
+      Relay — free software, owned by no one<br>
+      No account · No tracking · No master
     </p>
   </div>
 </footer>

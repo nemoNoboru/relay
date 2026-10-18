@@ -3,6 +3,7 @@
 
   import type { AdminOverview, DeployKey } from "../admin/schema";
   import type { AdminState } from "../admin/state";
+  import { inviteLink } from "../publish";
 
   /**
    * Operator admin page (admin.html). Pure rendering of the `admin` store;
@@ -70,6 +71,13 @@
   const copy = (text: string): void => {
     void navigator.clipboard?.writeText(text);
   };
+
+  let invited = $state("");
+  const invite = (k: DeployKey): void => {
+    copy(inviteLink(location.origin, k.token));
+    invited = k.id;
+    setTimeout(() => (invited = ""), 1500);
+  };
 </script>
 
 <main class="adminapp">
@@ -123,7 +131,7 @@
       <section class="panel wide">
         <h3>Deploy keys</h3>
         <div class="panel-body">
-          <p class="hint">Each key lets one user deploy sites. Reveal to copy a token; rotate or revoke to cut someone off.</p>
+          <p class="hint">Each key lets one person publish sites. Send them its invite link: they open it and drop their site. Rotate or revoke to cut someone off.</p>
           <form onsubmit={(e) => { e.preventDefault(); onCreate(userInput); userInput = ""; }}>
             <div class="field">
               <label for="key-user">user</label>
@@ -158,6 +166,7 @@
                         </div>
                         <div class="keyactions">
                           {#if !k.revoked}
+                            <button class="btn solid" onclick={() => invite(k)}>{invited === k.id ? "Copied" : "Copy invite link"}</button>
                             <button class="btn" onclick={() => onRotate(k.id)} disabled={$admin.busy}>Rotate</button>
                             <button class="btn" onclick={() => onRevoke(k.id)} disabled={$admin.busy}>Revoke</button>
                           {:else}

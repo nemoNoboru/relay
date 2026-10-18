@@ -53,11 +53,11 @@ MINI_DIAGRAM = """<div class="mini" role="img" aria-label="A browser asks for a 
 </div>"""
 
 
-MANBACK = ('<div class="manback"><p>Read it, fork it, run a node. '
-           'The web belongs to the people who build it.</p>'
+MANBACK = ('<div class="manback"><p>Read it, copy it, keep a server. '
+           'The web belongs to the people who make it.</p>'
            '<div class="actions">'
-           '<a class="btn solid" href="./index.html#deploy">Deploy a site</a>'
-           '<a class="btn" href="./index.html#node">Run a node</a>'
+           '<a class="btn solid" href="./index.html#publish">Publish a site</a>'
+           '<a class="btn" href="./index.html#keep">Keep a server</a>'
            '</div></div>')
 
 
@@ -235,7 +235,7 @@ def render_section(sec, manback=True):
     title = sec["title"]
     blocks = sec["blocks"]
 
-    if title == "Core Principles":
+    if title == "What we promise":
         rows = [split_lead(inline(b[1])) for b in blocks if b[0] == "p"]
         return '<div class="principles">\n' + "\n".join("<div>%s</div>" % r for r in rows) + "\n</div>"
 

@@ -17,7 +17,8 @@
     "smoke": "node tools/smoke.mjs node error && node tools/smoke.mjs node ready && node tools/smoke.mjs site error && node tools/smoke.mjs site ready && node tools/smoke.mjs admin ready"
   },
   "dependencies": {
-    "effect": "^4.0.3"
+    "effect": "^4.0.3",
+    "marked": "^15.0.12"
   },
   "devDependencies": {
     "@effect/vitest": "^4.0.3",
