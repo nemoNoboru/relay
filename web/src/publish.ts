@@ -86,8 +86,8 @@ const BANNER = `
     <div class="rb-bar"></div><div class="rb-word">RELAY</div>
   </div>
   <div class="rb-body">
-    <p class="rb-tag">Made by a person,<br><em>not a platform</em></p>
-    <p class="rb-sub">This page sits on a server kept by people, not rented from a company. Yours can too. <a href="/">Know how</a>.</p>
+    <p class="rb-tag">Where this page lives</p>
+    <p class="rb-sub">On a server someone keeps, not space rented from a company. No account sits behind it, and no one is counting your visit. Yours could sit beside it — <a href="/">know how</a>.</p>
     <div class="rb-actions">
       <button class="rb-btn solid" id="rb-share" type="button">Share this page</button>
       <button class="rb-btn" id="rb-qr" type="button">QR code</button>
