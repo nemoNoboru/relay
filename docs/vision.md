@@ -8,6 +8,8 @@ The web has been captured. What began as a network for sharing what people know 
 
 This was not an accident. The web began as common land: anyone could put up a page, and anyone could read it. In twenty years it was fenced off, the way the fields were fenced before it. Marx wrote that the history of enclosure is written "in letters of blood and fire". Ours is written in terms of service.
 
+"The executive of the modern state is but a committee for managing the common affairs of the whole bourgeoisie." Add the platforms, and the sentence holds. When they write the rules, they write them for themselves, and we are asked to be grateful.
+
 > You make the thing.
 > They keep it.
 > You pay to reach it.
@@ -52,7 +54,7 @@ A website of your own is the opposite. It does not rank you, measure you, or sel
 
 Walter Benjamin asked writers not only to fill the apparatus of publishing, but to change it. A Relay server is a small piece of that apparatus, in the hands of the people who use it. A collective keeps one running for its members. A neighbourhood keeps one for its street. Each one is a printing press that no investor can buy and no shareholder can shut down.
 
-There is no centre to capture. Every server runs the same free software. If one closes, the sites move to another.
+There is no centre to capture. Every server runs the same free software. If one closes, the sites move to another. One collective's server is a club. A thousand, side by side, are the commons.
 
 ### What we promise
 
@@ -81,6 +83,8 @@ What works today is publishing: a folder goes up, a site comes out. The next ver
 ### Take it back
 
 None of this is destiny. The machines that fenced the web can unfence it, if enough people keep a server running and enough people put their work there instead of in someone else's field.
+
+They took the land from under our feet. They are taking the ground under our words. Take it back.
 
 ---
 
