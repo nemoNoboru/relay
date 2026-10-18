@@ -46,8 +46,8 @@
 <h4>Contents</h4>
 <a href="#how-it-works">How it works</a>
 <a href="#what-s-built">What's built</a>
-<a href="#reachability-planned">Reachability (planned)</a>
-<a href="#run-a-node">Run a node</a>
+<a href="#reachability-planned-not-built-yet">Reachability (planned — not built yet)</a>
+<a href="#keep-a-server">Keep a server</a>
 <a href="#further-reading">Further reading</a>
     </aside>
 
@@ -60,7 +60,7 @@
 <h2 id="what-s-built">What's built</h2>
 <table><thead><tr><th>Piece</th><th>Choice</th><th>Status</th></tr></thead><tbody><tr><td>Static hosting</td><td>paths under one host</td><td><strong>live</strong></td></tr><tr><td>Uploads</td><td><code>tar</code> + per-user deploy key</td><td><strong>live</strong></td></tr><tr><td>Versions</td><td>atomic deploys, last 10 kept, rollback</td><td><strong>live</strong></td></tr><tr><td>Operator console</td><td>issue, reveal, revoke, rotate keys; sites by user</td><td><strong>live</strong></td></tr><tr><td>HTTPS</td><td>native (<code>--tls-cert</code>/<code>--tls-key</code>) or a reverse proxy</td><td><strong>live</strong></td></tr><tr><td>Reachability</td><td>outbound WebSocket tunnel to a public friend</td><td>planned</td></tr><tr><td>Ownership</td><td>Ed25519 key as the deed to an address; signed deploys</td><td>planned</td></tr><tr><td>Site data</td><td>one SQLite file per site, opt-in login and stats</td><td>planned</td></tr></tbody></table>
 
-<h2 id="reachability-planned">Reachability (planned)</h2>
+<h2 id="reachability-planned-not-built-yet">Reachability (planned — not built yet)</h2>
 <p>A machine behind NAT can't accept inbound connections. So a private node will dial out: it opens one <strong>outbound WebSocket</strong> to a public friend and registers its path prefix. The public node routes each request by its first path segment down the matching tunnel. No port forwarding, no static IP, no dynamic DNS.</p>
 <div class="mini" role="img" aria-label="A browser asks for a path on one host; the public node routes the request down the matching outbound WebSocket to a friend node behind NAT.">
   <div class="flow">
@@ -82,7 +82,7 @@
   </div>
 </div>
 
-<h2 id="run-a-node">Run a node</h2>
+<h2 id="keep-a-server">Keep a server</h2>
 <p>Every node needs a <strong>name</strong>, the first path segment of its sites (<code>--name mynode</code> serves <code>/mynode/&lt;site&gt;/</code>). On first start the node writes an <strong>admin token</strong> to <code>&lt;data&gt;/admin-token</code> and prints it once to the log. Use it to sign in to the operator console at <code>/_relay/admin.html</code> and issue deploy keys.</p>
 <h4 id="binary">Binary</h4>
 <p>Linux or macOS, amd64 or arm64:</p>
