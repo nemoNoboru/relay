@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Upload a site — Relay</title>
+    <title>Publish, step by step — Relay</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -15,87 +15,97 @@
         <a class="brand" href="../"><span class="mark">R</span> RELAY</a>
         <nav class="main">
           <a href="../">Home</a>
-          <a href="./admin.html">Console</a>
-          <a href="./deploy.html">Upload</a>
+          <a href="./admin.html">Keys</a>
+          <a href="./deploy.html">Step by step</a>
         </nav>
-        <span class="stamp">Upload guide</span>
+        <span class="stamp">Step by step</span>
       </div>
     </header>
 
     <main class="wrap">
       <div class="prose" style="padding: 72px 0 90px">
-        <span class="kick">Relay · static hosting</span>
-        <h2>Upload a site</h2>
+        <span class="kick">Publish a site</span>
+        <h2>Step by step</h2>
 
         <p>
-          Send a <code>tar</code> archive of your folder with your
-          <b>deploy key</b>, and the site goes live at
-          <code>/&lt;node&gt;/&lt;site&gt;/</code>. You get a deploy key
-          from whoever runs this node; if that's you, issue one in the
-          <a href="./admin.html">operator console</a>.
+          A website is just a folder with an <code>index.html</code> inside.
+          You need that folder, a key from whoever keeps this server, and
+          two minutes.
         </p>
-
-        <h3>Upload</h3>
-        <pre>tar -C ./dist -cf site.tar .
-curl -X POST \
-  -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
-  -H "Content-Type: application/x-tar" \
-  --data-binary @site.tar \
-  "$RELAY_ORIGIN/_relay/v1/sites/mysite/deploy"</pre>
-        <p>The response tells you where the site is live:</p>
-        <pre>{"site":"mysite","files":3,"bytes":5120,"url":"/mynode/mysite/"}</pre>
         <p>
-          Site names use lowercase letters, digits, and hyphens in the
-          middle, up to 63 characters. Keep asset paths relative so the site
-          works under its path. If you have the <code>relay</code> binary, the
-          same upload is one line:
-          <code>relay deploy --origin $RELAY_ORIGIN --site mysite ./dist</code>.
+          <b>The easy way:</b> open the invite link you were sent and drop
+          your folder onto the page. No invite link?
+          <a href="./publish.html">Open the publish page</a> and paste your
+          key. The steps below are for the terminal.
         </p>
 
-        <h3>Archive rules</h3>
+        <h3>1. Open a terminal in your folder</h3>
         <ul>
-          <li>Archive what's inside the folder (<code>tar -C ./dist … .</code>), not the folder itself.</li>
-          <li>Relative paths only. No <code>..</code>, no absolute paths, no symlinks or hard links.</li>
-          <li>Up to 65,536 files and 256 MiB per upload.</li>
-          <li>Each upload replaces the whole site, so include every file each time.</li>
+          <li><b>Mac:</b> right-click the folder in Finder, then <i>New Terminal at Folder</i>.</li>
+          <li><b>Windows:</b> open the folder, click the address bar, type <code>powershell</code> and press Enter.</li>
+          <li><b>Linux:</b> right-click inside the folder, then <i>Open in Terminal</i>.</li>
         </ul>
 
-        <h3>Errors</h3>
+        <h3>2. Paste this line</h3>
+        <p>
+          Put your key in place of <code>YOUR-KEY</code>, and a name for
+          your site in place of <code>your-site</code>: lowercase letters,
+          numbers and hyphens.
+        </p>
+        <pre>tar -cf - . | curl --data-binary @- \
+  -H "Authorization: Bearer YOUR-KEY" \
+  https://this-server/_relay/v1/sites/your-site/deploy</pre>
+        <p>On Windows, paste these two lines instead:</p>
+        <pre>tar -cf ..\site.tar .
+curl.exe --data-binary "@..\site.tar" -H "Authorization: Bearer YOUR-KEY" https://this-server/_relay/v1/sites/your-site/deploy</pre>
+
+        <h3>3. Open your site</h3>
+        <p>
+          The reply ends with your site's address, after <code>"url"</code>.
+          Changed something? Paste the same line again. Every upload
+          replaces the whole site, and the server keeps the last ten
+          versions in case you need one back.
+        </p>
+
+        <h3>If it goes wrong</h3>
         <table>
           <thead>
-            <tr><th>code</th><th>HTTP</th><th>Meaning</th></tr>
+            <tr><th>The reply says</th><th>What to do</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>bad_token</code></td><td>401</td><td>the deploy key is missing, wrong, or revoked</td></tr>
-            <tr><td><code>bad_name</code></td><td>400</td><td>the site name isn't valid</td></tr>
-            <tr><td><code>bad_archive</code></td><td>400</td><td>not a tar archive, or an entry breaks the rules</td></tr>
-            <tr><td><code>too_large</code></td><td>413</td><td>the archive is over the size limit</td></tr>
+            <tr><td><code>bad_token</code></td><td>The key is wrong or was withdrawn. Ask for a new one.</td></tr>
+            <tr><td><code>bad_name</code></td><td>Pick a site name with only lowercase letters, numbers and hyphens.</td></tr>
+            <tr><td><code>bad_archive</code></td><td>Something odd in the folder: a shortcut or a link. Remove it and try again.</td></tr>
+            <tr><td><code>too_large</code></td><td>Over 256 MB. Make the images smaller.</td></tr>
           </tbody>
         </table>
-
-        <h3>Rollback</h3>
         <p>
-          The node keeps the last 10 versions of every site. The operator
-          rolls back with the admin token:
-          <code>relay rollback --origin $RELAY_ORIGIN --site mysite</code>.
-          Rolling back saves the current version first, so nothing is lost.
+          Pages look broken? Write links as <code>images/cat.jpg</code>,
+          not <code>/images/cat.jpg</code>: your site lives in its own
+          corner of the server, not at the top.
         </p>
 
-        <h3>Keep your key secret</h3>
+        <h3>Keep the key to yourself</h3>
         <p>
-          Send it only in the <code>Authorization</code> header. Never put
-          it in a URL, a commit, or a log. If it leaks, ask the operator to
-          rotate it. The admin token is separate and only for the operator.
-          You never need it to upload.
+          Whoever holds the key can change the site. Don't post it, don't
+          put it in a shared file. If it leaks, ask for a new one and the
+          old one stops working.
         </p>
 
-        <h3>Deploy with an agent</h3>
+        <h3>Let an assistant do it</h3>
         <p>
-          Give your agent the node's address, your deploy key, and the
-          <a href="./skills/relay-deploy/SKILL.md">deploy skill</a>. It
-          covers the same steps in a form agents can follow.
+          AI assistants can follow
+          <a href="./skills/relay-deploy/SKILL.md">these instructions</a>.
+          Give them the server's address and your key, and nothing else.
         </p>
       </div>
     </main>
+    <script>
+      fetch('/healthz').then((r) => {
+        if (!r.ok) return
+        for (const pre of document.querySelectorAll('pre'))
+          pre.textContent = pre.textContent.replaceAll('https://this-server', location.origin)
+      }).catch(() => {})
+    </script>
   </body>
 </html>

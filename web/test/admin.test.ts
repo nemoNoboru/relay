@@ -108,6 +108,11 @@ describe("Admin.svelte ready", () => {
     expect(html).not.toContain("tok-bob-9876543210");
   });
 
+  it("offers an invite link for active keys only", async () => {
+    const html = await renderAdmin(ready(OVERVIEW));
+    expect(html.split("Copy invite link").length - 1).toBe(1);
+  });
+
   it("groups sites by user", async () => {
     const html = await renderAdmin(ready(OVERVIEW));
     expect(html).toContain("Sites by user");

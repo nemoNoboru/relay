@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relay — Put your folder on the web</title>
-<meta name="description" content="Relay turns a folder into a website with one upload. No account, no build step, no platform — just a key from the node you deploy to.">
+<title>Relay — The web belongs to all</title>
+<meta name="description" content="Put your website online without a platform, an account, or a master. One command, on a server kept by people instead of shareholders.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -16,30 +16,93 @@
   <div class="wrap">
     <a class="brand" href="#top"><span class="mark">R</span> RELAY</a>
     <nav class="main">
-      <a href="#deploy">Deploy</a>
-      <a href="#node">Run a node</a>
-      <a href="./manifesto.html">Manifesto</a>
-      <a href="./technicals.html">Technicals</a>
-      <a href="./_relay/admin.html">Console</a>
+      <a href="#publish">Publish</a>
+      <a href="#theses">Why</a>
+      <a href="#keep">Keep a server</a>
+      <a href="./_relay/admin.html">Keys</a>
     </nav>
-    <span class="stamp">Open · Federated</span>
+    <span class="stamp">Against cloud rent</span>
   </div>
 </header>
 
 <main id="top">
 
-  <!-- HERO -->
-  <section class="hero">
+  <!-- ONE SCREEN: the claim and the act -->
+  <section class="front">
     <div class="wrap">
-      <div class="hero-copy">
-        <span class="kicker">Static hosting without landlords</span>
-        <h1>Your folder<br><span class="rev">is a</span><br><span class="red">website</span></h1>
-        <p class="lead"><b>Building a site is easy now. Getting it online shouldn't be the hard part.</b> Upload a folder to a Relay node and it's live at a real address — no account, no build step, no platform in between.</p>
-        <div class="actions">
-          <a class="btn solid" href="#deploy">Deploy a site</a>
-          <a class="btn" href="#node">Run a node</a>
-        </div>
-        <p class="meta">One upload · Live instantly · Rollback built in</p>
+      <div class="claim">
+        <span class="kicker">Hosting is a commons</span>
+        <h1>The web<br><span class="rev">belongs</span><br><span class="red">to all</span></h1>
+        <p class="lead"><b>The web has been captured.</b> What began as a network for sharing what people know is now five websites, owned by five companies, hosted on three clouds. Relay is the way out: what you make, on a server kept by people instead of shareholders.</p>
+        <p class="meta">No account · No tracking · No terms that change overnight · No master</p>
+      </div>
+
+      <article class="publish" id="publish">
+        <span class="wedge" aria-hidden="true"></span>
+        <span class="tag">Publish now</span>
+        <h2>Put it on the web</h2>
+        <ol class="steps">
+          <li><b>Get an invite link</b> from whoever keeps this server. Keep it yourself? <a href="./_relay/admin.html">Make one here</a>.</li>
+          <li><b>Open it and drop your site</b> onto the page: a folder, a Markdown file or a <code>.tar</code>.</li>
+          <li><b>Done.</b> You get your site's address. Drop again to change it; the last ten versions are kept.</li>
+        </ol>
+        <p class="ai">Using Claude or another assistant? Give it the invite link and ask it to publish your folder.</p>
+        <details>
+          <summary>Prefer a terminal?</summary>
+<pre>tar -cf - . | curl --data-binary @- \
+  -H "Authorization: Bearer YOUR-KEY" \
+  <span class="origin">https://this-server</span>/_relay/v1/sites/your-site/deploy</pre>
+        </details>
+        <p class="aside"><a href="./_relay/publish.html">Open the publish page</a> · <a href="./_relay/deploy.html">Step by step</a></p>
+      </article>
+    </div>
+  </section>
+
+  <!-- THESES -->
+  <section class="theses" id="theses">
+    <div class="wrap">
+      <h2 class="theses-head"><span>Five theses</span> on the web</h2>
+      <ol>
+        <li>
+          <h3>On rent</h3>
+          <p>The big platforms live less on profit than on rent. They own the ground and take a cut of everything built on it. You bring in the harvest; they keep it.</p>
+          <cite>Y. Varoufakis, <i>Technofeudalism</i>, 2023</cite>
+        </li>
+        <li>
+          <h3>On enclosure</h3>
+          <p>The web was common land. In twenty years it was fenced off by five companies, the way the fields were fenced before it.</p>
+          <cite>K. Marx, <i>Das Kapital</i>, part VIII, 1867</cite>
+        </li>
+        <li>
+          <h3>On dwelling</h3>
+          <p>“Not a simple visiting right.” A place on the web should be somewhere you live and shape, not a room rented by the month.</p>
+          <cite>H. Lefebvre, <i>Le droit à la ville</i>, 1968</cite>
+        </li>
+        <li>
+          <h3>On tools</h3>
+          <p>Once, anyone could write a page and put it up. Now it takes frameworks, pipelines and specialists. A convivial tool needs none of them: drop it, no account, no permission.</p>
+          <cite>I. Illich, <i>Tools for Conviviality</i>, 1973</cite>
+        </li>
+        <li>
+          <h3>On the spectacle</h3>
+          <p>The feed turns life into something to watch. A site of your own is something you make, for the people around you.</p>
+          <cite>G. Debord, <i>La société du spectacle</i>, 1967</cite>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- KEEP A SERVER -->
+  <section class="keep" id="keep">
+    <div class="wrap">
+      <div>
+        <span class="kick">Keep a server</span>
+        <h2>A press that<br>can't be bought</h2>
+        <p>For your collective, your street, your union, your club. One program on any computer: an old laptop is enough. It prints a password when it starts. Use it on the <a href="./_relay/admin.html">keys page</a> to give each person a key.</p>
+<pre>curl -sSfL https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+
+relay node --name my-collective --data ~/relay --listen :8080</pre>
+        <p class="aside"><a href="./technicals.html">Docker, Kubernetes and the details</a></p>
       </div>
       <div class="art" aria-hidden="true">
         <div class="frame"></div>
@@ -48,129 +111,7 @@
         <div class="wedge"></div>
         <div class="bar"></div>
         <div class="word">RELAY</div>
-        <div class="tag">The last mile</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- DEPLOY -->
-  <section class="deploysec" id="deploy">
-    <div class="wrap">
-      <span class="kick">Deploy</span>
-      <h2>Live in three steps</h2>
-      <div class="rule"></div>
-      <p class="deploy-lead">All you need is a deploy key from this node. Your site goes live at <code>/&lt;node&gt;/&lt;site&gt;/</code> the moment the upload finishes.</p>
-
-      <div class="deploy-grid steps">
-        <article class="dcard">
-          <span class="dnum">01</span>
-          <h3>Get a key</h3>
-          <p>Ask whoever runs this node for a <b>deploy key</b>. If it's your node, make one yourself in the operator console. You won't need an account.</p>
-          <div class="actions">
-            <a class="btn solid" href="./_relay/admin.html">Operator console</a>
-          </div>
-          <span class="foot">One key per person</span>
-        </article>
-
-        <article class="dcard">
-          <span class="dnum">02</span>
-          <h3>Pack the folder</h3>
-          <p>Archive what's <b>inside</b> the folder, not the folder itself. Keep links relative.</p>
-<pre>tar -C ./dist -cf site.tar .</pre>
-          <span class="foot">Up to 256 MiB · 65,536 files</span>
-        </article>
-
-        <article class="dcard">
-          <span class="dnum">03</span>
-          <h3>Upload</h3>
-<pre>curl -X POST \
-  -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
-  -H "Content-Type: application/x-tar" \
-  --data-binary @site.tar \
-  "<span class="origin">$RELAY_ORIGIN</span>/_relay/v1/sites/mysite/deploy"</pre>
-          <p class="dnote">Set <code>RELAY_DEPLOY_TOKEN</code> to your key and swap <code>mysite</code> for your site's name.</p>
-          <div class="actions">
-            <a class="btn" href="./_relay/deploy.html">Full guide</a>
-            <a class="btn" href="./_relay/skills/relay-deploy/SKILL.md">Agent skill</a>
-          </div>
-          <span class="foot">Each upload replaces the whole site · last 10 kept</span>
-        </article>
-      </div>
-
-      <div class="oneliner">
-        <span class="or">Or</span>
-<pre>relay deploy --origin <span class="origin">$RELAY_ORIGIN</span> --site mysite ./dist</pre>
-      </div>
-      <p class="sub">The one-liner needs the relay binary (see <a href="#node">Run a node</a>). It packs and uploads in one step.</p>
-    </div>
-  </section>
-
-  <!-- RUN A NODE -->
-  <section class="deploysec" id="node">
-    <div class="wrap">
-      <span class="kick">Run a node</span>
-      <h2>Host your own</h2>
-      <div class="rule"></div>
-      <p class="deploy-lead">A node is one binary and one data directory. It serves sites, hands out deploy keys, and keeps every byte on a disk you control.</p>
-
-      <div class="deploy-grid two">
-        <article class="dcard">
-          <span class="dnum">01</span>
-          <h3>Binary</h3>
-<pre>curl --proto '=https' --tlsv1.2 -sSfL \
-  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
-
-relay node --name mynode --data /var/lib/relay --listen :8080</pre>
-          <span class="foot">Linux · macOS · amd64 · arm64</span>
-        </article>
-
-        <article class="dcard">
-          <span class="dnum">02</span>
-          <h3>Docker</h3>
-<pre>docker run -d -p 8080:8080 -v relay-data:/data \
-  ghcr.io/nemonoboru/relay:latest --name mynode</pre>
-          <p>Prefer Kubernetes? It's a single <code>kubectl apply</code>.</p>
-          <div class="actions">
-            <a class="btn" href="./technicals.html#docker">Docker</a>
-            <a class="btn" href="./technicals.html#kubernetes">Kubernetes</a>
-          </div>
-          <span class="foot">Runs unprivileged · state in /data</span>
-        </article>
-      </div>
-
-      <p class="sub">The node prints an admin token on first start. Use it to sign in at <code>/_relay/admin.html</code> and issue keys.</p>
-    </div>
-  </section>
-
-  <!-- WHY -->
-  <section id="why">
-    <div class="wrap">
-      <span class="kick">Why Relay</span>
-      <h2>The web belongs to all</h2>
-      <div class="rule"></div>
-      <div class="prims">
-        <article class="prim">
-          <span class="num">01</span>
-          <h3>Nothing to sign up for</h3>
-          <p>No platform account, no billing page, no terms that change overnight. A node and a key are all it takes.</p>
-          <span class="foot">Live today</span>
-        </article>
-        <article class="prim">
-          <span class="num">02</span>
-          <h3>Take it with you</h3>
-          <p>Your site is a folder, so moving it means copying it. Every node runs the same open code, which leaves nothing to be locked into.</p>
-          <span class="foot">Live today</span>
-        </article>
-        <article class="prim">
-          <span class="num">03</span>
-          <h3>Serve from home</h3>
-          <p>Next up: a node behind your router dials out to a public friend, so the computer under your desk can serve the world without port forwarding.</p>
-          <span class="foot soon">On the roadmap</span>
-        </article>
-      </div>
-      <div class="actions">
-        <a class="btn" href="./manifesto.html">Read the manifesto</a>
-        <a class="btn" href="./technicals.html">How it works</a>
+        <div class="tag">Owned by no one</div>
       </div>
     </div>
   </section>
@@ -181,14 +122,15 @@ relay node --name mynode --data /var/lib/relay --listen :8080</pre>
   <div class="wrap">
     <p class="big">The web was built by people, <em>for people.</em> Let's take it back.</p>
     <p class="fine">
-      Relay — open, federated static hosting<br>
-      <a href="./manifesto.html">Manifesto</a> · <a href="./technicals.html">Technicals</a> · <a href="./_relay/deploy.html">Upload guide</a> · <a href="https://github.com/nemoNoboru/relay">Source</a>
+      Free software · Owned by no one<br>
+      <a href="./manifesto.html">Manifesto</a> · <a href="./technicals.html">Technicals</a> · <a href="https://github.com/nemoNoboru/relay">Source</a><br>
+      Red wedge after El Lissitzky, 1919
     </p>
   </div>
 </footer>
 
 <script>
-  // Copy buttons on every command; on a real node, fill in its address.
+  // Copy buttons on every command; on a real Relay server, fill in its address.
   for (const pre of document.querySelectorAll('main pre')) {
     const box = document.createElement('div');
     const btn = document.createElement('button');
