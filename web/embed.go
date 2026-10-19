@@ -2,9 +2,9 @@
 //
 // The frontend is built by Vite into dist/ (see README.md in this directory).
 // The node serves the embedded filesystem under /_relay/ (see
-// internal/serve/ui.go); because Vite is configured with a relative base
-// (base: "./"), the same dist/ works at any URL depth — Relay's addressing
-// is path-based.
+// internal/serve/ui.go). Vite uses the fixed base "/_relay/" so assets also
+// load from nested shells such as /_relay/people/<id> and
+// /_relay/posts/<site>.
 //
 // Build order: the root Makefile builds the frontend before `go build`.
 // dist/.gitkeep keeps the embed pattern satisfiable before the first

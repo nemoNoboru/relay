@@ -37,3 +37,9 @@ export const changeToken = (token: string, next: string): Effect.Effect<TokenCha
     const client = yield* Client;
     return yield* client.post("/_relay/v1/admin/token", { token: next }, TokenChanged, token);
   });
+
+export const deleteComment = (token: string, id: string): Effect.Effect<void, ApiError, Client> =>
+  Effect.gen(function* () {
+    const client = yield* Client;
+    return yield* client.del(`/_relay/v1/admin/comments/${encodeURIComponent(id)}`, token);
+  });

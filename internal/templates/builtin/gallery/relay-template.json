@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "id": "gallery",
+  "name": "Gallery",
+  "description": "A set of photos with a title and caption.",
+  "version": "1.0.0",
+  "fields": [
+    { "name": "title", "type": "text", "required": true, "max": 160 },
+    { "name": "images", "type": "gallery", "required": true, "accept": "image/*" },
+    { "name": "caption", "type": "textarea", "max": 2000 }
+  ],
+  "entry": "prepublish.html",
+  "script": "publish.js"
+}

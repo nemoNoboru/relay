@@ -7,7 +7,7 @@ const text = (b: Uint8Array) => new TextDecoder().decode(b);
 const file = (path: string, s = "x") => ({ path, data: enc(s) });
 
 test("invite link keeps the key in the fragment", () =>
-  expect(inviteLink("https://r.org", "k1")).toBe("https://r.org/_relay/publish.html#key=k1"));
+  expect(inviteLink("https://r.org", "k1")).toBe("https://r.org/_relay/home.html#key=k1"));
 
 test("invite gives back key and site", () =>
   expect(readInvite("#key=k1&site=blog")).toEqual({ key: "k1", site: "blog" }));
@@ -44,7 +44,7 @@ test("a dropped tar is sent as it is", () =>
 test("a rendered page carries the relay bar linking home", () => {
   const html = text(toSite([file("p.md", "# Hi")])[0]!.data);
   expect(html).toContain('class="relay-bar"');
-  expect(html).toContain("Know how");
+  expect(html).toContain("your own place");
 });
 
 test("a rendered page carries the relay banner", () => {
@@ -67,8 +67,8 @@ test("assistant prompt carries the upload line with server, key and site", () =>
     '-H "Authorization: Bearer k1" https://r.org/_relay/v1/sites/blog/deploy',
   ));
 
-test("assistant prompt asks for a site name when there is none", () =>
-  expect(assistantPrompt("https://r.org", "k1", "")).toContain("Ask me for a site name"));
+test("assistant prompt asks for a page name when there is none", () =>
+  expect(assistantPrompt("https://r.org", "k1", "")).toContain("Ask me for a page name"));
 
 test("publish page can greet someone with an invite", () =>
   expect(readFileSync("publish.html", "utf8")).toContain('id="invited"'));

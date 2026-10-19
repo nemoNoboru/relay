@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Publish, step by step — Relay</title>
+    <title>Publish a page, step by step — Relay</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -15,31 +15,31 @@
         <a class="brand" href="../"><span class="mark">R</span> RELAY</a>
         <nav class="main">
           <a href="../">Home</a>
-          <a href="./admin.html">Keys</a>
-          <a href="./deploy.html">Step by step</a>
+          <a href="./home.html">Your home</a>
+          <a href="./admin.html">Host</a>
         </nav>
-        <span class="stamp">Step by step</span>
+        <span class="stamp">Publish a page</span>
       </div>
     </header>
 
     <main class="wrap">
       <div class="prose" style="padding: 72px 0 90px">
-        <span class="kick">Publish a site</span>
+        <span class="kick">Publish a page</span>
         <h2>Step by step</h2>
 
         <p>
-          A website is a page called <code>index.html</code>, plus any
-          pictures or styles it uses. You need those, a key from whoever
+          A page is a file called <code>index.html</code>, plus any pictures
+          or styles it uses. You need those, an invitation link from whoever
           keeps this server, and two minutes.
         </p>
         <p>
-          <b>The easy way:</b> open the invite link you were sent and drop
-          your site onto the page. No invite link?
+          <b>The easy way:</b> open the invitation link you were sent and drop
+          your page onto the publish page. No link?
           <a href="./publish.html">Open the publish page</a> and paste your
           key. The steps below are for the terminal.
         </p>
 
-        <h3>1. Open a terminal where your site is</h3>
+        <h3>1. Open a terminal where your page is</h3>
         <ul>
           <li><b>Mac:</b> right-click it in Finder, then <i>New Terminal at Folder</i>.</li>
           <li><b>Windows:</b> open it, click the address bar, type <code>powershell</code> and press Enter.</li>
@@ -49,21 +49,21 @@
         <h3>2. Paste this line</h3>
         <p>
           Put your key in place of <code>YOUR-KEY</code>, and a name for
-          your site in place of <code>your-site</code>: lowercase letters,
+          your page in place of <code>your-page</code>: lowercase letters,
           numbers and hyphens.
         </p>
         <pre>tar -cf - . | curl --data-binary @- \
   -H "Authorization: Bearer YOUR-KEY" \
-  https://this-server/_relay/v1/sites/your-site/deploy</pre>
+  https://this-server/_relay/v1/sites/your-page/deploy</pre>
         <p>On Windows, paste these two lines instead:</p>
-        <pre>tar -cf ..\site.tar .
-curl.exe --data-binary "@..\site.tar" -H "Authorization: Bearer YOUR-KEY" https://this-server/_relay/v1/sites/your-site/deploy</pre>
+        <pre>tar -cf ..\page.tar .
+curl.exe --data-binary "@..\page.tar" -H "Authorization: Bearer YOUR-KEY" https://this-server/_relay/v1/sites/your-page/deploy</pre>
 
-        <h3>3. Open your site</h3>
+        <h3>3. Open your page</h3>
         <p>
-          The reply ends with your site's address, after <code>"url"</code>.
+          The reply ends with your page's address, after <code>"url"</code>.
           Changed something? Paste the same line again. Every upload
-          replaces the whole site, and the server keeps the last ten
+          replaces the whole page, and the server keeps the last ten
           versions in case you need one back.
         </p>
 
@@ -74,22 +74,22 @@ curl.exe --data-binary "@..\site.tar" -H "Authorization: Bearer YOUR-KEY" https:
           </thead>
           <tbody>
             <tr><td><code>bad_token</code></td><td>The key is wrong or was withdrawn. Ask for a new one.</td></tr>
-            <tr><td><code>bad_name</code></td><td>Pick a site name with only lowercase letters, numbers and hyphens.</td></tr>
+            <tr><td><code>bad_name</code></td><td>Pick a page name with only lowercase letters, numbers and hyphens.</td></tr>
             <tr><td><code>bad_archive</code></td><td>Something odd is in there: a shortcut or a link. Remove it and try again.</td></tr>
             <tr><td><code>too_large</code></td><td>Over 256 MB. Make the images smaller.</td></tr>
           </tbody>
         </table>
         <p>
           Pages look broken? Write links as <code>images/cat.jpg</code>,
-          not <code>/images/cat.jpg</code>: your site lives in its own
-          corner of the server, not at the top.
+          not <code>/images/cat.jpg</code>: your page lives under a path on
+          the server, not at the top.
         </p>
 
         <h3>Keep the key to yourself</h3>
         <p>
-          Whoever holds the key can change the site. Don't post it, don't
-          put it in a shared file. If it leaks, ask for a new one and the
-          old one stops working.
+          Whoever holds the key is that member. Don't post it, don't put it in
+          a shared file. If it leaks, ask the host to rotate it and the old
+          one stops working.
         </p>
 
         <h3>Let an assistant do it</h3>

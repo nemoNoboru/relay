@@ -15,14 +15,12 @@ import (
 var landingFiles = map[string]string{
 	"/":                "index.html",
 	"/index.html":      "index.html",
-	"/manifesto.html":  "manifesto.html",
 	"/technicals.html": "technicals.html",
 	"/styles.css":      "styles.css",
 }
 
-// Landing serves the embedded public site (landing page, manifesto,
-// technicals, stylesheet) at the node root, and delegates every other path
-// to next.
+// Landing serves the embedded public site (landing page, technicals,
+// stylesheet) at the node root, and delegates every other path to next.
 func Landing(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name, ok := landingFiles[r.URL.Path]

@@ -12,26 +12,19 @@ A type (and each function) has **one reason to change**.
 
 - A `Router` that also persists sites and also formats HTTP responses is three types.
 - Package-level check: if you can't state in one sentence why a package changes, split it.
-- Relay example: `internal/tunnel` changes when the tunnel *protocol* changes;
-  `internal/infra/ws` changes when the *transport* changes. Those are different reasons,
-  so they are different packages.
+- Relay example: `internal/serve` changes when the HTTP surface changes;
+  `internal/route` changes when path parsing changes; `internal/social` (planned)
+  changes when a member/post/comment rule changes. Those are different reasons, so
+  they are different packages.
 
 ### O — Open for Extension, Closed for Modification
 
 Design extension points where the design doc already anticipates variants, and only there.
 
-- Relay's clearest case is the **classifier**: the locked design has providers
-  (`none`, `heuristic`, `laya-service`, `laya-onnx`). The feature declares one interface:
-
-  ```go
-  // internal/rules (consumer)
-  type Classifier interface {
-      Score(ctx context.Context, state RuleState, rules RuleSet) (Decision, error)
-  }
-  ```
-
-  New providers land as new implementations in `internal/infra`; `internal/rules` never
-  changes.
+- Relay's clearest case is the **social store**: the first implementation writes
+  JSON files in the data directory, but a later SQLite (or remote) store may replace
+  it. `internal/social` declares the interface it consumes; the implementation lives
+  beside it. Handlers never know which store is in use.
 - Extension via **composition and configuration** (choose the implementation in `cmd/relay`),
   not via plugin machinery. No `plugin` package.
 - Don't invent extension points "just in case". If there is one provider and no planned
@@ -41,8 +34,8 @@ Design extension points where the design doc already anticipates variants, and o
 
 Every value that satisfies an interface must be substitutable without the caller noticing.
 
-- Keep interfaces narrow so this is true: a `TunnelTransport` that says "it can be used
-  anywhere a tunnel is expected" must not surprise with `nil` returns, blocking without
+- Keep interfaces narrow so this is true: a `PostStore` that says "it can be used
+  anywhere posts are stored" must not surprise with `nil` returns, blocking without
   ctx, or mutating its arguments.
 - If a "variant" needs an `if type X` special case at a call site, the interface is too
   wide — split it.
@@ -94,14 +87,14 @@ High-level policy depends on interfaces; low-level code implements them.
                         │ calls
         ┌───────────────▼──────────────────────┐
         │  feature application services        │  orchestrate one use case:
-        │  internal/tunnel, control, runtime,  │  claim, deploy, serve, route,
+        │  internal/social, serve, route       │  member, invite, publish, rollback,
         │  auth, metrics, rules                │  export. Thin. No business rules.
         └───────┬──────────────────────┬───────┘
                 │ declares interfaces  │ calls
         ┌───────▼─────────────┐  ┌─────▼──────────────────────────┐
         │  internal/domain    │  │  internal/infra implementations│
         │  site, deploy,      │  │  sqlite, blobs, ws, caddy,      │
-        │  prefix, key        │  │  wazero, laya provider          │
+        │  domain, key, prefix│  │  filesystem, JSON store          │
         │  (pure, no I/O)     │  │  (implement the interfaces,     │
         │                     │  │   own all the I/O)              │
         └─────────────────────┘  └────────────────────────────────┘
@@ -117,8 +110,8 @@ High-level policy depends on interfaces; low-level code implements them.
 |---|---|
 | Does it parse/serialize transport bytes? | edge handler |
 | Does it orchestrate steps of one use case (load, check, save, notify)? | feature app service |
-| Is it a rule the business will hold you to ("a deploy must be signed", "versions increase", "a released prefix cannot be re-claimed within the grace period")? | **domain type/method** |
-| Does it touch SQLite, disk, network, TLS, WASM? | infra implementation |
+| Is it a rule the business will hold you to ("a revoked invitation cannot invite", "versions increase", "a member may delete only their own comment")? | **domain type/method** |
+| Does it touch disk, the network, TLS, or a subprocess? | infra implementation |
 | Does it choose which implementation, or build config? | `cmd/relay` |
 
 **App service vs domain — the one-line test.** An app service method may be read as a
@@ -133,7 +126,7 @@ out of the domain — move it to a domain method and keep the recipe.
   after *domain* operations, not queries.
 - **Don't** build repositories for plumbing: static file serving needs a
   `FileServer`; the blob store is a content-addressed `Put/Get(hash)` — that's an API, not
-  a repository. The tunnel is not a repository for anything.
+  a repository. The file registry is not a repository for anything.
 - Repository methods return domain types, not rows. Row↔domain mapping is an infra
   detail.
 

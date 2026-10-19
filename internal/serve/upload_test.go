@@ -3,6 +3,7 @@ package serve_test
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/nemoNoboru/relay/internal/serve"
+	"github.com/nemoNoboru/relay/internal/social"
 )
 
 // tarSite builds an in-memory tar archive of the given regular files.
@@ -64,7 +66,7 @@ func testUploader(t *testing.T, data string, maxBytes int64, reload func() error
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewUploader("mynode", data, ks, serve.NewVersions(data), maxBytes, reload), token
+	return serve.NewUploader("mynode", data, ks, serve.NewVersions(data), nil, maxBytes, reload), token
 }
 
 // TestUploadRequiresToken pins that uploads are gated by a deploy key.
@@ -93,7 +95,7 @@ func TestUploadRejectsRevokedKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	up := serve.NewUploader("mynode", data, ks, serve.NewVersions(data), serve.MaxDeployBytes, nil)
+	up := serve.NewUploader("mynode", data, ks, serve.NewVersions(data), nil, serve.MaxDeployBytes, nil)
 	body := tarSite(t, map[string]string{"index.html": "hi"})
 
 	if rec := doDeploy(t, up, "/_relay/v1/sites/docs/deploy", token, body); rec.Code != http.StatusOK {
@@ -151,7 +153,7 @@ func TestUploadRecordsSiteOwner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	up := serve.NewUploader("mynode", data, ks, serve.NewVersions(data), serve.MaxDeployBytes, nil)
+	up := serve.NewUploader("mynode", data, ks, serve.NewVersions(data), nil, serve.MaxDeployBytes, nil)
 
 	rec := doDeploy(t, up, "/_relay/v1/sites/blog/deploy", token, tarSite(t, map[string]string{"index.html": "hi"}))
 	if rec.Code != http.StatusOK {
@@ -333,5 +335,62 @@ func TestUploadAcceptsArchiveRootEntry(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(data, "sites", "docs", "index.html")); err != nil {
 		t.Fatalf("index.html not written: %v", err)
+	}
+}
+
+// TestUploadIndexesPost pins that a deploy creates a post, writes the
+// portable sidecar, and updates the same post on redeploy.
+func TestUploadIndexesPost(t *testing.T) {
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, key, err := ks.Create("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	posts, err := social.NewStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	up := serve.NewUploader("mynode", data, ks, serve.NewVersions(data), posts, serve.MaxDeployBytes, nil)
+
+	rec := doDeploy(t, up, "/_relay/v1/sites/sunday-walk/deploy", key.Token, tarSite(t, map[string]string{"index.html": "v1"}))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("deploy = %d %s", rec.Code, rec.Body)
+	}
+	var reply struct {
+		PostURL string `json:"postUrl"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &reply); err != nil {
+		t.Fatal(err)
+	}
+	if reply.PostURL != "/_relay/posts/sunday-walk" {
+		t.Fatalf("postUrl = %q", reply.PostURL)
+	}
+	first, ok := posts.Get("sunday-walk")
+	if !ok || first.Member != key.ID || first.Title != "Sunday Walk" || first.Template != "custom" {
+		t.Fatalf("indexed post = %+v %v", first, ok)
+	}
+	if _, err := os.Stat(filepath.Join(data, "sites", "sunday-walk", "relay-post.json")); err != nil {
+		t.Fatalf("sidecar: %v", err)
+	}
+
+	// A sidecar in the upload supplies the title/summary/template.
+	body := tarSite(t, map[string]string{
+		"index.html":      "v2",
+		"relay-post.json": `{"title":"A walk","summary":"Six photos","template":"gallery"}`,
+	})
+	rec = doDeploy(t, up, "/_relay/v1/sites/sunday-walk/deploy", key.Token, body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("redeploy = %d %s", rec.Code, rec.Body)
+	}
+	second, ok := posts.Get("sunday-walk")
+	if !ok || second.ID != first.ID || !second.PublishedAt.Equal(first.PublishedAt) {
+		t.Fatalf("identity changed: %+v -> %+v", first, second)
+	}
+	if second.Title != "A walk" || second.Summary != "Six photos" || second.Template != "gallery" {
+		t.Fatalf("updated post = %+v", second)
 	}
 }

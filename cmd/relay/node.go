@@ -19,6 +19,7 @@ import (
 
 	"github.com/nemoNoboru/relay/internal/domain"
 	"github.com/nemoNoboru/relay/internal/serve"
+	"github.com/nemoNoboru/relay/internal/social"
 )
 
 // runNode serves this node's sites and accepts site uploads.
@@ -81,13 +82,26 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	}
 
 	versions := serve.NewVersions(*data)
+	posts, err := social.NewStore(*data)
+	if err != nil {
+		fmt.Fprintf(stderr, "relay: post index: %v\n", err)
+		return 1
+	}
+	comments, err := social.NewCommentStore(*data)
+	if err != nil {
+		fmt.Fprintf(stderr, "relay: comments: %v\n", err)
+		return 1
+	}
 	reload := func() error {
 		_, err := registry.Reload()
 		return err
 	}
-	uploader := serve.NewUploader(node, *data, keys, versions, serve.MaxDeployBytes, reload)
+	uploader := serve.NewUploader(node, *data, keys, versions, posts, serve.MaxDeployBytes, reload)
 	tokenPath := filepath.Join(*data, "admin-token")
-	admin := serve.NewAdmin(token, keys, versions, reload, func(t string) error {
+	reindex := func(name domain.Name) error {
+		return serve.IndexSite(posts, *data, name)
+	}
+	admin := serve.NewAdmin(token, keys, versions, comments, reload, reindex, func(t string) error {
 		return writeTokenFile(tokenPath, t)
 	})
 	ui, err := serve.UIHandler()
@@ -101,6 +115,21 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.Handle("/_relay/v1/admin", admin)
 	mux.Handle("/_relay/v1/admin/", admin)
 	mux.Handle("/_relay/v1/invites", serve.NewInvites(keys))
+	session := serve.NewSession(node, keys)
+	mux.Handle("/_relay/v1/session", session)
+	mux.Handle("/_relay/v1/me", session)
+	postIndex := serve.NewPosts(node, keys, posts, comments)
+	commentAPI := serve.NewComments(keys, posts, comments)
+	templateStore := serve.NewTemplateStore(*data)
+	templateAPI := serve.NewTemplates(templateStore, keys)
+	publisher := serve.NewPublisher(node, uploader, templateStore, keys)
+	mux.Handle("/_relay/v1/feed", postIndex)
+	mux.Handle("/_relay/v1/people/", postIndex)
+	mux.Handle("/_relay/v1/posts/", serve.NewPostSurface(postIndex, commentAPI))
+	mux.Handle("/_relay/v1/comments/", commentAPI)
+	mux.Handle("/_relay/v1/templates", templateAPI)
+	mux.Handle("/_relay/v1/publish", publisher)
+	mux.Handle("/_relay/templates/", templateAPI)
 	mux.Handle("/_relay/v1/", uploader)
 	mux.Handle("/_relay/", ui)
 	// The node root serves the embedded landing page and its companions;

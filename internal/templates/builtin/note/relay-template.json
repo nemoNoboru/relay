@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "note",
+  "name": "Note",
+  "description": "A short page of writing.",
+  "version": "1.0.0",
+  "fields": [
+    { "name": "title", "type": "text", "required": true, "max": 160 },
+    { "name": "body", "type": "richtext", "required": true }
+  ],
+  "entry": "prepublish.html",
+  "script": "publish.js"
+}

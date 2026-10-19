@@ -16,7 +16,6 @@ func TestLandingServesPublicSite(t *testing.T) {
 		wantContent string // substring of the served body
 	}{
 		{path: "/", wantType: "text/html", wantContent: "Relay"},
-		{path: "/manifesto.html", wantType: "text/html", wantContent: "Manifesto"},
 		{path: "/technicals.html", wantType: "text/html", wantContent: "Technicals"},
 		{path: "/styles.css", wantType: "text/css", wantContent: "Relay"},
 	}
@@ -59,7 +58,7 @@ func TestLandingIndexRedirect(t *testing.T) {
 // TestLandingDelegatesOtherPaths pins that every non-landing path — site
 // routes and anything else — is handed to the registry, not swallowed.
 func TestLandingDelegatesOtherPaths(t *testing.T) {
-	for _, p := range []string{"/demo/hello/", "/demo", "/demo/hello/assets/style.css", "/_relay/node.html", "/nope"} {
+	for _, p := range []string{"/demo/hello/", "/demo", "/demo/hello/assets/style.css", "/_relay/admin.html", "/nope"} {
 		t.Run(p, func(t *testing.T) {
 			called := false
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

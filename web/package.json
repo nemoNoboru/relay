@@ -2,7 +2,7 @@
   "name": "relay-web",
   "private": true,
   "version": "0.0.0",
-  "description": "Relay owner UI (node admin + site console). Built by Vite, embedded into the Go node binary.",
+  "description": "Relay owner UI (member home, profiles, posts, host console, publish). Built by Vite, embedded into the Go node binary.",
   "type": "module",
   "engines": {
     "node": ">=22.12"
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke": "node tools/smoke.mjs node error && node tools/smoke.mjs node ready && node tools/smoke.mjs site error && node tools/smoke.mjs site ready && node tools/smoke.mjs admin ready"
+    "smoke": "node tools/smoke.mjs admin ready && node tools/smoke.mjs home signedout && node tools/smoke.mjs home ready"
   },
   "dependencies": {
     "effect": "^4.0.3",

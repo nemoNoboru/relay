@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/nemoNoboru/relay/internal/serve"
@@ -137,7 +138,7 @@ func TestMissingFile(t *testing.T) {
 	}
 }
 
-// AC-5: unknown first segment and bare root are 404 (no probing, contract 5).
+// AC-5: unknown first segment and bare root are 404 (no probing).
 func TestUnknownNodeAndRoot(t *testing.T) {
 	srv := httptest.NewServer(newTestNode(t))
 	defer srv.Close()
@@ -239,5 +240,20 @@ func TestSiteIsolation(t *testing.T) {
 	body, _ := io.ReadAll(res.Body)
 	if string(body) != "blog home" {
 		t.Fatalf("blog body = %q, want %q", body, "blog home")
+	}
+}
+
+// TestServesPostsInSandbox pins that a static post cannot act as the node
+// origin: its scripts must not reach the member APIs with the viewer's cookie.
+func TestServesPostsInSandbox(t *testing.T) {
+	srv := httptest.NewServer(newTestNode(t))
+	defer srv.Close()
+	res, err := http.Get(srv.URL + "/mynode/docs/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if got := res.Header.Get("Content-Security-Policy"); !strings.Contains(got, "sandbox") {
+		t.Fatalf("Content-Security-Policy = %q, want a sandbox", got)
 	}
 }

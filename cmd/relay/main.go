@@ -34,6 +34,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runDeploy(args[1:], stdout, stderr)
 	case "rollback":
 		return runRollback(args[1:], stdout, stderr)
+	case "index":
+		return runIndex(args[1:], stdout, stderr)
+	case "template":
+		return runTemplate(args[1:], stdout, stderr)
 	case "node":
 		return runNode(args[1:], stdout, stderr)
 	case "help", "--help", "-h":
@@ -49,19 +53,22 @@ func run(args []string, stdout, stderr io.Writer) int {
 func usage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
   relay version          print the version
-  relay key new [-o f]   generate a new ownership key
+  relay key new [-o f]   generate an Ed25519 key file (not the invite flow)
   relay deploy --origin <url> --site <n> [--token <t>] [--insecure] <folder>
-                         upload a folder as site <n> (replaces it atomically)
+                         upload a folder as page <n> (replaces it atomically)
   relay rollback --origin <url> --site <n> [--admin-token <t>] [--to <v>] [--insecure]
                          roll site <n> back to a previous version
+  relay index --data <d> backfill the post index from existing sites
+  relay template list|install|remove --data <d> [folder|id]
+                         manage installed post templates
   relay node --name <n> --data <d> --listen <addr> [--admin-token <t>]
                          [--tls-cert <f> --tls-key <f>]
                          serve <d>/sites/ at /<n>/<site>/ and accept site
                          uploads at /_relay/v1/sites/<site>/deploy
 
-The ownership key is the deed to a Relay address: guard it like a password.
-The admin token authorizes the operator console (/_relay/admin.html); without
---admin-token it is generated once into <data>/admin-token (0600) and printed.
-Users upload with per-user deploy keys created on the operator console.
+An invitation link is the member credential. The host makes the first ones on
+the host console (/_relay/admin.html); members can invite people they trust.
+The admin password authorizes the host console only. Without --admin-token it
+defaults to "relay" and is written to <data>/admin-token (0600).
 `)
 }

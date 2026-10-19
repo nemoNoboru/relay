@@ -9,7 +9,7 @@ what that means in practice — it is a working discipline, not a school of thou
 1. **Pure functions are the default unit of logic.** A function that only reads its
    arguments and returns a value is the normal case; anything else must say so.
 2. **State is immutable data.** A change to state produces a new value
-   (`{...state, tunnels: [...state.tunnels, t]}`), never an in-place edit.
+   (`{...state, members: [...state.members, m]}`), never an in-place edit.
 3. **Side effects are named, typed, and confined to the edge.** DOM writes, fetches,
    timers, and storage live in the edge layer, each wrapped in `Effect` with a typed
    error channel.
@@ -19,22 +19,21 @@ what that means in practice — it is a working discipline, not a school of thou
 
 ## Why functional is the right call for this codebase
 
-- **The UI is live data, not a document app.** Node admin shows tunnel status; the site
-  console shows deploys and daily-salted counters. Live data + derived state is exactly
+- **The UI is operational data, not a document app.** The host console shows invitations,
+  members, pages by member, and versions. Action results and derived state are exactly
   where one-way flow and pure derivations pay off: the hard part is knowing what changed
   and recomputing what depends on it, and immutability makes that mechanical.
-- **There is no framework to lean on.** Without React or Vue there is no reactivity
-  machinery. The functional structure *is* the machinery: a fold, a render, a scope.
-  Adding a framework to get reactivity would import a second state system for free.
+- **Svelte renders; it does not own the rules.** Svelte is the view layer. The functional
+  core — state type, fold, derivations, `Schema` decoding — stays in plain TypeScript and
+  remains testable without a browser. Do not move business rules into components.
 - **It mirrors the backend.** Relay's Go side is domain-driven: value objects with
   invariants on types, aggregates with behavior, persistence at the edge. A functional
   frontend keeps the same shape across the wire — `Schema` definitions mirror the Go
-  domain vocabulary (site, prefix, deploy, tunnel, friend), so both sides read the same.
+  domain vocabulary (node, member, invitation, page, version), so both sides read the same.
 - **The core is testable without a browser.** Pure folds and derivations are
   table-driven tests in milliseconds. The browser is needed only for edge tests.
-- **State is bounded and comprehensible.** A node has a handful of tunnels and a list of
-  sites; a site has deploys and counters. One immutable `NodeState` / `SiteState` object
-  per page is a design, not an accident.
+- **State is bounded and comprehensible.** A node has dozens of members and pages, not
+  millions. One immutable `AdminState` object per page is a design, not an accident.
 
 ## The shape
 
@@ -52,7 +51,7 @@ what that means in practice — it is a working discipline, not a school of thou
                                               └────────────────────────┘
 ```
 
-- **Events** are a discriminated union (`{ _tag: "TunnelChanged" } | …`), produced by the
+- **Events** are a discriminated union (`{ _tag: "OverviewLoaded" } | …`), produced by the
   edge (user clicks, poll results, timers).
 - **fold** is a pure function `(state, event) => state`. All business rules live here and
   are the main test surface.

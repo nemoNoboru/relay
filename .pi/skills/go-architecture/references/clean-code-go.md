@@ -8,16 +8,18 @@ matter most here: names, small functions, honest comments, and tests that fail c
 - **The distance rule:** the further a name is used from its declaration, the more
   descriptive it must be. `i` for a loop, `n` for a receiver, but `outboundFriend`
   for something that lives across functions.
-- **Use the domain vocabulary** from `REVIEW.md`, consistently: `node`, `site`, `prefix`,
-  `deploy`, `friend`, `tunnel`, `key`. If the design doc calls it a "friend node", the
-  code says `Friend`, not `Peer`/`Upstream`/`Remote` in different packages.
-- **Functions are verbs or verb phrases:** `Claim`, `DeploySite`, `Rollback`.
-  **Types are nouns:** `Deploy`, `SiteStore`. **Booleans read as predicates:**
-  `isPublic`, `hasRoute`, `canSign`.
+- **Use the domain vocabulary** from `docs/product.md`, consistently: `node`, `member`,
+  `invitation`, `page`/`site`, `version`, `post`, `comment`, `template`, `host`. The
+  existing code uses `site` for a post's path segment; keep that in the hosting
+  packages. If the product says "invitation", the code says `Invitation`, not
+  `Token`/`Ticket`/`Invite` in different packages.
+- **Functions are verbs or verb phrases:** `Create`, `Invite`, `DeploySite`, `Rollback`.
+  **Types are nouns:** `Invitation`, `Site`, `Version`. **Booleans read as predicates:**
+  `isRevoked`, `hasDescendants`, `canPublish`.
 - **No clever abbreviations** that require decoding. `prefix` not `pfx`. Acronyms allowed
   only when universal (`URL`, `ID`, `HTTP`).
 - If a name needs a comment to explain it, rename the thing.
-- **Prefixes that duplicate the package are banned:** `site.Site`, `tunnel.Tunnel`
+- **Prefixes that duplicate the package are banned:** `site.Site`, `post.Post`
   are the exception (the type is the domain noun); `site.SiteManager` is not.
 
 ## Functions
@@ -27,16 +29,16 @@ matter most here: names, small functions, honest comments, and tests that fail c
 - **Early return on error; keep the happy path at the left margin** ("indent error flow"):
 
   ```go
-  func (n *Node) routePrefix(r *http.Request) (handler.Handler, error) {
-      prefix := firstSegment(r.URL.Path)
-      if prefix == "" {
-          return nil, ErrMissingPrefix
+  func (s *Sites) lookup(r *http.Request) (siteServer, error) {
+      target, err := route.Resolve(r.URL.Path)
+      if err != nil {
+          return siteServer{}, err
       }
-      fr, ok := n.friends[prefix]
+      ss, ok := s.bySite[domain.Name(target.Site)]
       if !ok {
-          return nil, fmt.Errorf("%w: %q", ErrNoRoute, prefix)
+          return siteServer{}, fmt.Errorf("%w: %q", ErrNoSite, target.Site)
       }
-      return fr, nil
+      return ss, nil
   }
   ```
 
@@ -52,23 +54,23 @@ matter most here: names, small functions, honest comments, and tests that fail c
 
 ## Comments
 
-- **Code says what; comments say why.** `// retry because the tunnel may be mid-reconnect`
+- **Code says what; comments say why.** `// retry because the client may still be writing the upload`
   is worth writing; `// loop over friends` is noise.
 - **Doc comments** on every exported identifier (and non-trivial unexported ones):
   full sentence, starts with the name being described:
 
   ```go
-  // Claim records that key owns prefix until the key is released.
-  // It returns ErrPrefixTaken if the prefix is already claimed by another key.
-  func (s *Site) Claim(key ed25519.PublicKey, prefix string) error { ... }
+  // Invite mints a child key under the inviter. It returns ErrBadInviter
+  // if the inviter is unknown or revoked, and ErrBadUser for a bad name.
+  func (ks *KeyStore) Invite(inviterToken, name string) (string, KeyInfo, error) { ... }
   ```
 
 - **Package comment** on every package, adjacent to the `package` clause, no blank line:
 
   ```go
-  // Package site holds the pure domain model for hosted sites: deploys,
-  // versions, rollback, and ownership. It performs no I/O.
-  package site
+  // Package route resolves request paths to a serving target: which node,
+  // which site, and which file inside it. It performs no I/O.
+  package route
   ```
 
 - **TODO:** `// TODO(username): short reason + Kandev task ref`. A TODO without an owner
@@ -153,9 +155,9 @@ func TestFirstSegment(t *testing.T) {
 - **No sleeping.** Use contexts with timeouts, channels, or test seams. A `time.Sleep`
   in a test is a flake factory.
 - `t.Parallel()` at the top of independent subtests; `t.TempDir()` for per-test files
-  (SQLite test databases belong here); `t.Cleanup` for anything started.
+  (temp data directories belong here); `t.Cleanup` for anything started.
 - **Boundary tests are integration tests.** For Relay: deploy → serve → rollback → export
-  against a real temp-dir SQLite file; tunnel tests run **two in-process nodes** and move
+  against a real temp-dir data directory; handler tests run with `httptest` and move
   a real HTTP request through the WebSocket. These are not "slow tests to skip" — they are
   the point.
 - **Examples:** every new package ships one runnable `Example` or a small test showing the
@@ -167,9 +169,9 @@ func TestFirstSegment(t *testing.T) {
 - Levels: `Error` for "a page 404'd where it should have been 200", `Warn` for
   "reconnecting, attempt 3", `Info` for lifecycle (node started, deploy live), `Debug`
   for per-request trace. A healthy node at `Info` should be quiet.
-- Every log line that can carry an identifier does: `site`, `prefix`, `node`.
-- **Never log secrets:** Ed25519 private halves, session tokens, key-file contents. Log
-  fingerprints (`sha256` prefix), never material.
+- Every log line that can carry an identifier does: `node`, `site`, `member`, `invitation`.
+- **Never log secrets:** invitation tokens, admin passwords, cookies, key-file contents.
+  Log key ids (`dk_…`) and counts, never material.
 
 ## Code-smell checklist (for review)
 

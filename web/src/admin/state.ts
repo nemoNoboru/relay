@@ -1,9 +1,9 @@
 import type { AdminOverview } from "./schema";
 
 /**
- * The admin page's UI state. Unlike the polled pages (`live.ts`), the admin
- * page is interactive: the phase tracks the admin-token session, and actions
- * update `notice`/`newToken`/`actionError` without leaving the ready phase.
+ * The host console's UI state. The page is interactive: the phase tracks
+ * the admin-password session, and actions update `notice`/`newToken`/
+ * `actionError` without leaving the ready phase.
  */
 export type AdminPhase = "locked" | "loading" | "ready" | "error";
 

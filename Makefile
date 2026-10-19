@@ -8,7 +8,7 @@
 
 GO ?= go
 
-.PHONY: check web build site-check web-check go-check test fmt vet staticcheck clean
+.PHONY: check web build web-check go-check test fmt vet staticcheck clean
 
 # Build the owner UI (web/) into web/dist/.
 # --include=dev: some environments set NODE_ENV=production, which would
@@ -22,10 +22,6 @@ web:
 # Full: frontend, then the Go binary.
 build: web
 	$(GO) build -o relay ./cmd/relay
-
-# Static root site: the generated pages are in sync with their Markdown.
-site-check:
-	python3 tools/build.py --check
 
 # Owner UI: typecheck (tsc + svelte-check), production build, unit + SSR
 # tests, and the bundle smoke test — all from a clean npm install.
@@ -42,7 +38,7 @@ go-check:
 	$(GO) test -race ./...
 
 # CI-style: everything that can be checked without a node binary.
-check: site-check web-check go-check
+check: web-check go-check
 
 test: ## go test -race ./...
 	$(GO) test -race ./...

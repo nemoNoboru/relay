@@ -19,7 +19,7 @@ const dec = new TextDecoder();
 
 /** The key rides in the fragment, which browsers never send to the server. */
 export const inviteLink = (origin: string, key: string): string =>
-  `${origin}/_relay/publish.html#${new URLSearchParams({ key })}`;
+  `${origin}/_relay/home.html#${new URLSearchParams({ key })}`;
 
 export const readInvite = (hash: string) => {
   const p = new URLSearchParams(hash.replace(/^#/, ""));
@@ -29,16 +29,16 @@ export const readInvite = (hash: string) => {
 /** A message to paste into Claude or another assistant, ready to run. */
 export const assistantPrompt = (origin: string, key: string, site: string): string =>
   [
-    "Please publish my website with Relay.",
+    "Please publish my page with Relay.",
     "",
-    "Upload my site as a tar archive with this command:",
+    "Upload my page as a tar archive with this command:",
     "",
-    `tar -cf - -C SITE_FOLDER . | curl --data-binary @- -H "Authorization: Bearer ${key}" ${origin}/_relay/v1/sites/${site || "SITE_NAME"}/deploy`,
+    `tar -cf - -C PAGE_FOLDER . | curl --data-binary @- -H "Authorization: Bearer ${key}" ${origin}/_relay/v1/sites/${site || "PAGE_NAME"}/deploy`,
     "",
-    "- SITE_FOLDER is where my site is on this computer; it should have an index.html. Turn any Markdown files into HTML pages first.",
-    site ? `- The site name is ${site}.` : "- Ask me for a site name: lowercase letters, numbers and hyphens.",
+    "- PAGE_FOLDER is where my page is on this computer; it should have an index.html. Turn any Markdown files into HTML pages first.",
+    site ? `- The page name is ${site}.` : "- Ask me for a page name: lowercase letters, numbers and hyphens.",
     `- The JSON reply's "url" field is the address. Give me the full link: ${origin} followed by that url.`,
-    "- Every upload replaces the whole site.",
+    "- Every upload replaces the whole page.",
     "- The key after Bearer is private. Don't repeat it back to me or put it anywhere else.",
   ].join("\n");
 
@@ -76,7 +76,7 @@ export const cardTitle = (md: string): string => {
 const BAR = `
 <header class="relay-bar">
   <a class="rbar-brand" href="/"><span class="rbar-mark">R</span> RELAY</a>
-  <a class="rbar-note" href="/">Hosted with Relay <span>· Know how</span></a>
+  <a class="rbar-note" href="/">Hosted with Relay <span>· your own place</span></a>
 </header>`;
 
 const BANNER = `
@@ -86,8 +86,8 @@ const BANNER = `
     <div class="rb-bar"></div><div class="rb-word">RELAY</div>
   </div>
   <div class="rb-body">
-    <p class="rb-tag">Where this page lives</p>
-    <p class="rb-sub">On a server someone keeps, not space rented from a company. No account sits behind it, and no one is counting your visit. Yours could sit beside it — <a href="/">know how</a>.</p>
+    <p class="rb-tag">A page on a Relay node</p>
+    <p class="rb-sub">A micro-social network for you and your real friends. This page sits on a server someone in the group keeps: no account, no ads, no one counting the visit. Your group could have a node of its own — <a href="/">see how</a>.</p>
     <div class="rb-actions">
       <button class="rb-btn solid" id="rb-share" type="button">Share this page</button>
       <button class="rb-btn" id="rb-qr" type="button">QR code</button>

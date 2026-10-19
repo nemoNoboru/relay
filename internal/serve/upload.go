@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/nemoNoboru/relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/social"
 )
 
 const (
@@ -31,6 +32,7 @@ type Uploader struct {
 	sitesDir string
 	ks       *KeyStore
 	versions *Versions
+	posts    *social.Store
 	maxBytes int64
 	maxFiles int
 	reload   func() error
@@ -38,15 +40,16 @@ type Uploader struct {
 
 // NewUploader returns an uploader that writes sites under <dataDir>/sites
 // and reports them at /<self>/<site>/. ks authorizes uploads and records
-// site ownership; versions keeps rollback snapshots. reload is called after
-// every successful deploy so the serving registry picks up the new site; it
-// may be nil.
-func NewUploader(self domain.Name, dataDir string, ks *KeyStore, versions *Versions, maxBytes int64, reload func() error) *Uploader {
+// site ownership; versions keeps rollback snapshots; posts indexes the
+// publish (it may be nil). reload is called after every successful deploy so
+// the serving registry picks up the new site; it may be nil.
+func NewUploader(self domain.Name, dataDir string, ks *KeyStore, versions *Versions, posts *social.Store, maxBytes int64, reload func() error) *Uploader {
 	return &Uploader{
 		self:     self,
 		sitesDir: filepath.Join(dataDir, "sites"),
 		ks:       ks,
 		versions: versions,
+		posts:    posts,
 		maxBytes: maxBytes,
 		maxFiles: maxDeployFiles,
 		reload:   reload,
@@ -57,6 +60,10 @@ func NewUploader(self domain.Name, dataDir string, ks *KeyStore, versions *Versi
 // application/x-tar body. Everything else is 404.
 func (u *Uploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	const base = "/_relay/v1/sites/"
+	if !sameOrigin(r) {
+		writeError(w, http.StatusForbidden, "bad_origin", "request origin does not match this node")
+		return
+	}
 	if r.Method != http.MethodPost {
 		http.NotFound(w, r)
 		return
@@ -80,9 +87,9 @@ func (u *Uploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Uploader) deploy(w http.ResponseWriter, r *http.Request, name domain.Name) {
-	user, ok := u.user(r)
+	member, _, ok := memberFromRequest(u.ks, r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or missing deploy token")
+		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or missing invitation")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, u.maxBytes)
@@ -99,36 +106,56 @@ func (u *Uploader) deploy(w http.ResponseWriter, r *http.Request, name domain.Na
 	}
 	defer os.RemoveAll(dir) // no-op once renamed into place
 
-	if err := u.commit(name, dir); err != nil {
+	meta := readPostMeta(dir)
+	_, postURL, err := u.savePublish(name, dir, member, meta)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	if u.reload != nil {
-		if err := u.reload(); err != nil {
-			// The site is live on disk; only the in-memory view failed to
-			// refresh. Report it, do not fail the deploy.
-			fmt.Fprintf(os.Stderr, "serve: reload sites after deploy: %v\n", err)
-		}
-	}
-	if err := u.ks.RecordSite(string(name), user); err != nil {
-		// The site is live; only the ownership bookkeeping failed.
-		fmt.Fprintf(os.Stderr, "serve: record owner of %s: %v\n", name, err)
-	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"site":  string(name),
-		"files": files,
-		"bytes": bytes,
-		"url":   "/" + string(u.self) + "/" + string(name) + "/",
+		"site":    string(name),
+		"files":   files,
+		"bytes":   bytes,
+		"url":     "/" + string(u.self) + "/" + string(name) + "/",
+		"postUrl": postURL,
 	})
 }
 
-// user returns the user a bearer deploy token belongs to.
-func (u *Uploader) user(r *http.Request) (string, bool) {
-	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok || token == "" {
-		return "", false
+// savePublish commits a staged site, records ownership, writes the portable
+// sidecar, and upserts the post index. The site bytes are the source of
+// truth; index and bookkeeping failures are logged, not fatal.
+func (u *Uploader) savePublish(name domain.Name, staging string, member Member, meta postMeta) (social.Post, string, error) {
+	post := social.Post{
+		Site: string(name), Member: member.ID,
+		Title: meta.Title, Summary: meta.Summary, Template: meta.Template, Image: meta.Image,
 	}
-	return u.ks.Authenticate(token)
+	post.Normalize()
+	if err := writePostMeta(staging, postMeta{
+		Title: post.Title, Summary: post.Summary, Template: post.Template, Image: post.Image,
+		Author: member.User, Member: member.ID,
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "serve: write post metadata for %s: %v\n", name, err)
+	}
+	if err := u.commit(name, staging); err != nil {
+		return social.Post{}, "", err
+	}
+	if u.reload != nil {
+		if err := u.reload(); err != nil {
+			fmt.Fprintf(os.Stderr, "serve: reload sites after publish: %v\n", err)
+		}
+	}
+	if err := u.ks.RecordSite(string(name), member.User); err != nil {
+		fmt.Fprintf(os.Stderr, "serve: record owner of %s: %v\n", name, err)
+	}
+	if u.posts != nil {
+		indexed, err := u.posts.Upsert(post)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "serve: index post %s: %v\n", name, err)
+		} else {
+			post = indexed
+		}
+	}
+	return post, "/_relay/posts/" + string(name), nil
 }
 
 // stage extracts the archive in body into a fresh staging directory next to
@@ -253,7 +280,7 @@ func safeJoin(dest, name string) (string, error) {
 	return full, nil
 }
 
-// errorEnvelope is the contract's error shape (docs/api-contract.md §2).
+// errorEnvelope is the API's error shape (docs/api.md).
 type errorEnvelope struct {
 	Error struct {
 		Code    string `json:"code"`
@@ -261,7 +288,7 @@ type errorEnvelope struct {
 	} `json:"error"`
 }
 
-// writeError writes the contract's error envelope (docs/api-contract.md §2).
+// writeError writes the API's error envelope (docs/api.md).
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	e := errorEnvelope{}
 	e.Error.Code = code

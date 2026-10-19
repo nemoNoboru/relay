@@ -3,8 +3,9 @@ import { Schema } from "effect";
 /**
  * Wire contract for the operator admin surface (`/_relay/v1/admin`).
  *
- * The admin token is sent as a bearer token on every call. A deploy key is
- * per-user; its plaintext token exists only in the create/rotate response.
+ * The admin password is sent as a bearer token on every call. An invitation
+ * key is per-member; its plaintext token is returned so the host can copy the
+ * invite link.
  */
 export const DeployKey = Schema.Struct({
   id: Schema.String,
@@ -21,10 +22,26 @@ export const SiteOwner = Schema.Struct({
   user: Schema.String,
 });
 
+/** One recent comment in the host overview, already sanitized by the node. */
+export const AdminComment = Schema.Struct({
+  id: Schema.String,
+  post: Schema.String,
+  member: Schema.String,
+  author: Schema.Struct({
+    id: Schema.String,
+    displayName: Schema.String,
+    revoked: Schema.optional(Schema.Boolean),
+  }),
+  body: Schema.String,
+  html: Schema.String,
+  createdAt: Schema.String,
+});
+
 export const AdminOverview = Schema.Struct({
   keys: Schema.Array(DeployKey),
   sites: Schema.Array(SiteOwner),
-  /** The node is still on the default admin token and must be given a new one. */
+  comments: Schema.Array(AdminComment),
+  /** The node is still on the default admin password and must be given a new one. */
   mustChangeToken: Schema.Boolean,
 });
 
@@ -46,6 +63,7 @@ export const TokenChanged = Schema.Struct({
 
 export type DeployKey = (typeof DeployKey)["Type"];
 export type SiteOwner = (typeof SiteOwner)["Type"];
+export type AdminComment = (typeof AdminComment)["Type"];
 export type AdminOverview = (typeof AdminOverview)["Type"];
 export type KeyCreated = (typeof KeyCreated)["Type"];
 export type KeyUpdated = (typeof KeyUpdated)["Type"];
