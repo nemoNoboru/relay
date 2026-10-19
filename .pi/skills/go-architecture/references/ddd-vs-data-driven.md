@@ -47,17 +47,17 @@ Its real cost shows up later, slowly:
 ## Domain-driven: honest costs
 
 - Slower start: the model must be named and the language agreed before the first table.
-- Needs the domain to be *known*; Relay's is (it's written in `REVIEW.md`), but a CRUD
+- Needs the domain to be *known*; Relay's is (it's written in `docs/product.md`), but a CRUD
   admin panel over it would not earn the model.
 - More concepts to keep in a team's head (aggregate, invariant, event).
-- Mapping rich models to storage is deliberate work — in Relay this is small, because the
-  storage choice (one SQLite file per site) already forces a clear repository boundary.
+- Mapping rich models to storage is deliberate work — in Relay this is small, because
+  the data directory and the JSON stores already force a clear boundary.
 
 ## Decision rules (use these, in order)
 
 1. **Are there invariants the business will hold you to** — rules that must be true in
-   every state, no matter which entry point mutates the data (signed deploys, monotonic
-   versions, claimed-prefix uniqueness, session lifetimes)?
+   every state, no matter which entry point mutates the data (invitation cascade revoke, monotonic
+   versions, comment ownership, member limits)?
    → **Domain-driven.** Put each invariant on exactly one type.
 2. **Is the data the product**, with no rules beyond storage semantics (a blob store,
    static files, a byte relay)?
@@ -66,13 +66,13 @@ Its real cost shows up later, slowly:
 3. **Is it a state machine** — objects with a small number of states and legal
    transitions (claim → released → reclaimed; deploy pending → live → rolled back)?
    → **Domain-driven**, even if the "model" is small. The transitions *are* the rules.
-4. **Is it glue/orchestration** between other components (routing a request to a tunnel
-   frame, forwarding, heartbeats)?
+4. **Is it glue/orchestration** between other components (routing a request to a site
+   folder, extracting a tar, writing a JSON index)?
    → **Neither.** It's plumbing: synchronous functions, clear error flow, good logs.
    Do not dress plumbing up as a domain model.
 5. **Mixed system?** The two styles coexist **per bounded context**, in the same binary.
-   Relay: `prefix` and `site/deploy` are rich; `metrics` and `blobs` are data-driven;
-   `tunnel` is plumbing with one protocol state machine.
+   Relay: `keys/invitations` and `site/deploy` are rich; `sites` and the JSON index
+   are data-driven; tar extraction and static serving are plumbing.
 
 The smell that flips #2 into #1: the same rule appears in a **second** place (two
 handlers both checking "version must increase"). When an invariant is written twice,
@@ -84,15 +84,15 @@ No classes, no framework — plain Go types:
 
 | DDD concept | Go shape in this repo |
 |---|---|
-| Ubiquitous language | Package and type names from `REVIEW.md`: `site`, `deploy`, `prefix`, `friend`, `tunnel`, `key` |
+| Ubiquitous language | Package and type names from `docs/product.md`: `node`, `member`, `invitation`, `site`, `post`, `comment`, `version` |
 | Entity | Struct with an identity field and methods; mutated through methods only (`*Site.Deploy(...)`) |
 | Value object | Small immutable struct, no identity, compared by value: `FileHash`, `Address`, `Signature`, `RuleSet` |
-| Aggregate | One root type (e.g. `Site`) that owns its invariants and hands out nothing inside the boundary but the root; persisted as a whole (one SQLite file per site is a natural aggregate boundary) |
+| Aggregate | One root type (e.g. `Site`) that owns its invariants and hands out nothing inside the boundary but the root; persisted as a whole (one site folder plus its index entry is a natural aggregate boundary) |
 | Invariant | A property no method on the aggregate allows to be violated; checked in the mutation method and, secondarily, at load time (corrupt data → `ErrCorrupt`) |
-| Repository | An interface declared by the feature: `site.Store` with domain-named methods (`Get`, `Put`, `Release`); the SQLite implementation maps rows ↔ aggregate |
-| Domain event | A plain struct + callback or a small in-process channel, used when "X happened" must trigger side effects (metrics count, friend re-route) without coupling the model to them |
+| Repository | An interface declared by the feature: `social.Store` with domain-named methods (`Get`, `Put`, `Delete`); the file implementation maps JSON ↔ aggregate |
+| Domain event | A plain struct + callback or a small in-process channel, used when "X happened" must trigger side effects (index a post, reload the site registry) without coupling the model to them |
 | Application service | Thin orchestrator in the feature package: load → verify → mutate aggregate → store → log |
-| Bounded context | A top-level feature package (`internal/site`, `internal/metrics`); each owns its own language and storage shape |
+| Bounded context | A top-level feature package (`internal/serve`, `internal/social`); each owns its own language and storage shape |
 
 ## Worked example: a deploy
 
@@ -112,7 +112,7 @@ func (h *Handler) Deploy(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-Every future entry point (CLI, tunnel, rollback path) must re-remember both rules.
+Every future entry point (CLI, publish endpoint, rollback path) must re-remember both rules.
 
 **Domain-driven** (what to write):
 
@@ -162,12 +162,12 @@ without a database.
 
 - **Blobs:** content-addressed `Put(hash, r io.Reader) / Get(hash)`; the "model" is the
   hash. A domain layer here is ceremony.
-- **Static serving:** Caddy/stdlib does it; Relay's contribution is path mapping and
+- **Static serving:** the standard library does it; Relay's contribution is path mapping and
   per-site scoping (cookies, CSRF, `X-Forwarded-Prefix`) — that scoping *is* domain-ish
   and belongs in the edge, not a fake model.
 - **Metrics:** aggregate counters with a daily salt. Data in, numbers out. Keep it a
   data store with one naming rule, and export = copy the file.
-- **Tunnel byte relay:** a frame in, a frame out. The only state machine worth modeling
+- **Tar extraction and file serving:** bytes in, bytes out. The only state machine worth modeling
   is connection lifecycle (registered → active → draining), and it earns a small
   domain-type treatment; everything around it is plumbing.
 
@@ -182,7 +182,7 @@ without a database.
   design" (see *From CRUD to DDD*). The fix is moving rules into types, not adding layers.
 - **Keep the ubiquitous language in one place.** If two packages name the same concept
   differently (`Prefix` vs `Path` vs `Route`), the model is not done — pick the
-  `REVIEW.md` term and rename.
+  `docs/product.md` term and rename.
 
 ## Sources
 

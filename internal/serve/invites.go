@@ -23,13 +23,17 @@ func NewInvites(ks *KeyStore) *Invites {
 // the inviter's own deploy token as the bearer token. Everything else is
 // 404; an unknown or revoked inviter is 401 bad_token.
 func (in *Invites) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !sameOrigin(r) {
+		writeError(w, http.StatusForbidden, "bad_origin", "request origin does not match this node")
+		return
+	}
 	if r.Method != http.MethodPost || strings.TrimSuffix(r.URL.Path, "/") != "/_relay/v1/invites" {
 		http.NotFound(w, r)
 		return
 	}
-	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok || token == "" {
-		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or missing deploy token")
+	_, token, ok := memberFromRequest(in.ks, r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or missing invitation")
 		return
 	}
 	var req struct {
@@ -42,7 +46,7 @@ func (in *Invites) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	invited, key, err := in.ks.Invite(token, strings.TrimSpace(req.Name))
 	switch {
 	case errors.Is(err, ErrBadInviter):
-		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or missing deploy token")
+		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or missing invitation")
 	case errors.Is(err, ErrBadUser):
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 	case err != nil:

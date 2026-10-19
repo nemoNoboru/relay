@@ -1,130 +1,146 @@
 # Relay owner UI
 
-The node's owner UI: `node.html` (node admin — tunnels, health),
-`site.html` (site console — deploys, metrics), and `admin.html` (operator
-console — deploy keys, sites by user). Svelte 5 components + Effect-TS,
-built with Vite, embedded into the Go node binary via `embed.go`, served by the
-node same-origin with its API.
+The node's owner-facing pages, embedded into the Go binary and served
+same-origin under `/_relay/`:
 
-Locked by `.pi/skills/frontend-architecture/SKILL.md`:
+| Page | Audience | What it does |
+|---|---|---|
+| `home.html` | member | Exchange an invite for a cookie, welcome the member, read the feed, edit display name/bio, sign out |
+| `people.html` | member | One member's profile and posts (`/_relay/people/<id>`) |
+| `post.html` | member | Post wrapper with author, date, static page iframe, comments and delete-own (`/_relay/posts/<site>`) |
+| `admin.html` | host | Sign in with the admin password; create, reveal, revoke, rotate invitations; see pages by member |
+| `publish.html` | member | Template picker, install a template tar, free-form publish, invite someone else |
+| `deploy.html` | member | Step-by-step terminal upload instructions |
 
-- TypeScript `strict` (plus `noUncheckedIndexedAccess`), no `any`.
-- Effect-TS: services/layers, `Stream` for live data, finalizers for teardown.
-- Functional paradigm; Svelte 5 (runes) components — see Deviations; shared
-  hand-written CSS — no CSS framework.
-- Every API response decoded with a `Schema`; `src/api/` is the only
-  wire-aware code.
-- No router, relative URLs only, no client-side key material.
-- Live-data state machine: `loading → ready ⇄ stale → error`
-  (`src/fold.ts`, pure, table-driven tested in `test/`).
+The pages are short-lived documents, not a SPA. They are built with Svelte 5
+(runes), Effect-TS, and Vite, and use the design tokens from the public site.
+
+The old `node.html` and `site.html` mock consoles were removed in the pivot
+cleanup. They polled `/api/tunnels` and `/api/site/deploy`, which the node never
+served. Do not bring them back without a real API and a product reason.
 
 ## Layout
 
 ```
-node.html, site.html     page shells (thin; the app is the script module)
-admin.html               operator console shell (deploy keys, sites by user)
-deploy.html              static upload docs page (plain HTML, no script)
-shared/styles.css        design tokens (mirrored from the root site) + owner UI
-public/skills/           generated: relay-deploy/SKILL.md, copied from .pi/skills
-                         at build time and served at /_relay/skills/…/SKILL.md
-src/live.ts              the live-page driver both pages share: store, scoped
-                         poll Stream, fold, Svelte mount, pagehide teardown
-src/main/node.ts         node page entry — the options handed to startPage
-src/main/site.ts         site page entry — same shape
-src/main/admin.ts        operator console entry — token session + API effects
-src/admin/schema.ts      /_relay/v1/admin wire schemas (keys, sites, create/rotate)
-src/admin/ops.ts         the admin API effects (overview, create, revoke, rotate)
-src/admin/state.ts       the console's UI state type + initial
-src/ui/Phase.svelte      shared presentation of the live phases (loading,
-                         error, stale); the page's data view is a snippet
-src/ui/Panel.svelte      shared panel wrapper (title + body snippet)
-src/ui/Node.svelte       node admin view: pure renderer of the live-data store
-src/ui/Site.svelte       site console view: same shape
-src/ui/Admin.svelte      operator console view: pure renderer of the admin store
-src/shims-svelte.d.ts    .svelte module shim for plain `tsc` (svelte-check does the real check)
-src/api/client.ts        fetch + Schema decode, typed ApiError — the only wire code
-src/fold.ts              pure (state, event) → state live-data machine (+ `ago`)
-src/tunnels/schema.ts    GET /api/tunnels — DRAFT wire contract
-src/deploys/schema.ts    GET /api/site/deploy — DRAFT wire contract
-tools/copy-skill.mjs     copies .pi/skills/relay-deploy/SKILL.md → public/skills/
-test/                    @effect/vitest suites (fold table, client, SSR component render)
-tools/smoke.mjs          DOM-stub smoke test of the built production bundles
-embed.go                 Go: //go:embed all:dist → webui.FS for the node binary
-dist/                    Vite output (generated; .gitkeep keeps embed valid pre-build)
+home.html                member welcome + feed shell
+people.html              profile shell (nested route)
+post.html                post wrapper shell (nested route)
+admin.html               host console shell
+publish.html             publish page shell
+deploy.html              static guide (no script)
+shared/styles.css        owner UI tokens + components
+public/skills/           generated: relay-deploy/SKILL.md, copied at build time
+src/main/home.ts         member home entry: invite exchange, /me, feed, profile
+src/main/people.ts       profile entry: member id from the path
+src/main/post.ts         post wrapper entry: site from the path
+src/main/admin.ts        host console entry: token session + API effects
+src/main/publish.ts      publish page entry: invite, files, tar, preview
+src/home/state.ts        home UI state
+src/people/state.ts      profile UI state
+src/post/state.ts        post wrapper UI state
+src/member/schema.ts     member, post, feed, profile schemas
+src/member/ops.ts        session, profile, feed, post, comment effects
+src/templates/schema.ts  template manifest schemas
+src/templates/ops.ts     template listing effect (install is in main/publish.ts)
+src/admin/schema.ts      /_relay/v1/admin wire schemas
+src/admin/ops.ts         host console API effects
+src/admin/state.ts       host console UI state type + initial
+src/ui/Home.svelte       member welcome + feed view (pure renderer)
+src/ui/FeedList.svelte   infinite-scroll feed (cursor + IntersectionObserver)
+src/ui/PostCard.svelte   one post: cover, metadata, inline comments/form
+src/ui/People.svelte     profile view (pure renderer)
+src/ui/PostPage.svelte   post wrapper view (pure renderer)
+src/ui/Admin.svelte      host console view (pure renderer)
+src/publish.ts           invite links, Markdown-to-page, tar, generated page
+src/api/client.ts        fetch + Schema decode, typed ApiError (only wire code)
+src/shims-svelte.d.ts    .svelte module shim for plain `tsc`
+tools/copy-skill.mjs     copies .pi/skills/relay-deploy/SKILL.md → public/skills
+web/public/template/     shared prepublish runtime (JS + CSS)
+tools/smoke.mjs          DOM-stub smoke test of the built admin + home bundles
+test/                    @effect/vitest suites
+embed.go                 Go: //go:embed all:dist → webui.FS
+dist/                    Vite output (generated; .gitkeep keeps embed valid)
 ```
 
 ## Scripts
 
-| script              | what it does                                        |
-| ------------------- | --------------------------------------------------- |
-| `npm run dev`       | Vite dev server (no API proxy; a missing node renders the designed stale/error state) |
-| `npm run build`     | typecheck (`tsc --noEmit` + `svelte-check`) + Vite build → `dist/` |
-| `npm run preview`   | serve `dist/` locally                               |
-| `npm run typecheck` | `tsc --noEmit` + `svelte-check` (strict Svelte + prop typing) |
-| `npm test`          | `vitest run` — fold table, client, SSR component render |
-| `npm run test:watch`| `vitest`                                            |
-| `npm run smoke`     | DOM-stub smoke test of the built bundles (all page/state scenarios) |
+| script | what it does |
+|---|---|
+| `npm run dev` | Vite dev server (no API proxy; the admin page renders its sign-in state) |
+| `npm run build` | typecheck (`tsc --noEmit` + `svelte-check`) + Vite build → `dist/` |
+| `npm run preview` | serve `dist/` locally |
+| `npm run typecheck` | `tsc --noEmit` + `svelte-check` |
+| `npm test` | `vitest run` — API client, publish helpers, SSR home/admin renders |
+| `npm run smoke` | DOM-stub smoke test of the built admin and home bundles |
 
-Node >= 22.12 is required (engines). `smoke` needs a fresh `dist/`
+Node >= 22.12 is required. `smoke` needs a fresh `dist/`
 (`npm run build` first).
 
 ## Building for the Go binary
 
-The root `make build` handles the order (frontend first, then `go build`):
+The root `make build` handles the order:
 
 1. `web/` → `npm ci` + `npm run build` → `web/dist/`
 2. root → `go build ./...` — `web/embed.go`'s `//go:embed all:dist` picks it up.
 
 `dist/` is committed only as `.gitkeep`; real build output is git-ignored.
-The relative asset base (`base: "./"` in `vite.config.ts`) is what makes the
-embed work at arbitrary path depth — do not change it.
+The fixed asset base (`base: "/_relay/"` in `vite.config.ts`) is required for
+nested shells such as `/_relay/people/<id>` and `/_relay/posts/<site>`. Do not
+change it to a relative base.
 
-## Wire contracts — drafts
+## Wire contracts
 
-`/api/tunnels` and `/api/site/deploy` have no finalized spec yet (REVIEW.md
-§7.5). `src/tunnels/schema.ts` and `src/deploys/schema.ts` are the UI's draft
-of the shapes, written in Relay's domain vocabulary. When the control/tunnel
-API spec lands, update these two files — they are the only place the wire
-shape is known, and every request is decoded through them.
+The host console talks to the admin API in [`docs/api.md`](../docs/api.md).
+The member pages talk to `/_relay/v1/session`, `/_relay/v1/me`,
+`/_relay/v1/feed`, `/_relay/v1/posts/<site>`, `/_relay/v1/people/<id>`, the
+comment endpoints under `/_relay/v1/posts/<site>/comments`, and
+`/_relay/v1/templates`. Template forms post finished files to
+`/_relay/v1/publish`. The host console deletes any comment with
+`DELETE /_relay/v1/admin/comments/<id>`.
+Every response is decoded with a `Schema` (`src/admin/schema.ts`,
+`src/member/schema.ts`); `src/api/client.ts` is the only code that knows about
+HTTP. Invitation tokens are bearer credentials and are never put in a URL.
+
+The member session, welcome, post index, feed, profiles, post wrappers,
+comments, and template publishing are built (Phases 1–4). Phase 5 host
+operations are planned in [`docs/pivot-plan.md`](../docs/pivot-plan.md).
 
 ## Testing
 
-Three layers, all browser-free:
+Browser-free:
 
-1. **`test/fold.test.ts`** — table-driven tests of the pure live-data state
-   machine (`loading → ready ⇄ stale → error`) and `ago`.
-2. **`test/client.test.ts`** — the API client against a stub `fetch`: schema
-   decode, typed errors, the only wire-aware code.
-3. **`test/ui.test.ts`** — SSR-rendering of the Svelte components
-   (`svelte/server` `render`) for every visible state: loading, ready (with
-   data and empty), stale (last data retained), and error. **`test/admin.test.ts`**
-   covers the operator console (locked sign-in, ready, one-time token).
+1. `test/home.test.ts` — SSR-renders the member welcome, empty feed, and feed
+   with posts.
+2. `test/people.test.ts` — SSR-renders a profile with posts and its empty and
+   signed-out states.
+3. `test/post.test.ts` — SSR-renders the post wrapper, comment list, and form.
+4. `test/admin.test.ts` — SSR-renders the host console in its locked, ready,
+   first-sign-in, and one-time-invitation states.
+5. `test/client.test.ts` — the API client against a stub `fetch`: schema
+   decode, typed errors, bearer/JSON request shape, PATCH/DELETE.
+6. `test/publish.test.ts` — invite parsing, tar layout, Markdown-to-page,
+   generated page copy, assistant prompt.
 
-`tools/smoke.mjs` goes one step further: it imports the **built production
-bundles** into Node with a minimal DOM stub (just enough for Svelte's client
-runtime — templates, anchors, text nodes) and asserts the rendered HTML for
-all four page/state scenarios. It is the closest this setup gets to a browser
-— a real headless browser would still be a stronger check.
+The feed uses cursor pagination (`next` from `/_relay/v1/feed`) and a sentinel
+watched by `IntersectionObserver`. Each post carries its comments, so the card
+renders the list and form without an extra request.
 
-## Deviation from the skill (flagged)
+`tools/smoke.mjs` imports the built production bundles into Node with a
+minimal DOM stub and asserts the admin sign-in state and the home signed-out/
+signed-in states. It is the closest this setup gets to a browser; a real
+headless browser would still be a stronger check.
 
-The skill pins tooling as "esbuild bundle only, no other build machinery" and
-the rendering approach as "vanilla DOM, no UI framework". **Vite and Svelte
-were both explicitly requested for this setup** and override those two lines:
+## Frontend rules
 
-- Vite uses esbuild for TS and Rollup for bundling.
-- Svelte 5 (runes) components replace hand-rolled DOM wiring. The Effect
-  layer is unchanged: `src/live.ts` (the shared live-page driver) still owns
-  the poll `Stream` and closes it on `pagehide`; Svelte receives the state
-  through a `svelte/store` `writable` (the only bridge — Svelte has no public
-  state factory usable from `.ts` files), so the state machine, schemas, and
-  client stay exactly as before.
+The engineering standard is
+[`.pi/skills/frontend-architecture`](../.pi/skills/frontend-architecture/SKILL.md)
+and its [`relay-ui.md`](../.pi/skills/frontend-architecture/references/relay-ui.md)
+reference. The short version:
 
-Two tooling consequences, also flagged: `svelte-check` (the Svelte 5 checker
-in this registry, unscoped) requires TypeScript `^5 || ^6`, so `typescript`
-is pinned to 6.0.3; and `.svelte` imports resolve for `tsc` via
-`src/shims-svelte.d.ts` (a module shim) — `svelte-check` performs the real
-strict checking of the components themselves.
-
-If the skill's tooling/rendering lines should be amended, that should be done
-as a skill change, not silently here.
+- strict TypeScript, no `any`;
+- decode every wire response with a `Schema`;
+- pure renders, effects at the edge;
+- no client-side key material in storage;
+- relative URLs only;
+- native elements for controls;
+- no new dependency without a written reason.

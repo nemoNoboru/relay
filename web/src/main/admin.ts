@@ -1,9 +1,10 @@
 /**
- * Operator admin page — the only wiring point for this page.
+ * Host console — the only wiring point for this page.
  *
- * Holds the admin-token session (sessionStorage), runs the API effects from
- * `admin/ops.ts`, and folds results into a Svelte store that Admin.svelte
- * renders. No polling: actions and a manual refresh drive re-renders.
+ * Holds the admin-password session (sessionStorage), runs the API effects
+ * from `admin/ops.ts`, and folds results into a Svelte store that
+ * Admin.svelte renders. No polling: actions and a manual refresh drive
+ * re-renders.
  */
 import { Effect } from "effect";
 import { mount } from "svelte";
@@ -12,12 +13,12 @@ import type { Writable } from "svelte/store";
 
 import { Client } from "../api/client";
 import type { ApiError } from "../api/client";
-import { changeToken, createKey, fetchOverview, revokeKey, rotateKey } from "../admin/ops";
+import { changeToken, createKey, deleteComment, fetchOverview, revokeKey, rotateKey } from "../admin/ops";
 import { initialAdmin } from "../admin/state";
 import type { AdminState } from "../admin/state";
 import AdminApp from "../ui/Admin.svelte";
 
-/** Where the admin token lives between reloads (never in localStorage/URL). */
+/** Where the admin password lives between reloads (never in localStorage/URL). */
 const TOKEN_KEY = "relay.admin.token";
 
 const root = document.getElementById("app");
@@ -107,6 +108,19 @@ const rotate = (id: string): void => {
   );
 };
 
+const removeComment = (id: string): void => {
+  const tok = get(store).token;
+  if (tok === "") return;
+  set({ busy: true, actionError: undefined });
+  void run(deleteComment(tok, id)).then(
+    () => {
+      set({ busy: false, notice: "Comment deleted", actionError: undefined });
+      refreshQuietly(tok);
+    },
+    (err: ApiError) => set({ busy: false, actionError: err.message }),
+  );
+};
+
 const refresh = (): void => {
   const tok = get(store).token;
   if (tok === "") return;
@@ -147,6 +161,7 @@ mount(AdminApp, {
     onCreate: create,
     onRevoke: revoke,
     onRotate: rotate,
+    onDeleteComment: removeComment,
     onRefresh: refresh,
     onDismiss: dismiss,
     onLogout: logout,

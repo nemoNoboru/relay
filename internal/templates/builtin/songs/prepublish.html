@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New songs — Relay</title>
+<link rel="stylesheet" href="/_relay/template/runtime.css">
+</head>
+<body class="tpl">
+<header class="tpl-bar">
+  <a class="tpl-brand" href="/_relay/home.html"><span class="tpl-mark">R</span> RELAY</a>
+  <span class="tpl-note">New songs</span>
+</header>
+<div class="tpl-wrap">
+  <section class="tpl-card">
+    <span class="tpl-kicker">Songs</span>
+    <h1>Put up a playlist</h1>
+    <form id="form" class="tpl-form">
+      <div class="tpl-field">
+        <label for="title">Title</label>
+        <input id="title" name="title" type="text" required maxlength="160" placeholder="A name for the set">
+      </div>
+      <div class="tpl-field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="4" maxlength="2000" placeholder="What is this, and who made it?"></textarea>
+      </div>
+      <div class="tpl-field">
+        <label for="tracks">Audio files</label>
+        <input id="tracks" name="tracks" type="file" accept="audio/*" multiple required>
+        <span class="hint">Pick one or more tracks. The node caps the whole post at 64 MB.</span>
+      </div>
+      <div class="tpl-actions">
+        <button class="tpl-btn solid" type="submit" id="go">Publish songs</button>
+        <a class="tpl-btn" href="/_relay/home.html">Cancel</a>
+      </div>
+      <p class="tpl-error" id="error" hidden></p>
+    </form>
+  </section>
+  <section class="tpl-preview">
+    <h2>Preview</h2>
+    <iframe class="tpl-frame" id="preview" title="Songs preview"></iframe>
+  </section>
+</div>
+<p class="tpl-foot"><a href="/_relay/publish.html">All publishing options</a> · Audio files are stored with the page on this node.</p>
+<script type="module" src="./publish.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Package route resolves request paths to a serving target: which node,
-// which site, and which file path within that site (contract 5).
+// which site, and which file path within that site (see docs/api.md).
 package route
 
 import (
@@ -21,7 +21,7 @@ type Target struct {
 var (
 	// ErrNoNode is returned when the path has no first segment, or when
 	// the first segment is not a valid name. Invalid is unknown, never a
-	// different node, so no probing happens (contract 5).
+	// different node, so no probing happens.
 	ErrNoNode = errors.New("route: no node in path")
 	// ErrNoSite is returned when the path names a valid node but has no
 	// site segment.

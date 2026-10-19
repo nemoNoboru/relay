@@ -50,14 +50,14 @@ var (
 ## Context
 
 - `context.Context` is the **first parameter**, named `ctx`:
-  `func (n *Node) DialFriend(ctx context.Context, addr string) (*Tunnel, error)`.
+  `func (s *Store) AddComment(ctx context.Context, post, member, body string) (Comment, error)`.
 - **Never store ctx in a struct.** Add a parameter to each method that needs it.
 - **Never invent your own context type** or use an interface instead of `context.Context`
   in signatures.
 - Application data belongs in parameters, the receiver, or (rarely) a `context.WithValue`
   — never use context as a grab bag for dependencies.
 - Propagate cancellation. Anything that loops or blocks long takes `ctx.Done()` into
-  account. Use `context.WithTimeout` for outbound work (tunnel dials, Laya calls) so a
+  account. Use `context.WithTimeout` for outbound work (uploads, HTTP calls) so a
   stuck friend cannot pin a goroutine.
 - `context.Background()` only at true roots: `main`, a test, or a top-level worker.
 
@@ -69,7 +69,7 @@ the spawner closes. If you cannot point to where a goroutine ends, it is a leak.
 
 ```go
 // good: the goroutine's lifetime is bounded by the caller's ctx
-func (t *Tunnel) pump(ctx context.Context) {
+func (u *Uploader) stage(ctx context.Context) {
     go func() {
         if err := t.readLoop(ctx); err != nil && !errors.Is(err, context.Canceled) {
             t.log.Error("read loop", "err", err)
@@ -152,12 +152,12 @@ func (t *Tunnel) pump(ctx context.Context) {
 - **Initialisms are all-caps or all-lower:** `URL`, `ID`, `HTTP`, `TLS`, `API`.
   `ServeHTTP`, not `ServeHttp`; `appID`, not `appId`.
 - **Packages:** short, lowercase, no underscores or `go` prefix, no plural (`site`,
-  `tunnel`). Never `util`, `common`, `misc`, `helpers`, `types`. The package name is part
+  `route`). Never `util`, `common`, `misc`, `helpers`, `types`. The package name is part
   of every identifier, so don't repeat it: `site.Site`, not `site.SiteInfo`.
 - **Variables:** the further a name is used from its declaration, the more descriptive it
   must be. Loop indices `i` are fine; a variable used 50 lines away needs meaning.
 - **Unexported is mixedCaps**, not `snake_case` or `MAX_LEN`: `maxPrefixLen`.
-- **Package names should read well in use:** `tunnel.Dial`, `site.Claim`. If the usage
+- **Package names should read well in use:** `route.Resolve`, `store.AddComment`. If the usage
   reads badly, rename the type or the package.
 
 ## Slices, maps, and nil
@@ -178,7 +178,7 @@ func (t *Tunnel) pump(ctx context.Context) {
 - **`time` package:** always UTC at the boundary (wire, storage, logs); convert for
   display. Don't do arithmetic on `time.Time` — use `time.Duration`.
 - **I/O:** use `io.Reader`/`io.Writer` boundaries, `io.Copy`, `io.ReadAll` only with
-  bounded input (or with a size limit for untrusted input — e.g. tunnel frames).
+  bounded input (or with a size limit for untrusted input — e.g. uploaded tar entries).
 
 ## Defer, range, and version foot-guns
 

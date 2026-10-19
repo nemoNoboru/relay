@@ -1,85 +1,119 @@
 # Relay
 
-**Put your site on the web.** One upload and your site is live at a real
-address: no account, no build step, and no platform in between. Relay is
-free hosting software that any collective, club or neighbour can run, so the
-web stops being rented from a handful of companies.
+**A micro-social network for you and your real friends.**
 
-## Deploy a site
+Relay is a small social space you and your people run yourselves. It lives on
+one computer that someone in the group keeps, and it holds the things you want
+to share: photos, links, writing, a poster, a page of notes.
 
-The easy way: the operator copies an **invite link** from the keys page
-(`/_relay/admin.html`) and sends it to you. Open it, drop your pages in, and
-press Publish. You can also hand the link to an AI
-assistant and ask it to publish your site.
-
-From a terminal:
-
-You need a Relay node's address (`$RELAY_ORIGIN`) and a deploy key from the
-person who runs it (`$RELAY_DEPLOY_TOKEN`):
-
-```sh
-tar -C ./dist -cf site.tar .
-curl -X POST \
-  -H "Authorization: Bearer $RELAY_DEPLOY_TOKEN" \
-  -H "Content-Type: application/x-tar" \
-  --data-binary @site.tar \
-  "$RELAY_ORIGIN/_relay/v1/sites/mysite/deploy"
+```
+one node  ·  4 to 29 friends  ·  pages, posts, pictures, comments
 ```
 
-Your site is now live at `$RELAY_ORIGIN/<node>/mysite/`. With the `relay`
-binary, the same upload is
-`relay deploy --origin $RELAY_ORIGIN --site mysite ./dist`.
+There is no sign-up. People join by invitation link, and the link is the
+account. The aim is a quiet home: each person has a page listing what they
+shared, and the node's home lists what everyone shared, newest first. No feed
+algorithm, no follower counts, no ads, no company in the middle.
 
-## Run a node
+Relay is that place. The hosting core and the pivot's social layer are built
+through Phase 4; Phase 5 is host operations. Read
+[`docs/product.md`](docs/product.md) for the product and
+[`docs/pivot-plan.md`](docs/pivot-plan.md) for the plan.
+
+## What works today
+
+- static pages at `/<node>/<post>/`
+- invite links, delegated invites, and cascade revoke
+- `tar` uploads from the browser or the command line
+- atomic deploys, the last 10 versions, and rollback from the CLI or admin API
+- a host console for invitations, members, and pages
+- a member welcome page: open an invite once, stay signed in, edit your profile
+- an infinite chronological home feed, profile pages, and post wrappers with cover images
+- comments directly under every post in the feed and profile, with own-comment deletion and host moderation
+- nine post templates (Note, Link, Gallery, Article, Songs, Videos, Carousel, Jet Set Radio, Longform), a template picker, and member-installable template tars
+- `relay index` to backfill posts from sites that predate the index
+- native HTTPS or a reverse proxy
+
+Not built yet: Phase 5 host operations (backup/export, invite expiry, limits,
+and moderation polish).
+
+## Keep a node
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSfL \
   https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
-relay node --name mynode --data /var/lib/relay --listen :8080
+
+relay node --name my-group --data /var/lib/relay --listen :8080
 ```
 
-Docker and Kubernetes each take one command; see
-[`docs/technicals.md`](docs/technicals.md). On first start the admin password is
-**`relay`**. Sign in at `/_relay/admin.html`, change it, then issue
-deploy keys (invite links). People you invite can invite others; revoke
-a key and everyone below it is cut off too. Every node also serves this
-project's landing page at `/`.
+On first start the admin password is **`relay`**. Open
+`/_relay/admin.html`, change it, and create the first invitation.
+
+Docker:
+
+```sh
+docker run -d --name relay --restart unless-stopped \
+  -p 8080:8080 -v relay-data:/data \
+  ghcr.io/nemonoboru/relay:latest --name my-group
+```
+
+Kubernetes and HTTPS options are in [`technicals.html`](technicals.html).
+
+## Publish a page
+
+The easy way: open the invitation link, press **Publish a page** on your home,
+drop a folder or a Markdown file, choose a name, and press Publish.
+
+From a terminal:
+
+```sh
+tar -C ./my-page -cf page.tar .
+curl -X POST \
+  -H "Authorization: Bearer $RELAY_KEY" \
+  -H "Content-Type: application/x-tar" \
+  --data-binary @page.tar \
+  "$RELAY_ORIGIN/_relay/v1/sites/sunday-walk/deploy"
+```
+
+The page is live at `$RELAY_ORIGIN/<node>/sunday-walk/`. With the `relay`
+binary, the same upload is `relay deploy --origin $RELAY_ORIGIN --site
+sunday-walk ./my-page`.
 
 ## Docs
 
 | Doc | What's in it |
 |---|---|
-| [`users-guide.md`](users-guide.md) | **Start here.** Run a node, issue keys, upload, and roll back |
-| [`docs/technicals.md`](docs/technicals.md) | How it works, what's built, and every way to deploy a node |
-| [`docs/vision.md`](docs/vision.md) | Why Relay exists |
-| [`REVIEW.md`](REVIEW.md) | The design review, with locked decisions and open questions. **Read it before writing code.** |
-| [`docs/keys.md`](docs/keys.md) · [`docs/api-contract.md`](docs/api-contract.md) · [`docs/architecture.md`](docs/architecture.md) | Ownership keys, the wire contract, and the backend design |
+| [`users-guide.md`](users-guide.md) | **Start here.** Run a node, invite people, publish, roll back |
+| [`docs/product.md`](docs/product.md) | What Relay is, what it is not, and the vocabulary |
+| [`docs/pivot-plan.md`](docs/pivot-plan.md) | The phased plan for the social layer |
+| [`docs/invites.md`](docs/invites.md) | Invitation links, member identity, cascade revoke |
+| [`docs/publishing.md`](docs/publishing.md) | Posts, microwebsites, templates, the publish protocol |
+| [`docs/architecture.md`](docs/architecture.md) | How the node is built today and what the pivot adds |
+| [`docs/api.md`](docs/api.md) | Current endpoints and the planned API |
+| [`technicals.html`](technicals.html) | **Public page.** How it works and how to run it |
 | [`web/README.md`](web/README.md) | The owner UI (Svelte + Vite, embedded in the binary) |
+| [`docs/pivot.md`](docs/pivot.md) | The original pivot brief, kept as the source note |
 
 ## Develop
 
 ```sh
-make check   # every gate: site in sync, web build + tests, gofmt/vet/staticcheck/test -race
+make check   # web build + tests, gofmt/vet/staticcheck/test -race
 make test    # go test -race ./...
 make build   # owner UI first, then the relay binary
 ```
 
-`index.html` is written by hand. `manifesto.html` and `technicals.html` are
-generated from `docs/vision.md` and `docs/technicals.md`. Edit the Markdown,
-then run `python3 tools/build.py`; `make check` fails if they drift.
+`index.html` and `technicals.html` are written by hand. Edit the HTML directly.
 Engineering standards for Go and the frontend live in [`.pi/skills/`](.pi/skills),
-alongside the deploy skill that every node serves at
+alongside the deploy skill every node serves at
 `/_relay/skills/relay-deploy/SKILL.md`.
 
 ## Status
 
-**Stage 0 (MVP).** Built:
+**Stage 0 (hosting MVP) and Phases 1–4 of the pivot are built.** Phases 1–3
+added the member cookie and welcome, post indexing/feed/profiles/wrappers,
+comments, and host comment deletion. Phase 4 adds nine templates, the publish
+endpoint, the template picker, and member-installable template tars. The next
+shippable step is Phase 5: host operations. See [`docs/pivot-plan.md`](docs/pivot-plan.md).
 
-- static hosting at `/<node>/<site>/`
-- `tar` uploads authenticated with per-user deploy keys
-- atomic deploys that keep the last 10 versions for rollback
-- the operator console and native HTTPS
-- the `relay` CLI: `node`, `deploy`, `rollback`, `key new`
-
-Not built yet: NAT tunnels, per-site ownership and signed deploys, per-site
-databases, and login and stats. See [`REVIEW.md`](REVIEW.md).
+Free software, owned by no one. Keep the server, invite your people, share what
+you make.

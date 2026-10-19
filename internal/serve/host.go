@@ -18,7 +18,7 @@ type siteServer struct {
 }
 
 // NodeHandler returns the node's HTTP handler. It serves this node's own
-// site folders at /<self>/<site>/... (contract 5). Requests for any
+// site folders at /<self>/<site>/.... Requests for any
 // other node, for unknown sites, and for the reserved _relay prefix all
 // get a plain 404.
 func NodeHandler(self domain.Name, sites Sites) http.Handler {
@@ -42,6 +42,11 @@ func siteHandler(self domain.Name, lookup func(domain.Name) (siteServer, bool)) 
 			http.NotFound(w, r)
 			return
 		}
+		// A post is static content, not a tenant with the node's identity.
+		// The sandbox gives the document an opaque origin so its scripts
+		// cannot call member APIs with the viewer's cookie. Scripts, forms,
+		// and popups still work; same-origin storage and XHR do not.
+		w.Header().Set("Content-Security-Policy", "sandbox allow-scripts allow-popups allow-forms allow-downloads")
 		ss, ok := lookup(domain.Name(target.Site))
 		if !ok {
 			http.NotFound(w, r)

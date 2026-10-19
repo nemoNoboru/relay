@@ -6,8 +6,8 @@
  *   (references/relay-ui.md).
  * - Every response body is decoded with a Schema; nothing crosses into app
  *   code as `unknown`, and no JSON.parse happens outside this file.
- * - `token`, when given, is sent as a bearer token (the admin/deploy
- *   credentials). It is never logged or put in a URL.
+ * - `token`, when given, is sent as a bearer token (the admin password or
+ *   an invitation key). It is never logged or put in a URL.
  */
 import { Context, Effect, Layer, Schema } from "effect";
 import type { Constraint, SchemaError } from "effect/Schema";
@@ -54,6 +54,15 @@ export interface ClientShape {
     schema: S,
     token?: string,
   ) => Effect.Effect<S["Type"], ApiError, S["DecodingServices"]>;
+  /** PATCH `url` with a JSON `body` and decode the response with `schema`. */
+  readonly patch: <S extends Constraint>(
+    url: string,
+    body: unknown,
+    schema: S,
+    token?: string,
+  ) => Effect.Effect<S["Type"], ApiError, S["DecodingServices"]>;
+  /** DELETE `url`; a 204/2xx response has no body to decode. */
+  readonly del: (url: string, token?: string) => Effect.Effect<void, ApiError>;
 }
 
 /** One request, as a plain function; the service methods are thin wrappers. */
@@ -99,6 +108,28 @@ const request = <S extends Constraint>(
     );
   });
 
+/** A request whose success is a status, not a JSON body (e.g. sign out). */
+const requestNoContent = (
+  fetchFn: typeof globalThis.fetch,
+  url: string,
+  init: { readonly method: string; readonly token?: string },
+): Effect.Effect<void, ApiError> =>
+  Effect.gen(function* () {
+    const headers: Record<string, string> = { accept: "application/json" };
+    if (init.token !== undefined) headers.authorization = `Bearer ${init.token}`;
+    const res = yield* Effect.tryPromise({
+      try: () => fetchFn(url, { method: init.method, headers }),
+      catch: (error: unknown) =>
+        new ApiError({ message: `cannot reach the API at ${url}: ${describeError(error)}` }),
+    });
+    if (!res.ok) {
+      return yield* new ApiError({
+        message: `the API answered ${res.status} ${res.statusText} for ${url}`,
+        status: res.status,
+      });
+    }
+  });
+
 export class Client extends Context.Service<Client, ClientShape>()("relay.web.Client") {
   /**
    * Live layer: real `fetch` against the same-origin node. Tests pass a stub
@@ -111,6 +142,8 @@ export class Client extends Context.Service<Client, ClientShape>()("relay.web.Cl
       Client.of({
         get: (url, schema, token) => request(fetchFn, url, { method: "GET", token }, schema),
         post: (url, body, schema, token) => request(fetchFn, url, { method: "POST", body, token }, schema),
+        patch: (url, body, schema, token) => request(fetchFn, url, { method: "PATCH", body, token }, schema),
+        del: (url, token) => requestNoContent(fetchFn, url, { method: "DELETE", token }),
       }),
     );
 }

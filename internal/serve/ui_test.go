@@ -20,8 +20,8 @@ func TestUIHandlerRedirectsRoot(t *testing.T) {
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status = %d, want 302", rec.Code)
 	}
-	if loc := rec.Header().Get("Location"); loc != "/_relay/node.html" {
-		t.Fatalf("Location = %q, want /_relay/node.html", loc)
+	if loc := rec.Header().Get("Location"); loc != "/_relay/home.html" {
+		t.Fatalf("Location = %q, want /_relay/admin.html", loc)
 	}
 }
 

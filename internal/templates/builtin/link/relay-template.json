@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "id": "link",
+  "name": "Link",
+  "description": "A link with a note about why it matters.",
+  "version": "1.0.0",
+  "fields": [
+    { "name": "url", "type": "url", "required": true },
+    { "name": "title", "type": "text", "required": true, "max": 160 },
+    { "name": "note", "type": "textarea", "max": 2000 }
+  ],
+  "entry": "prepublish.html",
+  "script": "publish.js"
+}

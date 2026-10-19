@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "id": "songs",
+  "name": "Songs",
+  "description": "A small playlist of audio tracks.",
+  "version": "1.0.0",
+  "fields": [
+    { "name": "title", "type": "text", "required": true, "max": 160 },
+    { "name": "description", "type": "textarea", "max": 2000 },
+    { "name": "tracks", "type": "audio", "required": true, "accept": "audio/*" }
+  ],
+  "entry": "prepublish.html",
+  "script": "publish.js"
+}

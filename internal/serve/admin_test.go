@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nemoNoboru/relay/internal/domain"
 	"github.com/nemoNoboru/relay/internal/serve"
 )
 
@@ -20,7 +21,7 @@ func newAdmin(t *testing.T) (*serve.Admin, *serve.KeyStore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewAdmin(adminToken, ks, serve.NewVersions(data), nil, nil), ks
+	return serve.NewAdmin(adminToken, ks, serve.NewVersions(data), nil, nil, nil, nil), ks
 }
 
 // doJSON issues a request to the admin handler with an optional bearer token
@@ -121,7 +122,7 @@ func TestAdminChangeToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	saved := ""
-	a := serve.NewAdmin(serve.DefaultAdminToken, ks, serve.NewVersions(data), nil, func(s string) error {
+	a := serve.NewAdmin(serve.DefaultAdminToken, ks, serve.NewVersions(data), nil, nil, nil, func(s string) error {
 		saved = s
 		return nil
 	})
@@ -292,8 +293,8 @@ func newAdminNode(t *testing.T) (*serve.Admin, *serve.Registry, http.Handler, st
 		_, err := reg.Reload()
 		return err
 	}
-	up := serve.NewUploader("mynode", data, ks, versions, serve.MaxDeployBytes, reload)
-	return serve.NewAdmin(adminToken, ks, versions, reload, nil), reg, up, token
+	up := serve.NewUploader("mynode", data, ks, versions, nil, serve.MaxDeployBytes, reload)
+	return serve.NewAdmin(adminToken, ks, versions, nil, reload, nil, nil), reg, up, token
 }
 
 func deploySite(t *testing.T, up http.Handler, token, site, content string) {
@@ -393,5 +394,43 @@ func TestAdminRollbackPrevious(t *testing.T) {
 	}
 	if got := serveSite(t, reg, "/mynode/blog/"); got != "v1" {
 		t.Fatalf("served after rollback = %q, want v1", got)
+	}
+}
+
+// TestAdminRollbackReindexes pins that a rollback asks the post index to
+// refresh, so the feed does not go stale.
+func TestAdminRollbackReindexes(t *testing.T) {
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := ks.Create("tester")
+	if err != nil {
+		t.Fatal(err)
+	}
+	versions := serve.NewVersions(data)
+	reg, _, err := serve.NewRegistry("mynode", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reload := func() error {
+		_, err := reg.Reload()
+		return err
+	}
+	up := serve.NewUploader("mynode", data, ks, versions, nil, serve.MaxDeployBytes, reload)
+	deploySite(t, up, token, "blog", "v1")
+	deploySite(t, up, token, "blog", "v2")
+
+	var reindexed string
+	admin := serve.NewAdmin(adminToken, ks, versions, nil, reload, func(name domain.Name) error {
+		reindexed = string(name)
+		return nil
+	}, nil)
+	if rec := doJSON(t, admin, http.MethodPost, "/_relay/v1/admin/sites/blog/rollback", adminToken, ""); rec.Code != http.StatusOK {
+		t.Fatalf("rollback = %d %s", rec.Code, rec.Body.String())
+	}
+	if reindexed != "blog" {
+		t.Fatalf("reindexed = %q, want blog", reindexed)
 	}
 }

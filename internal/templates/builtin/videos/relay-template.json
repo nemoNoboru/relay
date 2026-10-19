@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "id": "videos",
+  "name": "Videos",
+  "description": "A page of video clips with a note.",
+  "version": "1.0.0",
+  "fields": [
+    { "name": "title", "type": "text", "required": true, "max": 160 },
+    { "name": "description", "type": "textarea", "max": 2000 },
+    { "name": "videos", "type": "video", "required": true, "accept": "video/*" }
+  ],
+  "entry": "prepublish.html",
+  "script": "publish.js"
+}

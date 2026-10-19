@@ -13,8 +13,10 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // GenerateToken returns a new random credential token (32 bytes, base64url).
@@ -44,6 +46,9 @@ var ErrBadUser = errors.New("invalid user label: must match [A-Za-z0-9._-]{1,63}
 // unknown or already revoked.
 var ErrBadInviter = errors.New("unknown or revoked inviter key")
 
+// ErrBadProfile is returned when a member's display name or bio is invalid.
+var ErrBadProfile = errors.New("invalid profile: display name up to 63 characters and bio up to 280")
+
 // deployKey is one issued per-user deploy credential, as persisted. The
 // plaintext token is kept so the operator can copy it from the console; the
 // hash is what Authenticate compares against, in constant time.
@@ -57,6 +62,10 @@ type deployKey struct {
 	// InvitedBy is the ID of the key that invited this one, empty for keys
 	// the operator issued. Revoking a key revokes everything below it.
 	InvitedBy string `json:"invitedBy,omitempty"`
+	// DisplayName and Bio are optional member profile fields. An empty
+	// DisplayName falls back to the last segment of User.
+	DisplayName string `json:"displayName,omitempty"`
+	Bio         string `json:"bio,omitempty"`
 }
 
 // keyFile is the on-disk shape of the deploy-key store.
@@ -68,12 +77,26 @@ type keyFile struct {
 // KeyInfo is the view of a deploy key returned by the admin API. It carries
 // the plaintext token (for the operator console) but never the hash.
 type KeyInfo struct {
-	ID        string    `json:"id"`
-	User      string    `json:"user"`
-	Token     string    `json:"token"`
-	Created   time.Time `json:"created"`
-	Revoked   bool      `json:"revoked"`
-	InvitedBy string    `json:"invitedBy,omitempty"`
+	ID          string    `json:"id"`
+	User        string    `json:"user"`
+	Token       string    `json:"token"`
+	Created     time.Time `json:"created"`
+	Revoked     bool      `json:"revoked"`
+	InvitedBy   string    `json:"invitedBy,omitempty"`
+	DisplayName string    `json:"displayName,omitempty"`
+	Bio         string    `json:"bio,omitempty"`
+}
+
+// Member is the member-facing view of a live invitation key. It is the
+// identity the member cookie resolves to.
+type Member struct {
+	ID          string    `json:"id"`
+	User        string    `json:"user"`
+	DisplayName string    `json:"displayName"`
+	Bio         string    `json:"bio,omitempty"`
+	Created     time.Time `json:"created"`
+	InvitedBy   string    `json:"invitedBy,omitempty"`
+	Revoked     bool      `json:"revoked,omitempty"`
 }
 
 // SiteOwner pairs a site with the user who last deployed it.
@@ -147,6 +170,88 @@ func (ks *KeyStore) persist() error {
 		return err
 	}
 	return nil
+}
+
+// MemberByToken returns the live member a token belongs to. It is the
+// session/cookie lookup; revocation takes effect immediately.
+func (ks *KeyStore) MemberByToken(token string) (Member, bool) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	i := ks.indexOfToken(token)
+	if i == -1 || ks.file.Keys[i].Revoked {
+		return Member{}, false
+	}
+	return memberOf(ks.file.Keys[i]), true
+}
+
+// MemberByID returns a member by key id, including a revoked member. It is
+// used to show the author of posts that outlive the member's key.
+func (ks *KeyStore) MemberByID(id string) (Member, bool) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	i := ks.indexOf(id)
+	if i == -1 {
+		return Member{}, false
+	}
+	return memberOf(ks.file.Keys[i]), true
+}
+
+// MemberByUser returns a live member by the stable user label. If several
+// keys share a label (a rotation), the first live one wins.
+func (ks *KeyStore) MemberByUser(user string) (Member, bool) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	for _, k := range ks.file.Keys {
+		if k.User == user && !k.Revoked {
+			return memberOf(k), true
+		}
+	}
+	return Member{}, false
+}
+
+// SiteUser returns the user label a site is attributed to, if any.
+func (ks *KeyStore) SiteUser(site string) string {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	return ks.file.Sites[site]
+}
+
+// LiveCount returns the number of members with a live key.
+func (ks *KeyStore) LiveCount() int {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	n := 0
+	for _, k := range ks.file.Keys {
+		if !k.Revoked {
+			n++
+		}
+	}
+	return n
+}
+
+// UpdateProfile changes a member's display name and bio. An empty display
+// name resets the view to the fallback (the last segment of User).
+func (ks *KeyStore) UpdateProfile(token, displayName, bio string) (Member, bool, error) {
+	displayName, okName := cleanText(displayName, 63, false)
+	bio, okBio := cleanText(bio, 280, true)
+	if !okName || !okBio {
+		return Member{}, false, ErrBadProfile
+	}
+
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	i := ks.indexOfToken(token)
+	if i == -1 || ks.file.Keys[i].Revoked {
+		return Member{}, false, nil
+	}
+	oldName, oldBio := ks.file.Keys[i].DisplayName, ks.file.Keys[i].Bio
+	ks.file.Keys[i].DisplayName = displayName
+	ks.file.Keys[i].Bio = bio
+	if err := ks.persist(); err != nil {
+		ks.file.Keys[i].DisplayName, ks.file.Keys[i].Bio = oldName, oldBio
+		return Member{}, false, err
+	}
+	return memberOf(ks.file.Keys[i]), true, nil
 }
 
 // Authenticate returns the user a token belongs to, or ok=false if the token
@@ -362,7 +467,41 @@ func keyInfo(k deployKey) KeyInfo {
 	return KeyInfo{
 		ID: k.ID, User: k.User, Token: k.Token,
 		Created: k.Created, Revoked: k.Revoked, InvitedBy: k.InvitedBy,
+		DisplayName: k.DisplayName, Bio: k.Bio,
 	}
+}
+
+// memberOf projects a stored key into the member-facing view.
+func memberOf(k deployKey) Member {
+	name := k.DisplayName
+	if name == "" {
+		name = k.User
+		if i := strings.LastIndexByte(name, '/'); i >= 0 {
+			name = name[i+1:]
+		}
+	}
+	return Member{
+		ID: k.ID, User: k.User, DisplayName: name, Bio: k.Bio,
+		Created: k.Created, InvitedBy: k.InvitedBy, Revoked: k.Revoked,
+	}
+}
+
+// cleanText trims and validates a profile field. Control characters are
+// rejected (except newline and tab in a multiline bio).
+func cleanText(s string, max int, multiline bool) (string, bool) {
+	s = strings.TrimSpace(s)
+	if utf8.RuneCountInString(s) > max {
+		return "", false
+	}
+	for _, r := range s {
+		if r == utf8.RuneError || r == 0x7f {
+			return "", false
+		}
+		if r < 0x20 && !(multiline && (r == '\n' || r == '\t')) {
+			return "", false
+		}
+	}
+	return s, true
 }
 
 func validUser(s string) bool {

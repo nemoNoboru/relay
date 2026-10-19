@@ -44,7 +44,7 @@ Always `return yield*` when raising inside a gen, so the type checker knows the 
 ## Typed errors
 
 ```ts
-export class TunnelApiError extends Schema.TaggedError<TunnelApiError>()("TunnelApiError", {
+export class AdminApiError extends Schema.TaggedError<AdminApiError>()("AdminApiError", {
   status: Schema.Int,
   cause: Schema.Defect(),
 }) {}
@@ -52,36 +52,40 @@ export class TunnelApiError extends Schema.TaggedError<TunnelApiError>()("Tunnel
 
 - One `TaggedError` class per failure mode the caller can reasonably react to.
 - Untyped causes (network failures, unknown throws) go in as `Schema.Defect()`.
-- `Effect.catchTag("TunnelApiError", e => …)` to react to one; `Effect.catch(e => …)` as
+- `Effect.catchTag("AdminApiError", e => …)` to react to one; `Effect.catch(e => …)` as
   the last resort; `Effect.mapError(reason => new OuterError({ reason }))` to wrap.
 - The wrap rule mirrors the Go skill: every layer adds context, nothing is swallowed,
   unhandled failures must be impossible by construction.
-- At the page edge, failures become **rendered states** (`stale`/`error`), never `alert()`.
+- At the page edge, failures become **rendered states** (`locked`/`error`), never `alert()`.
 
 ## Schema: the wire boundary
 
 All API decoding happens here, and only here (inside `api/`).
 
 ```ts
-export class Tunnel extends Schema.Class<Tunnel>("relay/Tunnel")({
+export const DeployKey = Schema.Struct({
   id: Schema.String,
-  site: Schema.String,
-  status: Schema.Literals(["connecting", "open", "closed"]),
-  peers: Schema.Array(Schema.String),
-}) {}
+  user: Schema.String,
+  token: Schema.String,
+  created: Schema.String,
+  revoked: Schema.Boolean,
+})
 
-// decoded / encoded TS representations, when needed:
-export type TunnelType = typeof Tunnel["Type"]
+export const AdminOverview = Schema.Struct({
+  keys: Schema.Array(DeployKey),
+  sites: Schema.Array(Schema.Struct({ site: Schema.String, user: Schema.String })),
+  mustChangeToken: Schema.Boolean,
+})
 ```
 
-- `Schema.decodeUnknownEffect(Tunnel)` — the standard decode; errors stay typed in the
+- `Schema.decodeUnknownEffect(AdminOverview)` — the standard decode; errors stay typed in the
   error channel.
 - Reuse the parsers at the edge; do not hand-parse JSON anywhere else, and do not
   validate with predicate functions where a Schema field exists
   (`Schema.NonEmptyString`, `Schema.Literals([...])`, `Schema.Array`, …).
-- Schema definitions mirror the Go domain vocabulary: `Site`, `Prefix`, `Deploy`,
-  `Tunnel`, `Friend`, `Metrics`. If the Go side renames a field, the Schema changes in
-  the same PR.
+- Schema definitions mirror the Go domain vocabulary: `DeployKey`, `AdminOverview`,
+  and later `Member`, `Post`, `Comment`, `Template`. If the Go side renames a field,
+  the Schema changes in the same PR. See `docs/api.md`.
 
 ## Services and layers
 
@@ -89,18 +93,18 @@ The structural unit of frontend code is the service.
 
 ```ts
 // feature service
-export class Tunnels extends Context.Service<Tunnels, {
-  readonly state: Effect.Effect<NodesTunnelState>
-  refresh(): Effect.Effect<void, TunnelApiError>
-}>()("relay/Tunnels") {
-  static readonly layerNoDeps = Layer.effect(Tunnels, Effect.gen(function*() {
+export class Admin extends Context.Service<Admin, {
+  readonly state: Effect.Effect<AdminState>
+  refresh(): Effect.Effect<void, AdminApiError>
+}>()("relay/Admin") {
+  static readonly layerNoDeps = Layer.effect(Admin, Effect.gen(function*() {
     const api = yield* Api
     // …
-    return Tunnels.of({ state, refresh })
+    return Admin.of({ state, refresh })
   }))
 
   static readonly layer = Layer.effectDiscard(
-    Tunnels.layerNoDeps.pipe(Layer.provide(Api.layer))
+    Admin.layerNoDeps.pipe(Layer.provide(Api.layer))
   )
 }
 ```
@@ -145,17 +149,17 @@ export const Http = Layer.effect(
   )
 ).pipe(Layer.provide(FetchHttpClient.layer))
 
-const tunnels = client.get("/api/tunnels").pipe(
-  Effect.flatMap(HttpClientResponse.schemaBodyJson(Schema.Array(Tunnel))),  // decoded, typed
-  Effect.mapError(cause => new TunnelApiError({ status: 0, cause })),
+const overview = client.get("/_relay/v1/admin").pipe(
+  Effect.flatMap(HttpClientResponse.schemaBodyJson(AdminOverview)),  // decoded, typed
+  Effect.mapError(cause => new AdminApiError({ status: 0, cause })),
 )
 ```
 
 - `schemaBodyJson(Schema)` is the standard response decode — never `res.json()` in app
   code.
 - `HttpClientRequest` helpers (`setUrlParams`, `bodyJson`, `acceptJson`) for request
-  shaping; the site console's mutating calls (deploy, rollback) go through the same
-  client so auth headers, retries, and decoding stay consistent.
+  shaping; the host console's mutating calls (create, revoke, rotate, rollback) go through
+the same client so auth headers, retries, and decoding stay consistent.
 - The `api/` service exposes `Effect`-returning methods. Promises never leak past it.
 
 ## Streams: live data
@@ -163,13 +167,14 @@ const tunnels = client.get("/api/tunnels").pipe(
 This is how the owner console feels alive — polling modeled as data, not loops.
 
 ```ts
-// poll the node API every 5s until the scope is interrupted
+// Poll a future member page (not used by the host console yet) every 5s
+// until the scope is interrupted.
 const poll = Stream.fromEffectSchedule(
-  api.fetchTunnels(),
+  api.fetchOverview(),
   Schedule.spaced("5 seconds")
 ).pipe(
-  Stream.map(tunnels => ({ _tag: "TunnelData" as const, tunnels })),
-  Stream.mapError(cause => new TunnelApiError({ status: 0, cause }))
+  Stream.map(overview => ({ _tag: "OverviewLoaded" as const, overview })),
+  Stream.mapError(cause => new AdminApiError({ status: 0, cause }))
 )
 
 // user events as a stream
@@ -188,8 +193,8 @@ yield* Effect.gen(function*() {
 })
 ```
 
-- Cadence defaults (overridable via `Context.Reference`): tunnels 5s, deploys 10s,
-  metrics 30s — daily-salted counters do not need faster.
+- There are no polled pages today. If a member page needs live data, use a scoped
+  stream with a cadence tied to how often the data actually changes.
 - Poll failures do not kill the stream: map them into a `stale` event so the view can
   show "last updated …s ago" instead of going quiet.
 - `Stream.take(n)` for bounded streams; `Stream.paginate` for paginated APIs.
@@ -197,12 +202,11 @@ yield* Effect.gen(function*() {
 ## Entrypoint pattern (browser)
 
 ```ts
-// web/src/main/node.ts — the only place the runtime is touched
+// web/src/main/admin.ts — the only place the runtime is touched
 const program = Effect.gen(function*() {
-  const tunnels = yield* Tunnels
-  const sites = yield* Sites
+  const admin = yield* Admin
   // …mount, run subscriptions, render loop (see Streams section)
-}).pipe(Effect.provide(Layer.succeed([Tunnels.layer, Sites.layer])))
+}).pipe(Effect.provide(Admin.layer))
 
 const fiber = Effect.runFork(program)   // keep the handle; scope = page lifetime
 window.addEventListener("pagehide", () => {
@@ -222,13 +226,13 @@ import { assert, describe, it, layer } from "@effect/vitest"
 
 describe("fold", () => {
   it.effect.each([
-    { event: { _tag: "TunnelData", tunnels: [openT] }, expect: 1 },
-    { event: { _tag: "TunnelData", tunnels: [] },        expect: 0 },
-  ])("tunnel count %#", ({ event, expect }) =>
+    { event: { _tag: "OverviewLoaded", overview: oneKey }, expect: 1 },
+    { event: { _tag: "OverviewLoaded", overview: noKeys }, expect: 0 },
+  ])("member count %#", ({ event, expect }) =>
     Effect.succeed(assert.strictEqual(countOpen(fold(initial, event)), expect)))
 })
 
-layer(Tunnels.layerTest)("Tunnels", (it) => {
+layer(Admin.layerTest)("Admin", (it) => {
   it.effect("survives a failed poll as stale", () => Effect.gen(function*() {
     // …with a faked Api layer
   }))

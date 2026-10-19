@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "id": "longform",
+  "name": "Longform",
+  "description": "A clean, Medium-like long read with a byline and reading time.",
+  "version": "1.0.0",
+  "fields": [
+    { "name": "title", "type": "text", "required": true, "max": 160 },
+    { "name": "byline", "type": "text", "max": 80 },
+    { "name": "standfirst", "type": "textarea", "max": 400 },
+    { "name": "hero", "type": "image", "accept": "image/*" },
+    { "name": "body", "type": "richtext", "required": true }
+  ],
+  "entry": "prepublish.html",
+  "script": "publish.js"
+}

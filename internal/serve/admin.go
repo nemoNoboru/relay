@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/nemoNoboru/relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/social"
 )
 
 // DefaultAdminToken is the credential a node comes up on when the operator
@@ -33,32 +34,38 @@ type Admin struct {
 	token    [sha256.Size]byte
 	ks       *KeyStore
 	versions *Versions
+	comments *social.CommentStore
 	reload   func() error
+	reindex  func(domain.Name) error
 	save     func(string) error
 }
 
 // NewAdmin returns an admin handler that authorizes with token, operates on
-// ks and versions, calls reload after a rollback, and calls save to persist
-// a changed admin token. reload and save may be nil.
-func NewAdmin(token string, ks *KeyStore, versions *Versions, reload func() error, save func(string) error) *Admin {
+// ks, versions, and comments, calls reload and reindex after a rollback, and
+// calls save to persist a changed admin token. comments, reload, reindex, and
+// save may be nil.
+func NewAdmin(token string, ks *KeyStore, versions *Versions, comments *social.CommentStore, reload func() error, reindex func(domain.Name) error, save func(string) error) *Admin {
 	return &Admin{
 		token:    sha256.Sum256([]byte(token)),
 		ks:       ks,
 		versions: versions,
+		comments: comments,
 		reload:   reload,
+		reindex:  reindex,
 		save:     save,
 	}
 }
 
 // ServeHTTP routes the admin surface under /_relay/v1/admin:
 //
-//	GET  /_relay/v1/admin                          overview (keys + sites)
+//	GET  /_relay/v1/admin                          overview (keys + sites + comments)
 //	POST /_relay/v1/admin/token                    change the admin token { "token": "…" }
 //	POST /_relay/v1/admin/keys                     create a key   { "user": "…" }
 //	POST /_relay/v1/admin/keys/{id}/revoke         revoke a key
 //	POST /_relay/v1/admin/keys/{id}/rotate         rotate a key
 //	GET  /_relay/v1/admin/sites/{site}/versions    list rollback snapshots
 //	POST /_relay/v1/admin/sites/{site}/rollback    roll back  { "version": "…" }
+//	DELETE /_relay/v1/admin/comments/{id}          delete any comment
 //
 // Everything else is 404; missing/wrong credentials are 401 bad_token.
 func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +76,11 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p := strings.TrimSuffix(r.URL.Path, "/")
 	switch {
 	case r.Method == http.MethodGet && p == "/_relay/v1/admin":
-		writeJSON(w, http.StatusOK, overview{Overview: a.ks.Overview(), MustChangeToken: a.mustChangeToken()})
+		ov := overview{Overview: a.ks.Overview(), Comments: []CommentView{}, MustChangeToken: a.mustChangeToken()}
+		if a.comments != nil {
+			ov.Comments = a.recentComments()
+		}
+		writeJSON(w, http.StatusOK, ov)
 	case r.Method == http.MethodPost && p == "/_relay/v1/admin/token":
 		a.changeToken(w, r)
 	case r.Method == http.MethodPost && p == "/_relay/v1/admin/keys":
@@ -78,6 +89,8 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.serveSite(w, r, strings.TrimPrefix(p, "/_relay/v1/admin/sites/"))
 	case strings.HasPrefix(p, "/_relay/v1/admin/keys/"):
 		a.serveKey(w, r, strings.TrimPrefix(p, "/_relay/v1/admin/keys/"))
+	case r.Method == http.MethodDelete && strings.HasPrefix(p, "/_relay/v1/admin/comments/"):
+		a.deleteComment(w, strings.TrimPrefix(p, "/_relay/v1/admin/comments/"))
 	default:
 		http.NotFound(w, r)
 	}
@@ -126,7 +139,40 @@ func (a *Admin) serveSite(w http.ResponseWriter, r *http.Request, rest string) {
 // still on the default credential.
 type overview struct {
 	Overview
-	MustChangeToken bool `json:"mustChangeToken"`
+	Comments        []CommentView `json:"comments"`
+	MustChangeToken bool          `json:"mustChangeToken"`
+}
+
+// recentComments returns the newest comments for the host console, capped so
+// the overview stays small.
+func (a *Admin) recentComments() []CommentView {
+	list := a.comments.ListAll()
+	if len(list) > 50 {
+		list = list[:50]
+	}
+	out := make([]CommentView, 0, len(list))
+	for _, c := range list {
+		out = append(out, commentView(a.ks, c, ""))
+	}
+	return out
+}
+
+func (a *Admin) deleteComment(w http.ResponseWriter, id string) {
+	if a.comments == nil {
+		http.NotFound(w, nil)
+		return
+	}
+	if id == "" || strings.Contains(id, "/") {
+		writeError(w, http.StatusNotFound, "not_found", "no comment")
+		return
+	}
+	if _, ok, err := a.comments.Delete(id); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+	} else if !ok {
+		writeError(w, http.StatusNotFound, "not_found", "no comment "+id)
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 // authorized reports whether r carries the admin token as a bearer token.
@@ -272,6 +318,12 @@ func (a *Admin) rollbackSite(w http.ResponseWriter, r *http.Request, name domain
 			// The rollback is on disk; only the in-memory view failed to
 			// refresh. Report it, do not fail the rollback.
 			fmt.Fprintf(os.Stderr, "serve: reload sites after rollback: %v\n", err)
+		}
+	}
+	if a.reindex != nil {
+		if err := a.reindex(name); err != nil {
+			// The rollback is on disk; the index can be repaired with relay index.
+			fmt.Fprintf(os.Stderr, "serve: reindex %s after rollback: %v\n", name, err)
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"site": string(name), "version": id})

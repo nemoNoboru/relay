@@ -1,17 +1,17 @@
 /**
- * Client-side smoke test for the production bundles (no browser available).
+ * Client-side smoke test for the built owner UI bundles (no browser).
  *
- * Usage: node tools/smoke.mjs <node|site|admin|bundle.js> <error|ready>
+ * Usage:
+ *   node tools/smoke.mjs admin ready
+ *   node tools/smoke.mjs home signedout
+ *   node tools/smoke.mjs home ready
  *
- * `admin` is the operator page: it renders the sign-in form on load and
- * only calls fetch after a token is entered, so its fetch stub rejects on
- * call and the bundle must never call fetch during the smoke run.
- *        page/bundle paths are relative to web/ (node|site auto-resolve
- *        dist/assets/<page>-*.js; an explicit path may also be given)
+ * The host console renders the sign-in form on load and must not fetch until
+ * a password is entered. The member home calls /_relay/v1/me on load; the
+ * stub answers either 401 (signed out) or a member payload.
  *
- * Stubs a minimal DOM + fetch, imports the entry bundle (which mounts the
- * Svelte component and starts the Effect poll stream), waits one tick, and
- * asserts the rendered HTML.
+ * Stubs a minimal DOM, imports the entry bundle (which mounts the Svelte
+ * component), waits one tick, and asserts the rendered HTML.
  */
 import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -21,25 +21,19 @@ import path from "node:path";
 // relative to it so the smoke test runs from anywhere.
 const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-// Resolve a page name (node|site|admin) to its entry bundle (dist/assets/<page>-*.js).
+// Resolve a page entry bundle (dist/assets/<page>-*.js).
 const resolveBundle = (page) => {
   const dir = path.join(webDir, "dist/assets");
   const hit = readdirSync(dir).find((f) => f.startsWith(`${page}-`) && f.endsWith(".js"));
   if (!hit) throw new Error(`no dist/assets/${page}-*.js — run \`npm run build\` first`);
   return path.join(dir, hit);
 };
-const [pageOrBundle, scenario] = process.argv.slice(2);
-if (!pageOrBundle || !scenario)
-  throw new Error("usage: node tools/smoke.mjs <node|site|admin|bundle.js> <error|ready>");
-if (!/^(error|ready)$/.test(scenario)) throw new Error(`unknown scenario ${scenario} (use error|ready)`);
-const isPage = (p) => p === "node" || p === "site" || p === "admin";
-if (pageOrBundle === "admin" && scenario === "error")
-  throw new Error("admin has no error scenario (it never calls the API without a token)");
-const bundlePath = isPage(pageOrBundle)
-  ? resolveBundle(pageOrBundle)
-  : path.isAbsolute(pageOrBundle)
-    ? pageOrBundle
-    : path.join(webDir, pageOrBundle);
+const [page = "admin", scenario = "ready"] = process.argv.slice(2);
+const allowed =
+  (page === "admin" && scenario === "ready") ||
+  (page === "home" && (scenario === "signedout" || scenario === "ready"));
+if (!allowed) throw new Error("usage: node tools/smoke.mjs <admin ready|home signedout|home ready>");
+const bundlePath = resolveBundle(page);
 
 class El {
   constructor(tag, nodeType = 1) {
@@ -311,6 +305,14 @@ globalThis.sessionStorage = {
   setItem: () => {},
   removeItem: () => {},
 };
+// The member home reads the invite fragment and may clean the URL.
+globalThis.location = {
+  origin: "http://localhost",
+  pathname: "/_relay/home.html",
+  search: "",
+  hash: "",
+};
+globalThis.history = { replaceState: () => {} };
 globalThis.MutationObserver = class {
   observe() {}
   disconnect() {}
@@ -335,49 +337,52 @@ globalThis.Comment = Comment;
 // class mirrors that so no smoke element matches it.
 globalThis.HTMLMediaElement = class {};
 
-const TUNNELS = {
-  tunnels: [
-    { id: "t1", peer: "12D3KooW…abc", prefixes: ["2606:4700::/32"], online: true },
-    { id: "t2", peer: "12D3KooW…def", prefixes: ["2001:db8::/32", "fd00::/8"], online: false },
-  ],
+const ME = {
+  member: {
+    id: "dk_1",
+    user: "alice",
+    displayName: "Alice",
+    bio: "Runs the reading group.",
+    created: "2026-10-19T12:00:00Z",
+  },
+  node: { name: "my-group", members: 12 },
 };
-const DEPLOYS = {
-  current: { id: "d42", site: "example.com", version: "v42", deployedAt: "2026-10-01T12:00:00Z", status: "live" },
-  versions: [
-    { id: "d42", site: "example.com", version: "v42", deployedAt: "2026-10-01T12:00:00Z", status: "live" },
-    { id: "d41", site: "example.com", version: "v41", deployedAt: "2026-09-20T09:30:00Z", status: "previous" },
-  ],
+const POST = {
+  id: "post_1",
+  site: "sunday-walk",
+  member: "dk_1",
+  title: "Sunday walk",
+  summary: "Six photos from the canal.",
+  template: "gallery",
+  publishedAt: "2026-10-19T16:04:00Z",
+  updatedAt: "2026-10-19T16:04:00Z",
+  author: { id: "dk_1", displayName: "Alice" },
+  url: "/my-group/sunday-walk/",
+  postUrl: "/_relay/posts/sunday-walk",
+  authorUrl: "/_relay/people/dk_1",
+  comments: [],
 };
 
-let fetchImpl;
 let fetchCalls = 0;
-globalThis.fetch = (...args) => {
+globalThis.fetch = (..._args) => {
   fetchCalls++;
-  return fetchImpl(...args);
+  if (page === "admin") {
+    return Promise.reject(new Error("the host console must not fetch before sign-in"));
+  }
+  if (scenario === "signedout") {
+    return Promise.resolve({
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      json: async () => ({ error: { code: "session_required", message: "sign in" } }),
+    });
+  }
+  const url = String(_args[0]);
+  if (url.includes("/feed")) {
+    return Promise.resolve({ ok: true, status: 200, statusText: "OK", json: async () => ({ posts: [POST] }) });
+  }
+  return Promise.resolve({ ok: true, status: 200, statusText: "OK", json: async () => ME });
 };
-
-const fail = () => Promise.reject(new TypeError("fetch failed"));
-const ok = (body) => () => Promise.resolve({ ok: true, status: 200, json: async () => body });
-
-// Derive the page (node|site|admin) from the bundle name if a path was given.
-const page = isPage(pageOrBundle)
-  ? pageOrBundle
-  : path.basename(bundlePath).startsWith("site")
-    ? "site"
-    : path.basename(bundlePath).startsWith("admin")
-      ? "admin"
-      : "node";
-
-// The admin page renders the sign-in form and never fetches until a token is
-// entered, so any fetch call is a bug and the stub rejects on call.
-fetchImpl =
-  scenario === "error"
-    ? fail
-    : page === "node"
-      ? ok(TUNNELS)
-      : page === "site"
-        ? ok(DEPLOYS)
-        : () => Promise.reject(new Error("admin mock must not call fetch"));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -407,27 +412,23 @@ const assert = (cond, what) => {
   }
 };
 
-if (scenario === "error") {
-  assert(
-    html.includes(page === "node" ? "Cannot reach the node:" : "Cannot reach the site console:"),
-    "error heading rendered",
-  );
-  assert(html.includes("fetch failed"), "error detail rendered");
-  assert(html.includes("Retrying."), "retry note rendered");
-} else if (page === "node") {
-  assert(html.includes("12D3KooW…abc"), "peer 1 rendered");
-  assert(html.includes("2606:4700::/32"), "prefix rendered");
-  assert(html.includes("offline"), "offline status rendered");
-  assert(html.includes("1 of 2 tunnels online"), "live summary rendered");
-} else if (page === "site") {
-  assert(html.includes("example.com"), "site name rendered");
-  assert(html.includes("v42") && html.includes("v41"), "versions rendered");
-  assert(html.includes("previous"), "previous status rendered");
-  assert(html.includes("2 site version(s) on record"), "live summary rendered");
-} else if (page === "admin") {
+if (page === "admin") {
   assert(html.includes("Sign in"), "sign-in form rendered");
-  assert(html.includes("admin token"), "admin token field rendered");
+  assert(html.includes("admin password"), "admin password field rendered");
+  assert(html.includes("Connect"), "connect button rendered");
   assert(fetchCalls === 0, "fetch was never called (no saved token)");
+} else if (scenario === "signedout") {
+  assert(html.includes("You need"), "invitation prompt rendered");
+  assert(html.includes("an invitation"), "invitation copy rendered");
+  assert(html.includes("Open my home"), "sign-in action rendered");
+  assert(fetchCalls === 1, "the page asked for /me once");
+} else {
+  assert(html.includes("Welcome,"), "welcome heading rendered");
+  assert(html.includes("Alice"), "member name rendered");
+  assert(html.includes("my-group"), "node name rendered");
+  assert(html.includes("Publish a page"), "publish action rendered");
+  assert(html.includes("Sunday walk"), "feed post rendered");
+  assert(fetchCalls === 2, "the page asked for /me and /feed once");
 }
 
 console.log(`${label} ✓`);

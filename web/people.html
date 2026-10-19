@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Profile — Relay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./shared/styles.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="wrap">
+        <a class="brand" href="/"><span class="mark">R</span> RELAY</a>
+        <nav class="main">
+          <a href="/_relay/home.html">Your home</a>
+          <a href="/_relay/publish.html">Publish</a>
+        </nav>
+        <span class="stamp">Profile</span>
+      </div>
+    </header>
+    <main id="app" aria-busy="true"></main>
+    <script type="module" src="./src/main/people.ts"></script>
+  </body>
+</html>

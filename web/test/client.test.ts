@@ -5,7 +5,8 @@
 import { Effect, Schema } from "effect";
 import { describe, effect, layer } from "@effect/vitest";
 import { ApiError, Client } from "../src/api/client";
-import { Tunnels } from "../src/tunnels/schema";
+
+const Ping = Schema.Struct({ ok: Schema.Boolean });
 
 type FetchFn = typeof globalThis.fetch;
 
@@ -34,12 +35,12 @@ const outcome = <A, E>(self: Effect.Effect<A, E>): Effect.Effect<Outcome<A, E>, 
   );
 
 describe("Client", () => {
-  layer(Client.layer(stub({ body: { tunnels: [{ id: "t1", peer: "friend-a", prefixes: ["/raspberry/"], online: true }] } })))("happy path", (it) => {
+  layer(Client.layer(stub({ body: { ok: true } })))("happy path", (it) => {
     it.effect("decodes a well-formed payload with the schema", (ctx) =>
       Effect.gen(function* () {
         const client = yield* Client;
-        const data = yield* client.get("/api/tunnels", Tunnels);
-        ctx.expect(data.tunnels).toEqual([{ id: "t1", peer: "friend-a", prefixes: ["/raspberry/"], online: true }]);
+        const data = yield* client.get("/_relay/v1/me", Ping);
+        ctx.expect(data).toEqual({ ok: true });
       }),
     );
   });
@@ -48,7 +49,7 @@ describe("Client", () => {
     it.effect("surfaces a typed ApiError with the status", (ctx) =>
       Effect.gen(function* () {
         const client = yield* Client;
-        const result = yield* outcome(client.get("/api/tunnels", Tunnels));
+        const result = yield* outcome(client.get("/_relay/v1/me", Ping));
         ctx.expect(result._tag).toBe("fail");
         if (result._tag === "fail") {
           ctx.expect(result.value._tag).toBe("ApiError");
@@ -58,11 +59,11 @@ describe("Client", () => {
     );
   });
 
-  layer(Client.layer(stub({ body: { tunnels: "not-an-array" } })))("decode error", (it) => {
+  layer(Client.layer(stub({ body: { ok: "not-a-boolean" } })))("decode error", (it) => {
     it.effect("fails when the payload shape is wrong", (ctx) =>
       Effect.gen(function* () {
         const client = yield* Client;
-        const result = yield* outcome(client.get("/api/tunnels", Tunnels));
+        const result = yield* outcome(client.get("/_relay/v1/me", Ping));
         ctx.expect(result._tag).toBe("fail");
         if (result._tag === "fail") ctx.expect(result.value._tag).toBe("ApiError");
       }),
@@ -73,7 +74,7 @@ describe("Client", () => {
     it.effect("wraps fetch failures in ApiError", (ctx) =>
       Effect.gen(function* () {
         const client = yield* Client;
-        const result = yield* outcome(client.get("/api/tunnels", Tunnels));
+        const result = yield* outcome(client.get("/_relay/v1/me", Ping));
         ctx.expect(result._tag).toBe("fail");
         if (result._tag === "fail") {
           ctx.expect(result.value._tag).toBe("ApiError");
@@ -110,6 +111,27 @@ describe("Client.post", () => {
         ctx.expect(captured.method).toBe("POST");
         ctx.expect(captured.auth).toBe("Bearer admin-token");
         ctx.expect(captured.body).toBe(JSON.stringify({ user: "alice" }));
+      }),
+    );
+
+    it.effect("PATCH sends JSON + bearer and decodes the response", (ctx) =>
+      Effect.gen(function* () {
+        const client = yield* Client;
+        const data = yield* client.patch("/_relay/v1/me", { displayName: "Alice" }, KeyCreated, "member-token");
+        ctx.expect(data).toEqual({ token: "t-123" });
+        ctx.expect(captured.method).toBe("PATCH");
+        ctx.expect(captured.auth).toBe("Bearer member-token");
+        ctx.expect(captured.body).toBe(JSON.stringify({ displayName: "Alice" }));
+      }),
+    );
+
+    it.effect("DELETE sends no body and does not decode one", (ctx) =>
+      Effect.gen(function* () {
+        const client = yield* Client;
+        yield* client.del("/_relay/v1/session", "member-token");
+        ctx.expect(captured.method).toBe("DELETE");
+        ctx.expect(captured.auth).toBe("Bearer member-token");
+        ctx.expect(captured.body).toBeUndefined();
       }),
     );
   });
