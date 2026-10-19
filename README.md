@@ -96,10 +96,33 @@ sunday-walk ./my-page`.
 
 ## Develop
 
+Build the web UI, build the binary, and run a local node:
+
+```sh
+make dev
+# or, when make is not installed:
+./scripts/dev.sh
+```
+
+It defaults to node `my-group`, data `./data`, and `:8080`. Override any of
+them:
+
+```sh
+make dev NODE=my-group DATA=./data LISTEN=:8080
+# or:
+NODE=my-group DATA=./data LISTEN=:8080 ./scripts/dev.sh
+```
+
+The first start uses the admin password `relay`; open
+`http://localhost:8080/_relay/admin.html` and change it.
+
+Other gates:
+
 ```sh
 make check   # web build + tests, gofmt/vet/staticcheck/test -race
 make test    # go test -race ./...
 make build   # owner UI first, then the relay binary
+make run     # run the existing binary without rebuilding
 ```
 
 `index.html` and `technicals.html` are written by hand. Edit the HTML directly.
