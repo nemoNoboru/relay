@@ -96,6 +96,20 @@ sunday-walk ./my-page`.
 
 ## Develop
 
+### Nix dev shell
+
+The project has a pinned Nix flake with Go 1.26, Node 24/npm, make, staticcheck,
+gopls, delve, Chromium, ImageMagick, ffmpeg, `gh`, and the basic CLI tools:
+
+```sh
+nix develop
+```
+
+Then use `make dev` / `make check` as below. The shell also sets `CHROME_BIN`
+for screenshot and browser tooling.
+
+### Local node
+
 Build the web UI, build the binary, and run a local node:
 
 ```sh
