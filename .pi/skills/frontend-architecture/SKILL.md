@@ -1,15 +1,16 @@
 ---
 name: frontend-architecture
-description: Relay frontend standard for the owner UI (host console, publish page, deploy guide). Use when writing or reviewing code under web/, adding a page or component, or wiring a node API response into the UI.
+description: Relay frontend standard for the owner UI (public feed, profiles, posts, host console, publish page, deploy guide). Use when writing or reviewing code under web/, adding a page or component, or wiring a node API response into the UI.
 ---
 
 # Frontend Architecture
 
 The engineering standard for Relay's owner-facing frontend in `web/`. It covers
-the **member home** (`home.html`), the **host console** (`admin.html`), the
-**publish page** (`publish.html`), and the **deploy guide** (`deploy.html`). The public landing and technicals pages
-are hand-written/generated HTML at the repository root and are not part of this
-bundle.
+the **public feed** (`feed.html`, served at `/`), **profiles** (`people.html`),
+the **post wrapper** (`post.html`), the **host console** (`admin.html`), the
+**publish page** (`publish.html`), and the **deploy guide** (`deploy.html`).
+The public landing (`host.html`) and technicals page are hand-written/generated
+HTML at the repository root and are not part of this bundle.
 
 The product is a micro-social network for a group of friends. The frontend must
 not promise features that are not built. The pivot plan is
@@ -33,6 +34,8 @@ not promise features that are not built. The pivot plan is
 - State, handlers, pure vs effectful → `references/functional-paradigm.md`
 - Effect-TS API — services, layers, Schema, HTTP, testing → `references/effect-tsx.md`
 - Relay-specific pages, layout, copy, and wire shapes → `references/relay-ui.md`
+- The visual system (tokens, type, chrome, cards) → the
+  [`relay-design` skill](../relay-design/SKILL.md)
 
 Read the matching reference before writing or reviewing frontend code.
 
@@ -67,28 +70,43 @@ Read the matching reference before writing or reviewing frontend code.
 
 ```
 web/
-  home.html                member welcome + feed shell
-  people.html              profile shell (nested route)
+  feed.html                public feed shell (served at /)
+  people.html              directory + profile shell (nested route)
   post.html                post wrapper shell (nested route)
   admin.html               host console shell
   publish.html             publish page shell
   deploy.html              static guide (no app bundle)
-  shared/styles.css        owner UI tokens and components
+  shared/styles.css        owner UI tokens and components (V4 quiet-feed)
+  fonts/fonts.css          self-hosted webfonts (Nunito/Figtree + legacy)
   src/
+    main/feed.ts           feed entry: /me (optional) + feed + people + mount
+    main/people.ts         directory/profile entry
+    main/post.ts           post wrapper entry
     main/admin.ts          host console entry: session + API effects + mount
     main/publish.ts        publish page entry: invite, files, tar, preview
     api/client.ts          the only wire-aware code: fetch + Schema decode
+    member/schema.ts       feed/post/comment/member wire schemas
+    member/ops.ts          member API effects
     admin/schema.ts        admin wire schemas
     admin/ops.ts           admin API effects
     admin/state.ts         host console UI state
-    ui/Home.svelte         pure view of the home store
-    ui/PostCard.svelte     one post in a feed/profile
-    ui/People.svelte       pure view of the profile store
-    ui/PostPage.svelte     pure view of the post wrapper
-    ui/Admin.svelte        pure view of the admin store
+    feed/state.ts          feed UI state
+    people/state.ts        directory/profile UI state
+    post/state.ts          post wrapper UI state
+    avatar.ts              avatar colour/initial helpers
+    invite.ts              readToken (fragment/key/link)
+    ui/Shell.svelte        shared chrome + inline sign-in
+    ui/Feed.svelte         the public feed view
+    ui/PeopleStrip.svelte  avatar row at the top of the feed
+    ui/PostCard.svelte     one post card (peek/cover + comments)
+    ui/Peek.svelte         page-preview panel for text templates
+    ui/Comments.svelte     collapsed comment thread + member form
+    ui/People.svelte       directory + profile view
+    ui/PostPage.svelte     post wrapper view
+    ui/Admin.svelte        host console view
     publish.ts             invite links, Markdown-to-page, tar, generated page
-  test/                    client, publish, and SSR admin tests
-  tools/smoke.mjs          DOM-stub smoke test of the built admin + home bundles
+  test/                    client, publish, admin, feed, people, post SSR tests
+  tools/smoke.mjs          DOM-stub smoke test of the built admin + feed bundles
 ```
 
 **Dependency rule:** `main → feature (admin/publish) → api → Schema`. Views
@@ -99,9 +117,10 @@ import types only; they never call `fetch`.
 - Brand line: **a micro-social network for you and your real friends**.
 - Use "member", "invitation", "page/post", "host", "node". Avoid "user account",
   "deploy key" in member-facing copy, and "site" when "page" is clearer.
-- Say what is built. Planned features (home feed, profiles, comments,
-  templates) are marked as planned in docs and must not appear as live
-  controls. The member cookie and welcome page are built.
+- Say what is built. The feed, profiles, comments, and templates are live;
+  the IndieWeb integrations (JSON Feed, Webmention, Micropub, IndieAuth,
+  passkeys) are proposals and must not appear as live controls. The member
+  cookie and invite exchange are built.
 - The host console may use "invitation", "token", and "admin password"; it is
   the one place where operational language is appropriate.
 - No ideology in UI copy. A node is a place for a group, not a movement.
