@@ -294,14 +294,49 @@ const unwrap = (files: ReadonlyArray<SiteFile>) => {
   return files.every((f) => f.path.startsWith(top)) ? files.map((f) => ({ ...f, path: f.path.slice(top.length) })) : files;
 };
 
-/** Markdown becomes pages; a lone Markdown file becomes the home page. */
+const isMd = (f: SiteFile) => f.path.endsWith(".md");
+const isHtml = (f: SiteFile) => f.path.endsWith(".html");
+
+/** Variables the bottom banner CSS needs, without restyling the host page. */
+const BANNER_ROOT = `:root{--ink:#141210;--paper:#f0e6d2;--paper2:#e6dac0;--red:#ce1f2b;--ochre:#dfa32a}`;
+
+/**
+ * Pin the Relay bottom banner onto an HTML page. Markdown publishes already
+ * carry it; hand-written HTML gets the same footing so every page can say
+ * where it lives and how to share it.
+ */
+const dress = (html: string): string => {
+  if (/class=["']relay-banner["']/.test(html)) return html;
+  const style = `<style>${BANNER_ROOT}${BANNER_CSS}</style>`;
+  const foot =
+    `${BANNER}<script>${QR_GLOBAL};var QRCODE=qrcode;</script><script>${BANNER_JS}</script>`;
+  if (!/<html/i.test(html)) {
+    return `<!doctype html><html><head>${style}</head><body>${html}${foot}</body></html>`;
+  }
+  let out = /<\/head>/i.test(html)
+    ? html.replace(/<\/head>/i, `${style}</head>`)
+    : html.replace(/<html[^>]*>/i, (m) => `${m}<head>${style}</head>`);
+  return /<\/body>/i.test(out) ? out.replace(/<\/body>/i, `${foot}</body>`) : out + foot;
+};
+
+/** Markdown becomes pages; a lone Markdown or HTML file becomes the home page. */
 export const toSite = (dropped: ReadonlyArray<SiteFile>): ReadonlyArray<SiteFile> => {
   const files = unwrap(dropped);
-  const isMd = (f: SiteFile) => f.path.endsWith(".md");
-  const home = files.filter(isMd).length === 1 && !files.some((f) => f.path === "index.html");
-  return files.map((f) =>
-    isMd(f) ? { path: home ? "index.html" : f.path.replace(/\.md$/, ".html"), data: enc.encode(page(dec.decode(f.data))) } : f,
-  );
+  const mdHome = files.filter(isMd).length === 1 && !files.some((f) => f.path === "index.html");
+  const rendered = files.map((f) => {
+    if (isMd(f)) {
+      return { path: mdHome ? "index.html" : f.path.replace(/\.md$/, ".html"), data: enc.encode(page(dec.decode(f.data))) };
+    }
+    if (isHtml(f)) {
+      return { ...f, data: enc.encode(dress(dec.decode(f.data))) };
+    }
+    return f;
+  });
+  const htmls = rendered.filter(isHtml);
+  if (htmls.length === 1 && htmls[0]!.path !== "index.html") {
+    return rendered.map((f) => (f.path === htmls[0]!.path ? { ...f, path: "index.html" } : f));
+  }
+  return rendered;
 };
 
 /** What to upload: a dropped tar as it is, anything else packed. */
