@@ -26,7 +26,8 @@ COPY go.mod ./
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 COPY web/embed.go ./web/embed.go
-COPY site.go index.html technicals.html styles.css ./
+COPY web/fonts ./web/fonts
+COPY site.go host.html technicals.html styles.css ./
 COPY --from=web /src/web/dist ./web/dist
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /relay ./cmd/relay
 

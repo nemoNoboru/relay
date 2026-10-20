@@ -169,19 +169,20 @@ is never half-written.
 
 ### Embedded public site and owner UI
 
-`site.go` embeds `index.html`, `technicals.html`, and `styles.css` from the repo
-root. `internal/serve/landing.go` maps `/`, `/index.html`, `/technicals.html`,
-and `/styles.css` to those files. Everything else falls through to site
-serving.
+`site.go` embeds `host.html`, `technicals.html`, and `styles.css` from the repo
+root, plus the self-hosted webfonts in `web/fonts`. `internal/serve/landing.go`
+maps `/` to the built feed shell, `/host` to `host.html`, and `/technicals.html`
+and `/styles.css` to their files; `serve.Fonts` serves the fonts at `/fonts/`.
+Everything else falls through to site serving.
 
 `web/embed.go` embeds the built Vite output (`web/dist`) and `ui.go` serves it
-under `/_relay/`. `/_relay/` redirects to the member home. The UI is a set of
-short-lived documents, not a SPA:
+under `/_relay/`. `/_relay/` redirects to `/` (the feed). The UI is a set of
+short-lived documents, not a SPA, sharing one `Shell.svelte` chrome:
 
-- `home.html` + Svelte + Effect-TS: member welcome, invite exchange, infinite feed, inline comments, profile editor.
-- `people.html` + Svelte: one member's profile and infinite posts/comments.
-- `post.html` + Svelte: post wrapper, static iframe, full comment list and form.
-- `admin.html` + Svelte + Effect-TS: host console.
+- `feed.html` (served at `/`) + Svelte + Effect-TS: the public feed, people strip, peek/cover cards, collapsed comments.
+- `people.html` + Svelte: the member directory and one member's profile.
+- `post.html` + Svelte: post wrapper, static iframe, comments.
+- `admin.html` + Svelte + Effect-TS: host console (keeps its own header).
 - `publish.html` + plain TypeScript: template picker, invite/publish flow, Markdown-to-page.
 - `deploy.html`: static step-by-step instructions.
 - `/_relay/templates/<id>/…`: trusted prepublish forms and template JS; the
