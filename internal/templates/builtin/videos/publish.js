@@ -12,7 +12,7 @@ const descriptionOf = (data) => String(data.get("description") ?? "");
 const clipName = (file) => String(file.name ?? "clip").replace(/\.[^.]+$/, "");
 const selected = () => [...input.files];
 
-const style = `.videos{display:flex;flex-direction:column;gap:18px;margin:1.4rem 0}.clip{border:3px solid var(--ink);background:var(--paper2);padding:10px}.clip video{display:block;width:100%;background:#000}.clip b{display:block;font-family:ui-monospace,monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}`;
+const style = `.videos{display:flex;flex-direction:column;gap:16px;margin:1.4rem 0}.clip{border:1px solid var(--hair);border-radius:12px;background:var(--paper2);padding:10px}.clip video{display:block;width:100%;background:#000;border-radius:9px}.clip b{display:block;font-family:Figtree,system-ui,sans-serif;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}`;
 
 const render = (data, sources) =>
   page({

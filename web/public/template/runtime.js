@@ -1,28 +1,28 @@
 /* Relay template runtime — shared helpers for prepublish pages and publish.js.
  * Templates are plain browser modules; the node never runs this code. */
 
-const BASE_CSS = `:root{--ink:#141210;--paper:#f0e6d2;--paper2:#e6d8bc;--red:#ce1f2b;--ochre:#dfa32a}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.65 Georgia,"Times New Roman",serif}
-.rbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:var(--ink);color:var(--paper);border-bottom:6px solid var(--red);padding:.7rem 1.2rem;font-family:ui-monospace,monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase}
-.rbar a{color:var(--paper);text-decoration:none;border-bottom:2px solid var(--red)}
-.rbar b{font-family:Impact,"Arial Narrow",sans-serif;font-size:1.15rem;letter-spacing:.06em}
-main{max-width:42rem;margin:0 auto;padding:3.2rem 1.25rem 2rem}
-h1,h2,h3{font-family:Impact,"Haettenschweiler","Arial Black","Arial Narrow",sans-serif;font-weight:400;line-height:1;text-transform:uppercase;letter-spacing:.01em}
-h1{font-size:clamp(2.4rem,7vw,4rem);margin:0 0 1.2rem;padding-bottom:.45rem;border-bottom:8px solid var(--ink);position:relative}
-h1::before{content:"";position:absolute;left:-2.4rem;top:.5em;width:1.5rem;height:1rem;background:var(--red);clip-path:polygon(0 0,100% 50%,0 100%)}
-h2{font-size:clamp(1.4rem,4vw,2rem);margin:2.4rem 0 .8rem;color:var(--red)}
-p{margin:0 0 1.1rem}.lead{font-size:1.15rem;font-style:italic}
-a{color:var(--red);text-decoration:none;border-bottom:2px solid var(--red)}
-a:hover{background:var(--red);color:var(--paper)}
-img{max-width:100%;height:auto;border:3px solid var(--ink)}
-figure{margin:1.8rem 0}figcaption{font-family:ui-monospace,monospace;font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;margin-top:.5rem;opacity:.7}
-hr{border:0;height:6px;background:var(--ink);margin:2.4rem 0}
-.kicker{font-family:ui-monospace,monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:.8rem}
-.card{border:4px solid var(--ink);background:var(--paper2);padding:1.6rem;box-shadow:9px 9px 0 var(--ink);margin:1.6rem 0}
-.card .url{font-family:ui-monospace,monospace;font-size:.68rem;letter-spacing:.04em;word-break:break-all}
-.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:1.6rem 0}
-.gallery img{border:3px solid var(--ink);aspect-ratio:1;object-fit:cover;width:100%}
-footer{max-width:42rem;margin:3rem auto 0;padding:1.4rem 1.25rem 2rem;border-top:6px solid var(--ink);font-family:ui-monospace,monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.72}
+const BASE_CSS = `:root{--ink:#141210;--paper:#f0e6d2;--paper2:#e6d8bc;--red:#ce1f2b;--ochre:#dfa32a;--hair:rgba(20,18,16,.16)}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 Figtree,system-ui,sans-serif;font-weight:300}
+.rbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:rgba(240,230,210,.92);color:var(--ink);border-bottom:1px solid var(--hair);padding:.6rem 1.1rem;font-family:Figtree,system-ui,sans-serif;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase}
+.rbar a{color:var(--ink);text-decoration:none;opacity:.7}
+.rbar a:hover{opacity:1;color:var(--red)}
+.rbar b{font-family:Nunito,system-ui,sans-serif;font-weight:700;font-size:.9rem;letter-spacing:.01em;text-transform:lowercase}
+main{max-width:42rem;margin:0 auto;padding:3rem 1.25rem 2rem}
+h1,h2,h3{font-family:Nunito,system-ui,sans-serif;font-weight:700;line-height:1.1;letter-spacing:.01em}
+h1{font-size:clamp(1.8rem,5vw,2.6rem);margin:0 0 1.1rem;padding-bottom:.5rem;border-bottom:1px solid var(--hair)}
+h2{font-size:1.4rem;margin:2.2rem 0 .7rem}
+p{margin:0 0 1.1rem}.lead{font-size:1.12rem;opacity:.85}
+a{color:var(--red);text-decoration:none;border-bottom:1px solid var(--red)}
+a:hover{border-color:var(--ink);color:var(--ink)}
+img{max-width:100%;height:auto;border-radius:9px}
+figure{margin:1.8rem 0}figcaption{font-family:Figtree,system-ui,sans-serif;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;margin-top:.5rem;opacity:.6}
+hr{border:0;height:1px;background:var(--hair);margin:2.4rem 0}
+.kicker{font-family:Figtree,system-ui,sans-serif;font-weight:600;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:.8rem}
+.card{border:1px solid var(--hair);border-radius:12px;background:var(--paper2);padding:1.2rem;margin:1.5rem 0}
+.card .url{font-family:Figtree,system-ui,sans-serif;font-size:.68rem;letter-spacing:.04em;word-break:break-all}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:1.5rem 0}
+.gallery img{border:1px solid var(--hair);border-radius:9px;aspect-ratio:1;object-fit:cover;width:100%}
+footer{max-width:42rem;margin:3rem auto 0;padding:1.2rem 1.25rem 2rem;border-top:1px solid var(--hair);font-family:Figtree,system-ui,sans-serif;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;opacity:.6}
 @media(max-width:560px){h1::before{display:none}}`;
 
 export const escapeHTML = (s) =>
@@ -58,9 +58,9 @@ export const shortDate = () => {
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 };
 
-/** A full static post page with the Relay constructivist base style. */
+/** A full static post page with the Relay quiet base style. */
 export const page = ({ title, kicker = "Post", content, style = "" }) =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHTML(title)}</title><style>${BASE_CSS}${style}</style></head><body><header class="rbar"><a href="/"><b>R RELAY</b></a><a href="/">a place among friends</a></header><main><span class="kicker">${escapeHTML(kicker)} · ${shortDate()}</span>${content}</main><footer>Made on a Relay node · <a href="/">relay</a></footer></body></html>`;
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHTML(title)}</title><style>${BASE_CSS}${style}</style></head><body><header class="rbar"><a href="/"><b>relay</b></a><a href="/">← the feed</a></header><main><span class="kicker">${escapeHTML(kicker)} · ${shortDate()}</span>${content}</main><footer>Posted on a Relay node · <a href="/">relay</a></footer></body></html>`;
 
 export const showError = (el, message) => {
   if (!el) return;
