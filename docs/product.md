@@ -109,7 +109,7 @@ The template and publish contract is in [`publishing.md`](publishing.md).
 | **Member** | A person with a live invitation key on this node. |
 | **Invite** | A link carrying a key. It is both the invitation and the identity. |
 | **Post** | A static microwebsite plus its entry in the node's index. |
-| **Template** | A kind of post: note, link, gallery, article, songs, videos, carousel, jet set radio, longform, or one a member installs. |
+| **Template** | A kind of post: note, link, gallery, article, songs, videos, carousel, jet set radio, longform, reply, event, or one a member installs. |
 | **Profile** | The page listing one member's posts. |
 | **Home** | The page listing every member's recent posts, newest first. |
 | **Comment** | A short reply under a post, visible to members. |

@@ -247,7 +247,7 @@ One field on the feed JSON drives the card: `templateName` (added per
 
 | Template | Preview |
 |---|---|
-| `note`, `article`, `longform`, `link`, custom | **Peek** — a small rendered excerpt of the page (static excerpt now; sandboxed iframe peek later) |
+| `note`, `article`, `longform`, `link`, `reply`, `event`, custom | **Peek** — a small rendered excerpt of the page (static excerpt now; sandboxed iframe peek later) |
 | `gallery`, `carousel`, `videos`, `songs`, `jetset` | **Cover** — the post's `imageUrl`, the whole cover is the link |
 | `link` | Peek + a one-line link target (the domain) |
 

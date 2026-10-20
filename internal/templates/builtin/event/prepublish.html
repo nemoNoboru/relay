@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New event — Relay</title>
+<link rel="stylesheet" href="/_relay/template/runtime.css">
+</head>
+<body class="tpl">
+<header class="tpl-bar">
+  <a class="tpl-brand" href="/"><span class="tpl-mark">R</span> RELAY</a>
+  <span class="tpl-note">New event</span>
+</header>
+<div class="tpl-wrap">
+  <section class="tpl-card">
+    <span class="tpl-kicker">Event</span>
+    <h1>Invite your people</h1>
+    <form id="form" class="tpl-form">
+      <div class="tpl-field">
+        <label for="title">What is it?</label>
+        <input id="title" name="title" type="text" required maxlength="160" placeholder="Reading group, gig, dinner…">
+      </div>
+      <div class="tpl-field">
+        <label for="when">When</label>
+        <input id="when" name="when" type="text" maxlength="160" placeholder="Saturday, 7pm">
+      </div>
+      <div class="tpl-field">
+        <label for="where">Where</label>
+        <input id="where" name="where" type="text" maxlength="160" placeholder="The usual place">
+      </div>
+      <div class="tpl-field">
+        <label for="details">Details</label>
+        <textarea id="details" name="details" rows="5" maxlength="12000" placeholder="Anything they need to know. **bold**, *italic*, and [links](https://example.org) work."></textarea>
+      </div>
+      <div class="tpl-actions">
+        <button class="tpl-btn solid" type="submit" id="go">Publish event</button>
+        <a class="tpl-btn" href="/">Cancel</a>
+      </div>
+      <p class="tpl-error" id="error" hidden></p>
+    </form>
+  </section>
+  <section class="tpl-preview">
+    <h2>Preview</h2>
+    <iframe class="tpl-frame" id="preview" title="Event preview"></iframe>
+  </section>
+</div>
+<p class="tpl-foot"><a href="/_relay/publish.html">All publishing options</a></p>
+<script type="module" src="./publish.js"></script>
+</body>
+</html>

@@ -105,8 +105,8 @@ author and code that turns the form into files.
 ```
 
 Built-in templates ship inside the binary (Note, Link, Gallery, Article,
-Songs, Videos, Images carousel, Jet Set Radio, Longform) and are served from
-the embedded folders. Installed templates live in
+Songs, Videos, Images carousel, Jet Set Radio, Longform, Reply, Event) and are
+served from the embedded folders. Installed templates live in
 `<data>/templates/<id>/`; the host can shadow a built-in with the CLI, while a
 member tar install cannot take a built-in id. The host manages installed
 templates with `relay template list|install|remove`.
@@ -345,6 +345,8 @@ wrapper is the comment surface for this phase.
 | **Images carousel** | title, images, caption | a swipeable image carousel |
 | **Jet Set Radio** | title, description, audio files | a loud street-radio playlist |
 | **Longform** | title, byline, standfirst, hero, body | a clean Medium-like long read |
+| **Reply** | url, body | a reply to someone else's post |
+| **Event** | title, when, where, details | an invitation: what, when, where |
 
 The built-ins live in one embedded folder tree and are discovered by reading
 `relay-template.json`; there is no server-side list of template ids.

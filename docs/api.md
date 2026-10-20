@@ -317,7 +317,7 @@ finished files; it never executes `publish.js`.
 ```
 
 Built-in templates: `note`, `link`, `gallery`, `article`, `songs`, `videos`,
-`carousel`, `jetset`, and `longform`. The list is discovered from the embedded folder tree and the
+`carousel`, `jetset`, `longform`, `reply`, and `event`. The list is discovered from the embedded folder tree and the
 installed folder, not hardcoded in the server. Any live member can install a
 template tar from the publish page:
 

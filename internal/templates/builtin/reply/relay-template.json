@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "reply",
+  "name": "Reply",
+  "description": "A reply to someone else's post.",
+  "version": "1.0.0",
+  "fields": [
+    { "name": "url", "type": "url", "required": true },
+    { "name": "body", "type": "richtext", "required": true }
+  ],
+  "entry": "prepublish.html",
+  "script": "publish.js"
+}
