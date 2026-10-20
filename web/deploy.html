@@ -4,19 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Publish a page, step by step — Relay</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
     <link rel="stylesheet" href="./shared/styles.css" />
   </head>
   <body>
     <header class="bar">
       <div class="wrap">
-        <a class="brand" href="../"><span class="mark">R</span> RELAY</a>
+        <a class="brand" href="/"><span class="mark">R</span> RELAY</a>
         <nav class="main">
-          <a href="../">Home</a>
-          <a href="./home.html">Your home</a>
-          <a href="./admin.html">Host</a>
+          <a href="/">Home</a>
+          <a href="./publish.html">Publish</a>
+          <a href="/_relay/people">People</a>
         </nav>
         <span class="stamp">Publish a page</span>
       </div>
@@ -26,18 +24,6 @@
       <div class="prose" style="padding: 72px 0 90px">
         <span class="kick">Publish a page</span>
         <h2>Step by step</h2>
-
-        <p>
-          A page is a file called <code>index.html</code>, plus any pictures
-          or styles it uses. You need those, an invitation link from whoever
-          keeps this server, and two minutes.
-        </p>
-        <p>
-          <b>The easy way:</b> open the invitation link you were sent and drop
-          your page onto the publish page. No link?
-          <a href="./publish.html">Open the publish page</a> and paste your
-          key. The steps below are for the terminal.
-        </p>
 
         <h3>1. Open a terminal where your page is</h3>
         <ul>
@@ -62,9 +48,7 @@ curl.exe --data-binary "@..\page.tar" -H "Authorization: Bearer YOUR-KEY" https:
         <h3>3. Open your page</h3>
         <p>
           The reply ends with your page's address, after <code>"url"</code>.
-          Changed something? Paste the same line again. Every upload
-          replaces the whole page, and the server keeps the last ten
-          versions in case you need one back.
+          Paste the same line again to update it.
         </p>
 
         <h3>If it goes wrong</h3>
@@ -87,9 +71,8 @@ curl.exe --data-binary "@..\page.tar" -H "Authorization: Bearer YOUR-KEY" https:
 
         <h3>Keep the key to yourself</h3>
         <p>
-          Whoever holds the key is that member. Don't post it, don't put it in
-          a shared file. If it leaks, ask the host to rotate it and the old
-          one stops working.
+          Whoever holds the key is that member. If it leaks, ask the host to
+          rotate it.
         </p>
 
         <h3>Let an assistant do it</h3>

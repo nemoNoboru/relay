@@ -118,12 +118,13 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	session := serve.NewSession(node, keys)
 	mux.Handle("/_relay/v1/session", session)
 	mux.Handle("/_relay/v1/me", session)
-	postIndex := serve.NewPosts(node, keys, posts, comments)
-	commentAPI := serve.NewComments(keys, posts, comments)
 	templateStore := serve.NewTemplateStore(*data)
+	postIndex := serve.NewPosts(node, keys, posts, comments, templateStore)
+	commentAPI := serve.NewComments(keys, posts, comments)
 	templateAPI := serve.NewTemplates(templateStore, keys)
 	publisher := serve.NewPublisher(node, uploader, templateStore, keys)
 	mux.Handle("/_relay/v1/feed", postIndex)
+	mux.Handle("/_relay/v1/people", postIndex)
 	mux.Handle("/_relay/v1/people/", postIndex)
 	mux.Handle("/_relay/v1/posts/", serve.NewPostSurface(postIndex, commentAPI))
 	mux.Handle("/_relay/v1/comments/", commentAPI)
@@ -132,6 +133,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.Handle("/_relay/templates/", templateAPI)
 	mux.Handle("/_relay/v1/", uploader)
 	mux.Handle("/_relay/", ui)
+	mux.Handle("/fonts/", serve.Fonts())
 	// The node root serves the embedded landing page and its companions;
 	// everything else (sites at /<node>/<site>/...) goes to the registry.
 	mux.Handle("/", serve.Landing(registry.Handler()))

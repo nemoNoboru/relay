@@ -4,6 +4,14 @@
 welcome, posts/profiles/home feed, comments, and templates. Phase 5 is not
 built yet.
 
+**New proposals (not built):** [`navigation-pivot.md`](navigation-pivot.md)
+reopens decision 3.8 (public reading) and re-plans the front door (its visual
+side is [`ui-ux-pivot.md`](ui-ux-pivot.md), with three home-feed mockups under
+[`../ui-experiments/`](../ui-experiments/));
+[`indieweb-syndication.md`](indieweb-syndication.md),
+[`indieauth.md`](indieauth.md), and [`accounts.md`](accounts.md) extend the
+plan toward the IndieWeb.
+
 This plan turns the brief in [`pivot.md`](pivot.md) into ordered work. The
 product definition is in [`product.md`](product.md). The two hard parts have
 their own specs:
@@ -153,6 +161,11 @@ the data directory".
 Anyone with the URL can read a post. Only members can publish, comment, or see
 the home page. We will say this plainly in the docs and UI. Per-post privacy is
 a later product, not a hidden promise of the first version.
+
+**Proposed reopening:** [`navigation-pivot.md`](navigation-pivot.md) §6.3 flips
+this — the feed, profiles, and comment *reads* become public by default (the
+content is already public at its URL), with `--members-only` as an opt-out.
+Publishing and commenting stay invite-only.
 
 ### 3.9 The host can moderate
 

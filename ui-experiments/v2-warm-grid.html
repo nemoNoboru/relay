@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V2 · Warm grid — Relay redesign experiment</title>
+<link rel="stylesheet" href="../web/fonts/fonts.css">
+<style>
+  /* Fonts load from ../web/fonts/fonts.css via <link>. */
+
+  :root{
+    --red:#ce1f2b; --red-deep:#a5141f; --ink:#141210; --paper:#f0e6d2;
+    --paper-2:#e6d8bc; --ochre:#dfa32a;
+    --display:'Fraunces','Georgia',serif;
+    --body:'Karla',system-ui,sans-serif;
+    --mono:'Karla',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--body);font-weight:300;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+
+  /* ---- chrome ---- */
+  header.bar{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:3px solid var(--ink)}
+  .bar .wrap{max-width:1060px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;height:64px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--display);letter-spacing:.06em;font-size:1.35rem;text-transform:uppercase}
+  .brand .mark{display:grid;place-items:center;width:34px;height:34px;background:var(--red);color:var(--paper);font-size:1.15rem;transform:rotate(-4deg)}
+  nav.main{display:flex;gap:22px;font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase}
+  nav.main a{opacity:.7;padding-bottom:3px;border-bottom:2px solid transparent}
+  nav.main a:hover{opacity:1}
+  nav.main a.active{opacity:1;border-color:var(--red)}
+  .me{display:flex;align-items:center;gap:10px}
+  .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:.8rem;color:var(--paper);border:2px solid var(--ink)}
+  .me .name{font-family:var(--mono);font-size:.72rem}
+  .me .out{font-family:var(--mono);font-size:.62rem;opacity:.55;text-transform:uppercase;letter-spacing:.06em}
+  .me .out:hover{color:var(--red);opacity:1}
+
+  main{max-width:720px;margin:0 auto;padding:30px 24px 90px}
+
+  /* ---- people strip ---- */
+  .people{display:flex;gap:22px;align-items:center;padding:14px 4px;margin-bottom:8px;border-bottom:1px dashed rgba(20,18,16,.25);overflow-x:auto}
+  .people .label{font-family:var(--mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;opacity:.55;white-space:nowrap}
+  .person{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto}
+  .person .avatar{width:46px;height:46px;font-size:1rem}
+  .person span{font-family:var(--mono);font-size:.6rem;opacity:.75}
+
+  /* ---- cards: media first, whole card is the unit ---- */
+  .feed{display:flex;flex-direction:column;gap:28px}
+  .card{background:#fff;border:3px solid var(--ink);box-shadow:7px 7px 0 rgba(20,18,16,.9);border-radius:4px}
+  .card-head{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(20,18,16,.12)}
+  .card-head .who{line-height:1.1}
+  .card-head .who a{font-weight:400;font-size:1rem}
+  .card-head .who a:hover{color:var(--red)}
+  .card-head .who .when{font-family:var(--mono);font-size:.58rem;letter-spacing:.05em;opacity:.5;text-transform:uppercase}
+  .chip{margin-left:auto;font-family:var(--mono);font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:4px 9px;transform:rotate(-1deg)}
+
+  .media{display:block;position:relative;background:var(--paper-2)}
+  .media img,.media .fill{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+  .media .tagline{position:absolute;left:12px;bottom:12px;background:rgba(20,18,16,.82);color:var(--paper);font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;padding:5px 9px}
+
+  .peek{position:relative;background:#fff;border-top:1px solid rgba(20,18,16,.12)}
+  .peek .brow{display:flex;align-items:center;gap:7px;padding:9px 14px;background:var(--paper-2);font-family:var(--mono);font-size:.6rem;letter-spacing:.05em;opacity:.75}
+  .peek .brow .dots{display:flex;gap:4px;margin-right:2px}
+  .peek .brow i{width:8px;height:8px;border-radius:50%;background:var(--ink);opacity:.25;display:block}
+  .peek .inner{padding:18px 20px}
+  .peek .ptitle{font-family:var(--display);font-weight:400;font-size:1.55rem;line-height:1;text-transform:uppercase;letter-spacing:.01em}
+  .peek p{opacity:.85;margin-top:9px;max-width:52ch}
+  .peek .lines{height:9px;background:var(--paper-2);border-radius:5px;margin-top:9px}
+  .peek .lines.w70{width:70%}.peek .lines.w45{width:45%}
+
+  .card-body{padding:14px 18px 6px}
+  .card-body h2{font-family:var(--display);font-weight:400;font-size:1.35rem;line-height:1;text-transform:uppercase;letter-spacing:.01em}
+  .card-body h2:hover{color:var(--red)}
+  .card-body p{opacity:.85;margin-top:6px}
+  .card-foot{display:flex;gap:18px;align-items:center;padding:12px 18px 16px;font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+  .card-foot a{border-bottom:2px solid var(--red)}
+  .card-foot .count{margin-left:auto}
+
+  /* comments inline */
+  .comments{border-top:2px dashed rgba(20,18,16,.3);margin:0 18px;padding:12px 0 14px}
+  .comments h3{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;opacity:.6;font-weight:400;margin-bottom:8px}
+  .cmt{display:flex;gap:9px;align-items:flex-start;font-size:.95rem;padding:5px 0}
+  .cmt .avatar{width:24px;height:24px;font-size:.58rem;border-width:1.5px}
+  .cmt b{font-weight:400}
+  .cmt p{opacity:.8}
+  .add{display:flex;gap:9px;margin-top:8px}
+  .add input{flex:1;font-family:var(--body);font-weight:300;font-size:.92rem;padding:10px 12px;border:2px solid var(--ink);background:var(--paper);color:var(--ink)}
+  .add button{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;background:var(--red);border:2px solid var(--ink);color:var(--paper);padding:10px 16px;cursor:pointer}
+  .add button:hover{background:var(--red-deep)}
+
+  footer{margin-top:40px;text-align:center;font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;opacity:.6;line-height:1.9}
+  footer a{border-bottom:2px solid var(--red)}
+
+  .ribbon{position:fixed;right:14px;bottom:14px;z-index:60;font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;background:var(--red);color:var(--paper);padding:6px 10px;border-radius:999px;opacity:.95}
+
+  @media(max-width:640px){
+    .bar .wrap{padding:0 14px}
+    nav.main{gap:14px;font-size:.6rem}
+    .me .name,.me .out{display:none}
+    .people{gap:16px}
+    main{padding:22px 12px 70px}
+    .card{box-shadow:5px 5px 0 rgba(20,18,16,.9)}
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#"><span class="mark">R</span> my-group</a>
+    <nav class="main">
+      <a class="active" href="#">Home</a>
+      <a href="#">Publish</a>
+      <a href="#">People</a>
+    </nav>
+    <div class="me">
+      <span class="avatar" style="background:var(--red)">A</span>
+      <span class="name">alice</span>
+      <a class="out" href="#">sign out</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="people">
+    <span class="label">People you know</span>
+    <div class="person"><span class="avatar" style="background:var(--red)">A</span><span>alice</span></div>
+    <div class="person"><span class="avatar" style="background:var(--ochre);color:var(--ink)">B</span><span>bob</span></div>
+    <div class="person"><span class="avatar" style="background:var(--ink)">D</span><span>dana</span></div>
+    <div class="person"><span class="avatar" style="background:var(--red-deep)">S</span><span>sam</span></div>
+    <div class="person"><span class="avatar" style="background:var(--paper-2);color:var(--ink)">+</span><span>invite</span></div>
+  </div>
+
+  <div class="feed">
+
+    <article class="card">
+      <div class="card-head">
+        <span class="avatar" style="background:var(--ochre);color:var(--ink)">B</span>
+        <div class="who"><a href="#">bob</a><span class="when">5 days ago</span></div>
+        <span class="chip">gallery</span>
+      </div>
+      <div class="media">
+        <div class="fill" style="background:linear-gradient(135deg,#141210 0%,#3a3328 42%,#dfa32a 74%,#ce1f2b 100%)"></div>
+        <span class="tagline">canal-photos · 14 frames</span>
+      </div>
+      <div class="card-body">
+        <h2>Canal photos</h2>
+        <p>Golden hour, half-frozen, all of us squinting.</p>
+      </div>
+      <div class="card-foot">
+        <a href="#">Open page</a>
+        <span class="count">1 comment</span>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <span class="avatar" style="background:var(--red)">A</span>
+        <div class="who"><a href="#">alice</a><span class="when">2 days ago</span></div>
+        <span class="chip">note</span>
+      </div>
+      <div class="peek">
+        <div class="brow"><span class="dots"><i></i><i></i><i></i></span> my-group / sunday-walk</div>
+        <div class="inner">
+          <div class="ptitle">Sunday walk, the long way</div>
+          <p>We took the canal path and it was exactly as slow as we needed. Nobody checked a phone.</p>
+          <div class="lines w70"></div>
+          <div class="lines w45"></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <h2>Sunday walk, the long way</h2>
+        <p>The long way is the whole point.</p>
+      </div>
+      <section class="comments">
+        <h3>2 comments</h3>
+        <div class="cmt"><span class="avatar" style="background:var(--ochre);color:var(--ink)">B</span><div><b>bob</b> <p>the long way is the whole point</p></div></div>
+        <div class="cmt"><span class="avatar" style="background:var(--ink)">D</span><div><b>dana</b> <p>next time I'm coming</p></div></div>
+        <form class="add" onsubmit="return false">
+          <input placeholder="Say something to your friend…" />
+          <button type="submit">Reply</button>
+        </form>
+      </section>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <span class="avatar" style="background:var(--ink)">D</span>
+        <div class="who"><a href="#">dana</a><span class="when">1 week ago</span></div>
+        <span class="chip">link</span>
+      </div>
+      <div class="peek">
+        <div class="brow"><span class="dots"><i></i><i></i><i></i></span> scroll.name / quiet-feed</div>
+        <div class="inner">
+          <div class="ptitle">A quiet feed, in someone else's words</div>
+          <p>"No follower counts, no engagement dashboards, no algorithm deciding who sees what."</p>
+          <div class="lines w45"></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <h2>A quiet feed, in someone else's words</h2>
+        <p>Filed under: things we already believe.</p>
+      </div>
+      <div class="card-foot">
+        <a href="#">Open page</a>
+        <span class="count">0 comments</span>
+      </div>
+    </article>
+
+  </div>
+
+  <footer>
+    This is a Relay node for my-group · <a href="#">Run your own →</a><br>
+    Posts are public · publishing and replying are by invitation
+  </footer>
+</main>
+
+<div class="ribbon">V2 · warm grid</div>
+</body>
+</html>

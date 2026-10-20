@@ -24,7 +24,7 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       input: {
-        home: "home.html",
+        feed: "feed.html",
         people: "people.html",
         post: "post.html",
         admin: "admin.html",

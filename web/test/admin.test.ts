@@ -159,7 +159,7 @@ describe("Admin.svelte first sign-in", () => {
   });
 
   it("tells a new operator the default password", async () => {
-    expect(await renderAdmin(locked())).toContain("the password is");
+    expect(await renderAdmin(locked())).toContain("starts on the password");
   });
 });
 

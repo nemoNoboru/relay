@@ -48,8 +48,8 @@ func newCommentsHandler(t *testing.T) (http.Handler, *serve.KeyStore, *social.Co
 
 func TestCommentsAddAndList(t *testing.T) {
 	h, _, _, at, _, _, _ := newCommentsHandler(t)
-	if rec := doMember(t, h, http.MethodGet, "/_relay/v1/posts/blog/comments", "", "", ""); rec.Code != http.StatusUnauthorized {
-		t.Fatalf("anonymous comments = %d, want 401", rec.Code)
+	if rec := doMember(t, h, http.MethodGet, "/_relay/v1/posts/blog/comments", "", "", ""); rec.Code != http.StatusOK {
+		t.Fatalf("anonymous comments = %d, want 200", rec.Code)
 	}
 	rec := doMember(t, h, http.MethodPost, "/_relay/v1/posts/blog/comments", "", `{"body":"Hello **friends**"}`, at)
 	if rec.Code != http.StatusCreated {

@@ -122,7 +122,7 @@ export const wirePublish = (form, button, errorEl, build) => {
     try {
       const payload = await build(new FormData(form));
       const reply = await publish(payload);
-      location.href = reply.post?.postUrl ?? "/_relay/home.html";
+      location.href = reply.post?.postUrl ?? "/";
     } catch (err) {
       showError(errorEl, err.message);
     } finally {

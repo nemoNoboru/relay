@@ -7,15 +7,15 @@ import (
 	"testing"
 )
 
-// TestLandingServesPublicSite pins that the node root and its companion
-// paths serve the embedded public site, with the right content types.
-func TestLandingServesPublicSite(t *testing.T) {
+// TestLandingServesHostSite pins that the hosting pitch and its companions
+// serve from the embedded public site with the right content types.
+func TestLandingServesHostSite(t *testing.T) {
 	cases := []struct {
 		path        string
 		wantType    string // Content-Type prefix
 		wantContent string // substring of the served body
 	}{
-		{path: "/", wantType: "text/html", wantContent: "Relay"},
+		{path: "/host", wantType: "text/html", wantContent: "Relay"},
 		{path: "/technicals.html", wantType: "text/html", wantContent: "Technicals"},
 		{path: "/styles.css", wantType: "text/css", wantContent: "Relay"},
 	}
@@ -39,26 +39,24 @@ func TestLandingServesPublicSite(t *testing.T) {
 	}
 }
 
-// TestLandingIndexRedirect pins the stdlib canonicalisation: /index.html is
-// a 301 to /, so the landing page has one canonical URL.
-func TestLandingIndexRedirect(t *testing.T) {
+// TestLandingOwnsFeedRoot pins that / is the feed shell's slot — Landing
+// answers it, never the site registry. The feed shell comes from the built
+// owner UI, so the status is 200 when dist is built and 404 when it is not.
+func TestLandingOwnsFeedRoot(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatalf("Landing served nothing for %q and fell through to next", r.URL.Path)
+		t.Fatalf("Landing delegated %q to the registry", r.URL.Path)
 	})
 	rec := httptest.NewRecorder()
-	Landing(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/index.html", nil))
-	if rec.Code != http.StatusMovedPermanently {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMovedPermanently)
-	}
-	if loc := rec.Header().Get("Location"); loc != "./" {
-		t.Fatalf("Location = %q, want %q", loc, "./")
+	Landing(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rec.Code != http.StatusOK && rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 200 (built feed) or 404 (not built)", rec.Code)
 	}
 }
 
 // TestLandingDelegatesOtherPaths pins that every non-landing path — site
 // routes and anything else — is handed to the registry, not swallowed.
 func TestLandingDelegatesOtherPaths(t *testing.T) {
-	for _, p := range []string{"/demo/hello/", "/demo", "/demo/hello/assets/style.css", "/_relay/admin.html", "/nope"} {
+	for _, p := range []string{"/demo/hello/", "/demo", "/demo/hello/assets/style.css", "/nope"} {
 		t.Run(p, func(t *testing.T) {
 			called := false
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

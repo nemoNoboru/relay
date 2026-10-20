@@ -99,8 +99,8 @@
       <section class="panel">
         <h3>Sign in</h3>
         <div class="panel-body">
-          <p class="hint">Enter the node's admin password to manage invitations, members and pages.</p>
-          <p class="hint">On a node you have just started, the password is <code>relay</code> — you will be asked to change it before inviting anyone.</p>
+          <p class="hint">Enter the node's admin password.</p>
+          <p class="hint">A fresh node starts on the password <code>relay</code> — change it before inviting anyone.</p>
           <form onsubmit={(e) => { e.preventDefault(); onConnect(tokenInput); }}>
             <div class="field">
               <label for="admin-token">admin password</label>
@@ -120,7 +120,7 @@
       <section class="panel">
         <h3>Choose a password</h3>
         <div class="panel-body">
-          <p class="hint">This node is still on the password it ships with, so anyone who finds it could take it over. Pick your own to go on. Eight characters or more.</p>
+          <p class="hint">This node is still on its shipped password. Pick your own — eight characters or more.</p>
           <form onsubmit={(e) => { e.preventDefault(); onChangeToken(newTokenInput); newTokenInput = ""; }}>
             <div class="field">
               <label for="new-token">new password</label>
@@ -155,7 +155,7 @@
       <section class="panel wide">
         <h3>Invitations &amp; members</h3>
         <div class="panel-body">
-          <p class="hint">Each invitation is a member's identity. Send them the link: they open it and join, then publish pages and invite people they trust. People they invite appear here as <code>name/guest</code>. Revoking a member also revokes everyone below them.</p>
+          <p class="hint">Each invitation is a member's identity. Send them the link. Revoking a member also revokes everyone below them.</p>
           <form onsubmit={(e) => { e.preventDefault(); onCreate(userInput); userInput = ""; }}>
             <div class="field">
               <label for="key-user">member name</label>

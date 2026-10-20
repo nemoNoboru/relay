@@ -19,7 +19,7 @@ const dec = new TextDecoder();
 
 /** The key rides in the fragment, which browsers never send to the server. */
 export const inviteLink = (origin: string, key: string): string =>
-  `${origin}/_relay/home.html#${new URLSearchParams({ key })}`;
+  `${origin}/#${new URLSearchParams({ key })}`;
 
 export const readInvite = (hash: string) => {
   const p = new URLSearchParams(hash.replace(/^#/, ""));

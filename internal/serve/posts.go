@@ -21,60 +21,62 @@ type Author struct {
 // PostView is a post plus the author and the two URLs a reader needs.
 type PostView struct {
 	social.Post
-	Author    Author        `json:"author"`
-	URL       string        `json:"url"`
-	PostURL   string        `json:"postUrl"`
-	AuthorURL string        `json:"authorUrl"`
-	ImageURL  string        `json:"imageUrl,omitempty"`
-	Comments  []CommentView `json:"comments"`
+	Author       Author        `json:"author"`
+	URL          string        `json:"url"`
+	PostURL      string        `json:"postUrl"`
+	AuthorURL    string        `json:"authorUrl"`
+	ImageURL     string        `json:"imageUrl,omitempty"`
+	TemplateName string        `json:"templateName,omitempty"`
+	Comments     []CommentView `json:"comments"`
 }
 
-// Posts serves the member-only post index surface:
+// Posts serves the post index surface. Reads are public; only comments and
+// publishing require a live member.
 //
 //	GET /_relay/v1/feed
 //	GET /_relay/v1/posts/<site>
+//	GET /_relay/v1/people
 //	GET /_relay/v1/people/<member-id>
-//
-// Comments and template publishing are later phases.
 type Posts struct {
-	node     domain.Name
-	ks       *KeyStore
-	posts    *social.Store
-	comments *social.CommentStore
+	node      domain.Name
+	ks        *KeyStore
+	posts     *social.Store
+	comments  *social.CommentStore
+	templates *TemplateStore
 }
 
 // NewPosts returns the post index handler for a node.
-func NewPosts(node domain.Name, ks *KeyStore, posts *social.Store, comments *social.CommentStore) *Posts {
-	return &Posts{node: node, ks: ks, posts: posts, comments: comments}
+func NewPosts(node domain.Name, ks *KeyStore, posts *social.Store, comments *social.CommentStore, templates *TemplateStore) *Posts {
+	return &Posts{node: node, ks: ks, posts: posts, comments: comments, templates: templates}
 }
 
-// ServeHTTP routes the post index surface. Everything is member-only.
+// ServeHTTP routes the post index surface.
 func (p *Posts) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.NotFound(w, r)
 		return
 	}
-	member, _, ok := memberFromRequest(p.ks, r)
-	if !ok {
-		writeError(w, http.StatusUnauthorized, "session_required", "open your invitation link to sign in")
-		return
-	}
+	// Reads are public; the viewer is resolved only to mark a comment "mine".
+	// A guest has an empty id, so mine is always false for them.
+	viewer, _, _ := memberFromRequest(p.ks, r)
 	path := strings.TrimSuffix(r.URL.Path, "/")
 	switch {
 	case path == "/_relay/v1/feed":
-		p.feed(w, r, member)
-	case strings.HasPrefix(path, "/_relay/v1/posts/"):
-		p.post(w, member, strings.TrimPrefix(path, "/_relay/v1/posts/"))
+		p.feed(w, r, viewer.ID)
+	case path == "/_relay/v1/people":
+		p.people(w)
 	case strings.HasPrefix(path, "/_relay/v1/people/"):
-		p.profile(w, r, member, strings.TrimPrefix(path, "/_relay/v1/people/"))
+		p.profile(w, r, viewer.ID, strings.TrimPrefix(path, "/_relay/v1/people/"))
+	case strings.HasPrefix(path, "/_relay/v1/posts/"):
+		p.post(w, viewer.ID, strings.TrimPrefix(path, "/_relay/v1/posts/"))
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func (p *Posts) feed(w http.ResponseWriter, r *http.Request, member Member) {
+func (p *Posts) feed(w http.ResponseWriter, r *http.Request, viewerID string) {
 	page, next := p.page(r, p.posts.List(), func(social.Post) bool { return true })
-	out := p.views(page, member.ID)
+	out := p.views(page, viewerID)
 	reply := map[string]any{"posts": out}
 	if next != "" {
 		reply["next"] = next
@@ -82,7 +84,7 @@ func (p *Posts) feed(w http.ResponseWriter, r *http.Request, member Member) {
 	writeJSON(w, http.StatusOK, reply)
 }
 
-func (p *Posts) post(w http.ResponseWriter, member Member, site string) {
+func (p *Posts) post(w http.ResponseWriter, viewerID, site string) {
 	if site == "" || strings.Contains(site, "/") {
 		writeError(w, http.StatusNotFound, "not_found", "no post")
 		return
@@ -92,10 +94,10 @@ func (p *Posts) post(w http.ResponseWriter, member Member, site string) {
 		writeError(w, http.StatusNotFound, "not_found", "no post "+site)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"post": p.views([]social.Post{post}, member.ID)[0]})
+	writeJSON(w, http.StatusOK, map[string]any{"post": p.views([]social.Post{post}, viewerID)[0]})
 }
 
-func (p *Posts) profile(w http.ResponseWriter, r *http.Request, viewer Member, memberID string) {
+func (p *Posts) profile(w http.ResponseWriter, r *http.Request, viewerID, memberID string) {
 	if memberID == "" || strings.Contains(memberID, "/") {
 		writeError(w, http.StatusNotFound, "not_found", "no member")
 		return
@@ -113,7 +115,7 @@ func (p *Posts) profile(w http.ResponseWriter, r *http.Request, viewer Member, m
 		}
 	}
 	page, next := p.page(r, all, func(post social.Post) bool { return post.Member == memberID })
-	out := p.views(page, viewer.ID)
+	out := p.views(page, viewerID)
 	reply := map[string]any{"member": member, "posts": out, "total": total}
 	if next != "" {
 		reply["next"] = next
@@ -121,10 +123,20 @@ func (p *Posts) profile(w http.ResponseWriter, r *http.Request, viewer Member, m
 	writeJSON(w, http.StatusOK, reply)
 }
 
+// people lists the node's live members. It is the public directory: names and
+// bios only, no tokens.
+func (p *Posts) people(w http.ResponseWriter) {
+	writeJSON(w, http.StatusOK, map[string]any{"members": p.ks.LiveMembers()})
+}
+
 func (p *Posts) views(posts []social.Post, currentMember string) []PostView {
 	out := make([]PostView, 0, len(posts))
 	for _, post := range posts {
-		out = append(out, postView(p.node, p.ks, p.comments, post, currentMember))
+		v := postView(p.node, p.ks, p.comments, post, currentMember)
+		if p.templates != nil {
+			v.TemplateName = p.templates.Name(post.Template)
+		}
+		out = append(out, v)
 	}
 	return out
 }

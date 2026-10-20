@@ -10,5 +10,12 @@ import "embed"
 // page (technicals.html), and their shared stylesheet. There is no generator;
 // the binary embeds whatever is present at build time.
 //
-//go:embed index.html technicals.html styles.css
+//go:embed host.html technicals.html styles.css
 var SiteFS embed.FS
+
+// FontsFS embeds the self-hosted webfonts and their @font-face stylesheet.
+// The node serves them at /fonts/, so neither the public site nor the owner UI
+// has to load fonts from Google Fonts at runtime.
+//
+//go:embed web/fonts
+var FontsFS embed.FS

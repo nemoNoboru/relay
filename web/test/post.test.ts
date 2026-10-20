@@ -9,6 +9,8 @@ import { writable } from "svelte/store";
 import type { PostState } from "../src/post/state";
 import PostApp from "../src/ui/PostPage.svelte";
 
+const noop = (): void => {};
+
 const POST = {
   id: "post_1",
   site: "sunday-walk",
@@ -16,6 +18,7 @@ const POST = {
   title: "Sunday walk",
   summary: "Six photos from the canal.",
   template: "gallery",
+  templateName: "Gallery",
   publishedAt: "2026-10-19T16:04:00Z",
   updatedAt: "2026-10-19T16:04:00Z",
   author: { id: "dk_1", displayName: "Alice" },
@@ -25,33 +28,45 @@ const POST = {
   comments: [],
 } as const;
 
-const noop = (): void => {};
+const ME = {
+  member: { id: "dk_1", user: "alice", displayName: "Alice", bio: "", created: "2026-10-19T12:00:00Z" },
+  node: { name: "my-group", members: 12 },
+} as const;
 
 const renderPost = (state: PostState): PromiseLike<string> =>
   render(PostApp, {
     props: {
       postState: writable<PostState>(state),
+      onSignIn: noop,
+      onSignOut: noop,
       onComment: noop,
       onDeleteComment: noop,
     },
   }).then((out) => out.body);
 
 describe("PostPage.svelte", () => {
-  it("renders the post metadata, iframe and comment form", async () => {
+  it("renders the post publicly with no write controls for a guest", async () => {
     const html = await renderPost({ phase: "ready", post: POST });
     expect(html).toContain("Sunday walk");
     expect(html).toContain("Six photos from the canal.");
     expect(html).toContain("Alice");
-    expect(html).toContain("gallery");
+    expect(html).toContain("Gallery");
     expect(html).toContain('src="/my-group/sunday-walk/"');
-    expect(html).toContain("Talk under the post");
-    expect(html).toContain("Post comment");
-    expect(html).toContain("No comments yet.");
+    expect(html).toContain("Comments");
+    expect(html).not.toContain("Reply");
+  });
+
+  it("shows the comment form to a member", async () => {
+    const html = await renderPost({ phase: "ready", me: ME, post: POST });
+    expect(html).toContain("Add a comment…");
+    expect(html).toContain("Reply");
+    expect(html).toContain("sign out");
   });
 
   it("renders comments with the sanitized body and delete for own comments", async () => {
     const html = await renderPost({
       phase: "ready",
+      me: ME,
       post: POST,
       comments: [
         {
@@ -70,8 +85,8 @@ describe("PostPage.svelte", () => {
     expect(html).toContain("Delete");
   });
 
-  it("shows the signed-out state", async () => {
-    const html = await renderPost({ phase: "signedOut" });
-    expect(html).toContain("an invitation");
+  it("shows the not-found state", async () => {
+    const html = await renderPost({ phase: "error", error: "No such post on this node." });
+    expect(html).toContain("No such post on this node.");
   });
 });

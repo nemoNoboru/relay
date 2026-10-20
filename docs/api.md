@@ -419,7 +419,10 @@ These endpoints are contracts for future work, not built features. Phases 1–4
 (member session, feed, profiles, post wrappers, comments, and templates) are
 built; Phase 5 is host operations. The product rules are in
 [`pivot-plan.md`](pivot-plan.md), [`invites.md`](invites.md), and
-[`publishing.md`](publishing.md).
+[`publishing.md`](publishing.md). Further proposals are referenced below:
+[`navigation-pivot.md`](navigation-pivot.md),
+[`indieweb-syndication.md`](indieweb-syndication.md),
+[`indieauth.md`](indieauth.md), and [`accounts.md`](accounts.md).
 
 ### Admin additions
 
@@ -444,6 +447,41 @@ GET /_relay/v1/node
 This is not a public directory and must not list members or posts to
 unauthenticated callers. It is useful for a future "is this node alive?" check
 and for the home header.
+
+### Navigation & feed-first pivot (proposal)
+
+From [`navigation-pivot.md`](navigation-pivot.md). Not built.
+
+- `/` serves the public feed (no session); `/host` and `/landing` serve the
+  hosting pitch; `/index.html` redirects to `/host`; `/_relay/home.html`
+  redirects to `/`.
+- Read endpoints become public: `GET /_relay/v1/feed`,
+  `GET /_relay/v1/posts/<site>`, `GET /_relay/v1/people/<id>/posts`,
+  `GET /_relay/v1/posts/<site>/comments`, and `GET /_relay/v1/templates`
+  (list only). Writes stay member-only.
+- New `GET /_relay/v1/people` (public members directory).
+- The feed/post JSON gains `templateName`.
+- An optional `--members-only` flag restores the old members-only reads.
+
+### IndieWeb: feeds, Webmention, Micropub, IndieAuth (proposal)
+
+From [`indieweb-syndication.md`](indieweb-syndication.md),
+[`indieauth.md`](indieauth.md), and [`accounts.md`](accounts.md). Not built.
+
+| Method | Path | Auth | Result |
+|---|---|---|---|
+| `GET` | `/_relay/v1/feed.json` | none | JSON Feed 1.1 of posts |
+| `POST` | `/_relay/v1/webmention` | none | Accept a source/target mention; verified + sanitized |
+| `POST` | `/_relay/v1/micropub` | IndieAuth token | Create a post from MF2 (`h=entry`) |
+| `GET` | `/_relay/v1/micropub?q=syndicate-to` | IndieAuth token | List syndication targets |
+| `GET` | `/_relay/v1/indieauth/metadata` | none | IndieAuth server metadata |
+| `GET`/`POST` | `/_relay/v1/indieauth/authorization` | member (invitation or passkey) | Authorization endpoint |
+| `POST` | `/_relay/v1/indieauth/token` | none (PKCE) | Token endpoint (`access_token`, `me`) |
+| `POST` | `/_relay/v1/indieauth/revocation` | token | Revoke a token |
+| `POST` | `/_relay/v1/indieauth/introspection` | internal | Introspect a token (RFC 7662 + `me`) |
+
+Profile pages emit `rel="indieauth-metadata"` and `rel="micropub"` links; the
+feed, post, and profile pages carry `h-feed`/`h-entry`/`h-card` markup.
 
 ---
 

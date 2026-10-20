@@ -5,19 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
     <title>Publish a page — Relay</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
     <link rel="stylesheet" href="./shared/styles.css" />
   </head>
   <body>
     <header class="bar">
       <div class="wrap">
-        <a class="brand" href="../"><span class="mark">R</span> RELAY</a>
+        <a class="brand" href="/"><span class="mark">R</span> RELAY</a>
         <nav class="main">
-          <a href="./home.html">Your home</a>
-          <a href="#pub">Publish</a>
-          <a href="#what">What is this</a>
+          <a href="/">Home</a>
+          <a href="./publish.html">Publish</a>
+          <a href="/_relay/people">People</a>
         </nav>
         <span class="stamp">Publish a page</span>
       </div>
@@ -31,10 +29,8 @@
         <details class="templates-install">
           <summary>Install a template from a .tar</summary>
           <p class="hint">
-            A template is a folder with <code>relay-template.json</code>,
-            <code>prepublish.html</code>, and <code>publish.js</code>. Tar its
-            contents, share the file, and install it here. Template code runs in
-            the browser; only install templates from people you trust.
+            Template code runs in your browser. Only install templates from
+            people you trust.
           </p>
           <form id="template-install">
             <input id="template-tar" type="file" accept=".tar,application/x-tar" required />
@@ -49,7 +45,7 @@
         <span class="wedge" aria-hidden="true"></span>
         <p class="invited" id="invited" hidden>You're invited to publish</p>
         <h1>Put something <span>up</span></h1>
-        <p class="pubsub">Drop a page, some files or a Markdown note. It goes live the moment you press Publish. No account, nothing to install.</p>
+        <p class="pubsub">Drop a page, some files or a Markdown note.</p>
 
         <form id="pub" class="pub">
           <div class="field">
@@ -77,48 +73,10 @@
         </form>
       </section>
 
-      <section class="prose what" id="what">
-        <h2>What is Relay?</h2>
-        <p>
-          <b>A micro-social network for you and your real friends.</b> The page
-          you are on belongs to a server someone in the group keeps — a friend,
-          a club, a reading group — not a company. Drop your files above and
-          they are online. There is no account to make, nothing to install,
-          and no bill at the end of the month.
-        </p>
-        <h3>Why a node instead of a platform?</h3>
-        <p>
-          Because the group should own the place. A node is one computer, one
-          program, and one data folder, looked after by someone you can talk
-          to. The pages are ordinary files at ordinary addresses. Nobody sits
-          between you and your friends counting the visit.
-        </p>
-        <p>
-          The group is small on purpose: a handful of people, invited by each
-          other. The plan is a quiet home where you see what your friends
-          shared, in the order they shared it — no public feed to perform for
-          and no algorithm deciding who gets seen.
-        </p>
-        <h3>What can I put here?</h3>
-        <p>
-          Photos, a link with a note, a zine, a page of writing, a poster for
-          something happening on your street. If all you have is a single
-          Markdown file, drop that: it is turned into a page for you. Each
-          upload replaces the whole page, and the last ten versions are kept
-          in case you want one back. The templates above make the common kinds
-          of post easy.
-        </p>
-        <p class="aside">
-          Want one of these servers for your own group? <a href="../">Anyone can
-          keep a node</a> — it is one program on any computer, an old laptop
-          included.
-        </p>
-      </section>
-
       <section class="pubcard" id="invite" hidden>
         <span class="wedge" aria-hidden="true"></span>
         <h2>Invite someone</h2>
-        <p class="pubsub">Your invitation is yours to pass on. Make a link for someone you trust and they get their own place in the group, on the same terms you did. Revoking you would cut them off too.</p>
+        <p class="pubsub">Make a link for someone you trust.</p>
         <form id="inviteform" class="pub">
           <div class="field">
             <label for="guest">Who are you inviting?</label>
@@ -133,24 +91,18 @@
       <aside class="prose assist" id="assistants">
         <h3>For AI assistants</h3>
         <p class="copyask">
-          Using Claude or another assistant? Copy this, paste it into the chat,
-          and tell it where your page is.
+          Copy this and paste it into your assistant.
         </p>
         <button class="btn solid" id="copyai" type="button">Copy instructions for Claude</button>
         <p>
-          You were sent a link to this page. The invitation key is the
-          <code>key</code> value after <code>#</code> in that link; never
-          print it or send it anywhere else. To publish, send a tar of the
-          page to this server:
+          The key is the value after <code>#</code> in your invite link —
+          never share it.
         </p>
         <pre>tar -cf - -C PAGE_FOLDER . | curl --data-binary @- \
   -H "Authorization: Bearer KEY" \
   https://THIS-SERVER/_relay/v1/sites/PAGE_NAME/deploy</pre>
         <p>
-          <code>THIS-SERVER</code> is the host of the link. Page names are
-          lowercase letters, numbers and hyphens. The JSON reply's
-          <code>url</code> field is the page's address. Each upload replaces
-          the whole page. More detail:
+          Page names are lowercase letters, numbers and hyphens. More:
           <a href="./skills/relay-deploy/SKILL.md">the publishing instructions</a>.
         </p>
       </aside>

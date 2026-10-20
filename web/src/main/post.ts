@@ -1,35 +1,41 @@
-/** Post wrapper: the site name comes from /_relay/posts/<site>. */
+/** Post wrapper: the site name comes from /_relay/posts/<site>. Reads are public. */
 import { Effect } from "effect";
 import { mount } from "svelte";
 import { writable } from "svelte/store";
 
 import { Client } from "../api/client";
 import type { ApiError } from "../api/client";
+import { readToken } from "../invite";
+import { addComment, deleteComment, establishSession, fetchComments, fetchMe, fetchPost, signOut } from "../member/ops";
 import { initialPost } from "../post/state";
-import { addComment, deleteComment, fetchComments, fetchPost } from "../member/ops";
+import type { PostState } from "../post/state";
 import PostApp from "../ui/PostPage.svelte";
 
 const root = document.getElementById("app");
 if (root === null) throw new Error("post.html is missing #app");
 
-const store = writable(initialPost());
-const set = (patch: Partial<ReturnType<typeof initialPost>>): void => store.update((s) => ({ ...s, ...patch }));
+const store = writable<PostState>(initialPost());
+const set = (patch: Partial<PostState>): void => store.update((s) => ({ ...s, ...patch }));
 
 const site = decodeURIComponent(location.pathname.replace(/^.*\/posts\//, "").replace(/\/$/, ""));
 const run = <A>(eff: Effect.Effect<A, ApiError, Client>): Promise<A> =>
   Effect.runPromise(eff.pipe(Effect.provide(Client.layer())));
+
+const loadMe = async (): Promise<PostState["me"]> => {
+  try {
+    return await run(fetchMe());
+  } catch (err) {
+    if ((err as ApiError).status === 401) return undefined;
+    throw err;
+  }
+};
 
 const loadComments = async (): Promise<void> => {
   try {
     const reply = await run(fetchComments(site));
     set({ comments: reply.comments, commentError: undefined });
   } catch (err) {
-    const api = err as ApiError;
-    if (api.status === 401) {
-      set({ phase: "signedOut" });
-    } else {
-      set({ commentError: api.message });
-    }
+    set({ commentError: (err as ApiError).message });
   }
 };
 
@@ -59,26 +65,66 @@ const removeComment = async (id: string): Promise<void> => {
   }
 };
 
+const signIn = async (raw: string): Promise<void> => {
+  const token = readToken(raw);
+  if (token === "") {
+    set({ signInError: "Paste an invitation key or link." });
+    return;
+  }
+  set({ busy: true, signInError: undefined });
+  try {
+    const me = await run(establishSession(token));
+    set({ me, busy: false });
+    await loadComments();
+  } catch (err) {
+    const api = err as ApiError;
+    set({
+      busy: false,
+      signInError: api.status === 401 ? "That invitation is not valid or has been revoked." : api.message,
+    });
+  }
+};
+
+const leave = async (): Promise<void> => {
+  set({ busy: true });
+  try {
+    await run(signOut());
+  } catch {
+    // The cookie is cleared by the response; the next /me settles it.
+  }
+  set({ me: undefined, busy: false, signInError: undefined });
+  await loadComments();
+};
+
 mount(PostApp, {
   target: root,
   props: {
     postState: store,
+    onSignIn: (token: string) => void signIn(token),
+    onSignOut: () => void leave(),
     onComment: (body: string) => void comment(body),
     onDeleteComment: (id: string) => void removeComment(id),
   },
 });
 
-if (site === "") {
-  set({ phase: "error", error: "No post in this address." });
-} else {
-  void run(fetchPost(site)).then(
-    (reply) => {
-      set({ phase: "ready", post: reply.post, error: undefined });
-      void loadComments();
-    },
-    (err: ApiError) => set({
-      phase: err.status === 401 ? "signedOut" : "error",
-      error: err.status === 401 ? undefined : err.status === 404 ? "No such post on this node." : err.message,
-    }),
-  );
-}
+const boot = async (): Promise<void> => {
+  set({ phase: "loading" });
+  if (site === "") {
+    set({ phase: "error", error: "No post in this address." });
+    return;
+  }
+  try {
+    const me = await loadMe();
+    const reply = await run(fetchPost(site));
+    set({ phase: "ready", me, post: reply.post, error: undefined });
+    await loadComments();
+  } catch (err) {
+    const api = err as ApiError;
+    set({
+      phase: "error",
+      error: api.status === 404 ? "No such post on this node." : api.message,
+    });
+  }
+};
+
+void boot();

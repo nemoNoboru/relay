@@ -58,6 +58,7 @@ export const Post = Schema.Struct({
   title: Schema.String,
   summary: Schema.optional(Schema.String),
   template: Schema.String,
+  templateName: Schema.optional(Schema.String),
   image: Schema.optional(Schema.String),
   imageUrl: Schema.optional(Schema.String),
   publishedAt: Schema.String,
@@ -73,6 +74,11 @@ export const Post = Schema.Struct({
 export const Feed = Schema.Struct({
   posts: Schema.Array(Post),
   next: Schema.optional(Schema.String),
+});
+
+/** The public member directory. */
+export const Members = Schema.Struct({
+  members: Schema.Array(Member),
 });
 
 export const Profile = Schema.Struct({
@@ -95,5 +101,6 @@ export type Comment = (typeof Comment)["Type"];
 export type Comments = (typeof Comments)["Type"];
 export type CommentReply = (typeof CommentReply)["Type"];
 export type Feed = (typeof Feed)["Type"];
+export type Members = (typeof Members)["Type"];
 export type Profile = (typeof Profile)["Type"];
 export type PostReply = (typeof PostReply)["Type"];
