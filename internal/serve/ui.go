@@ -21,12 +21,12 @@ func UIHandler() (http.Handler, error) {
 	fileServer := http.FileServer(http.FS(dist))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/_relay" || r.URL.Path == "/_relay/" {
-			http.Redirect(w, r, "/_relay/home.html", http.StatusFound)
+			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
-		// Profile and post wrappers are single shells whose clients read the
-		// id/site from the path. Any path under the prefix gets the shell.
-		if strings.HasPrefix(r.URL.Path, "/_relay/people/") {
+		// The people directory and each profile share one shell; the client
+		// reads the id (or its absence) from the path.
+		if r.URL.Path == "/_relay/people" || r.URL.Path == "/_relay/people/" || strings.HasPrefix(r.URL.Path, "/_relay/people/") {
 			http.ServeFileFS(w, r, dist, "people.html")
 			return
 		}

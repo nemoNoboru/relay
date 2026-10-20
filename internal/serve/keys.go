@@ -229,6 +229,21 @@ func (ks *KeyStore) LiveCount() int {
 	return n
 }
 
+// LiveMembers returns the node's live members, sorted by display name. It is
+// the public directory view: no tokens, no revoked members.
+func (ks *KeyStore) LiveMembers() []Member {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	out := make([]Member, 0, len(ks.file.Keys))
+	for _, k := range ks.file.Keys {
+		if !k.Revoked {
+			out = append(out, memberOf(k))
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].DisplayName < out[j].DisplayName })
+	return out
+}
+
 // UpdateProfile changes a member's display name and bio. An empty display
 // name resets the view to the fallback (the last segment of User).
 func (ks *KeyStore) UpdateProfile(token, displayName, bio string) (Member, bool, error) {

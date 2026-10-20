@@ -60,11 +60,6 @@ func (c *Comments) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Comments) onPost(w http.ResponseWriter, r *http.Request, site string) {
-	member, _, ok := memberFromRequest(c.ks, r)
-	if !ok {
-		writeError(w, http.StatusUnauthorized, "session_required", "open your invitation link to sign in")
-		return
-	}
 	if site == "" || strings.Contains(site, "/") {
 		writeError(w, http.StatusNotFound, "not_found", "no post")
 		return
@@ -75,8 +70,13 @@ func (c *Comments) onPost(w http.ResponseWriter, r *http.Request, site string) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		c.list(w, member, site)
+		c.list(w, r, site)
 	case http.MethodPost:
+		member, _, ok := memberFromRequest(c.ks, r)
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "session_required", "open your invitation link to sign in")
+			return
+		}
 		if !sameOrigin(r) {
 			writeError(w, http.StatusForbidden, "bad_origin", "request origin does not match this node")
 			return
@@ -87,11 +87,12 @@ func (c *Comments) onPost(w http.ResponseWriter, r *http.Request, site string) {
 	}
 }
 
-func (c *Comments) list(w http.ResponseWriter, member Member, site string) {
+func (c *Comments) list(w http.ResponseWriter, r *http.Request, site string) {
+	viewer, _, _ := memberFromRequest(c.ks, r)
 	list := c.comments.List(site)
 	out := make([]CommentView, 0, len(list))
 	for _, comment := range list {
-		out = append(out, commentView(c.ks, comment, member.ID))
+		out = append(out, commentView(c.ks, comment, viewer.ID))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"comments": out})
 }

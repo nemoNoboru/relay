@@ -104,6 +104,15 @@ func (s *TemplateStore) Open(id string) (fs.FS, social.Template, bool) {
 	return fsys, t, true
 }
 
+// Name returns a template's display name, or the id itself when the template
+// is unknown (e.g. a plain "custom" upload).
+func (s *TemplateStore) Name(id string) string {
+	if _, t, ok := s.Open(id); ok && t.Name != "" {
+		return t.Name
+	}
+	return id
+}
+
 // Install copies a template folder into <data>/templates/<id>. It is a host
 // action (the CLI); there is no public marketplace.
 func (s *TemplateStore) Install(srcDir string) (string, error) {
@@ -219,9 +228,15 @@ func NewTemplates(store *TemplateStore, ks *KeyStore) *Templates {
 }
 
 func (t *Templates) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// The manifest list is public so a public feed can render template names;
+	// installing and serving template files are member actions.
+	if strings.TrimSuffix(r.URL.Path, "/") == "/_relay/v1/templates" && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+		t.list(w)
+		return
+	}
 	if _, _, ok := memberFromRequest(t.ks, r); !ok {
 		if strings.Contains(r.Header.Get("Accept"), "text/html") {
-			http.Redirect(w, r, "/_relay/home.html", http.StatusFound)
+			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
 		writeError(w, http.StatusUnauthorized, "session_required", "open your invitation link to sign in")
@@ -235,19 +250,19 @@ func (t *Templates) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if strings.TrimSuffix(r.URL.Path, "/") == "/_relay/v1/templates" {
-		list, skipped := t.store.List()
-		for _, s := range skipped {
-			fmt.Fprintf(os.Stderr, "serve: skipping template: %s\n", s)
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"templates": list})
-		return
-	}
 	if !strings.HasPrefix(r.URL.Path, "/_relay/templates/") {
 		http.NotFound(w, r)
 		return
 	}
 	t.serveFile(w, r, strings.TrimPrefix(r.URL.Path, "/_relay/templates/"))
+}
+
+func (t *Templates) list(w http.ResponseWriter) {
+	list, skipped := t.store.List()
+	for _, s := range skipped {
+		fmt.Fprintf(os.Stderr, "serve: skipping template: %s\n", s)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"templates": list})
 }
 
 func (t *Templates) install(w http.ResponseWriter, r *http.Request) {

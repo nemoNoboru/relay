@@ -93,6 +93,12 @@ sunday-walk ./my-page`.
 | [`technicals.html`](technicals.html) | **Public page.** How it works and how to run it |
 | [`web/README.md`](web/README.md) | The owner UI (Svelte + Vite, embedded in the binary) |
 | [`docs/pivot.md`](docs/pivot.md) | The original pivot brief, kept as the source note |
+| [`docs/navigation-pivot.md`](docs/navigation-pivot.md) | **Proposal.** Feed-first navigation: `/` as the public feed, `/host` as the landing, one chrome |
+| [`docs/indieweb-syndication.md`](docs/indieweb-syndication.md) | **Proposal.** POSSE: feeds, Webmention, Micropub, syndication targets |
+| [`docs/indieauth.md`](docs/indieauth.md) | **Proposal.** IndieAuth as the node's sign-in and token layer |
+| [`docs/accounts.md`](docs/accounts.md) | **Proposal.** Member sign-in: invitation + passkeys via IndieAuth |
+| [`docs/ui-ux-pivot.md`](docs/ui-ux-pivot.md) | **Proposal.** The visual redesign: keeps the theme, makes the feed a friendly timeline. Three mockups under [`ui-experiments/`](ui-experiments/) |
+| [`docs/redesign.md`](docs/redesign.md) | **Spec.** The adopted whole-product redesign: quiet feed, soft sans (Nunito + Figtree), less-is-more copy |
 
 ## Develop
 
@@ -151,6 +157,16 @@ added the member cookie and welcome, post indexing/feed/profiles/wrappers,
 comments, and host comment deletion. Phase 4 adds nine templates, the publish
 endpoint, the template picker, and member-installable template tars. The next
 shippable step is Phase 5: host operations. See [`docs/pivot-plan.md`](docs/pivot-plan.md).
+
+**Proposals (not built):** the next product direction is documented in five
+research notes — [`docs/navigation-pivot.md`](docs/navigation-pivot.md)
+(feed-first navigation), [`docs/ui-ux-pivot.md`](docs/ui-ux-pivot.md) (the
+visual redesign, with three home-feed mockups under [`ui-experiments/`](ui-experiments/)),
+[`docs/indieweb-syndication.md`](docs/indieweb-syndication.md) (POSSE),
+[`docs/indieauth.md`](docs/indieauth.md) (sign-in and token layer), and
+[`docs/accounts.md`](docs/accounts.md) (member sign-in). They are designs, not
+shipped behaviour. The chosen visual direction is specified in
+[`docs/redesign.md`](docs/redesign.md).
 
 Free software, owned by no one. Keep the server, invite your people, share what
 you make.

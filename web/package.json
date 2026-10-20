@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke": "node tools/smoke.mjs admin ready && node tools/smoke.mjs home signedout && node tools/smoke.mjs home ready"
+    "smoke": "node tools/smoke.mjs admin ready && node tools/smoke.mjs feed signedout && node tools/smoke.mjs feed ready"
   },
   "dependencies": {
     "effect": "^4.0.3",

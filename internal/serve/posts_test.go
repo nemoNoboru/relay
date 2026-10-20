@@ -51,10 +51,10 @@ func newPostsHandler(t *testing.T) (http.Handler, *serve.KeyStore, *social.Store
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewPosts("mynode", ks, store, comments), ks, store, comments, at, ak, bt, bk
+	return serve.NewPosts("mynode", ks, store, comments, serve.NewTemplateStore(data)), ks, store, comments, at, ak, bt, bk
 }
 
-func TestFeedIsChronologicalAndMemberOnly(t *testing.T) {
+func TestFeedIsChronologicalAndPublic(t *testing.T) {
 	h, _, store, _, at, ak, _, bk := newPostsHandler(t)
 	old := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
 	if _, err := store.Upsert(social.Post{Site: "older", Member: ak.ID, Title: "Older", PublishedAt: old}); err != nil {
@@ -64,8 +64,8 @@ func TestFeedIsChronologicalAndMemberOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if rec := doMember(t, h, http.MethodGet, "/_relay/v1/feed", "", "", ""); rec.Code != http.StatusUnauthorized {
-		t.Fatalf("unauthenticated feed = %d, want 401", rec.Code)
+	if rec := doMember(t, h, http.MethodGet, "/_relay/v1/feed", "", "", ""); rec.Code != http.StatusOK {
+		t.Fatalf("unauthenticated feed = %d, want 200", rec.Code)
 	}
 	rec := doMember(t, h, http.MethodGet, "/_relay/v1/feed", "", "", at)
 	if rec.Code != http.StatusOK {

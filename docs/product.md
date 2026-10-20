@@ -82,6 +82,10 @@ member of that node. That is the account.
 
 The mechanics are in [`invites.md`](invites.md).
 
+A planned convenience (not built) is a passkey for one-tap returning sign-in,
+keeping the invitation as recovery and revocation — see
+[`accounts.md`](accounts.md).
+
 ## Posts are microwebsites
 
 Relay already hosts static sites. The pivot keeps that core and makes it social:
@@ -109,6 +113,17 @@ The template and publish contract is in [`publishing.md`](publishing.md).
 | **Profile** | The page listing one member's posts. |
 | **Home** | The page listing every member's recent posts, newest first. |
 | **Comment** | A short reply under a post, visible to members. |
+
+## Relay and the IndieWeb
+
+Relay sits in the IndieWeb / "small web" neighbourhood: the same "own your
+data, small pieces loosely joined, no engagement mechanics" values as Are.na,
+Cohost, Pixelfed, and Micro.blog. The difference is that Relay is **group-first**
+— one node, one group, invitation as identity — where the IndieWeb is
+domain-first. [`navigation-pivot.md`](navigation-pivot.md) §4.1 covers the
+positioning; [`indieweb-syndication.md`](indieweb-syndication.md) and
+[`indieauth.md`](indieauth.md) cover the mechanics (feeds, Webmention, Micropub,
+IndieAuth). These are proposals, not built behaviour.
 
 ## Principles
 

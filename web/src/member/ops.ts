@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { ApiError, Client } from "../api/client";
-import { CommentReply, Comments, Feed, Me, PostReply, Profile } from "./schema";
+import { CommentReply, Comments, Feed, Me, Members, PostReply, Profile } from "./schema";
 
 /**
  * Member session, profile, and post-index effects. The node sets an
@@ -38,6 +38,12 @@ export const fetchFeed = (cursor?: string): Effect.Effect<Feed, ApiError, Client
     const client = yield* Client;
     const url = cursor ? `/_relay/v1/feed?cursor=${encodeURIComponent(cursor)}` : "/_relay/v1/feed";
     return yield* client.get(url, Feed);
+  });
+
+export const fetchMembers = (): Effect.Effect<Members, ApiError, Client> =>
+  Effect.gen(function* () {
+    const client = yield* Client;
+    return yield* client.get("/_relay/v1/people", Members);
   });
 
 export const fetchProfile = (memberID: string, cursor?: string): Effect.Effect<Profile, ApiError, Client> =>

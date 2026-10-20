@@ -1,0 +1,71 @@
+/* Relay — self-hosted webfonts.
+   Downloaded from Google Fonts and bundled so a node never needs to reach
+   fonts.googleapis.com. Oswald is a variable font covering weights 200–700;
+   Anton and Space Mono are static; Fraunces (400–700) and Karla (300–800)
+   are variable and are the warmer pairing used by the feed redesign
+   experiments. Nunito (200–1000) and Figtree (300–900) are the rounder,
+   sans-serif alternative pairing. Served at /fonts/fonts.css. */
+
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./anton-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url('./oswald-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./space-mono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./space-mono-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./fraunces-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('./karla-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url('./nunito-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('./figtree-var.woff2') format('woff2');
+}

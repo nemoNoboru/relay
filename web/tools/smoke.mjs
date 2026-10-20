@@ -3,12 +3,12 @@
  *
  * Usage:
  *   node tools/smoke.mjs admin ready
- *   node tools/smoke.mjs home signedout
- *   node tools/smoke.mjs home ready
+ *   node tools/smoke.mjs feed signedout
+ *   node tools/smoke.mjs feed ready
  *
  * The host console renders the sign-in form on load and must not fetch until
- * a password is entered. The member home calls /_relay/v1/me on load; the
- * stub answers either 401 (signed out) or a member payload.
+ * a password is entered. The feed calls /_relay/v1/me (optional) and
+ * /_relay/v1/feed (public); the stub answers 401 for /me when signed out.
  *
  * Stubs a minimal DOM, imports the entry bundle (which mounts the Svelte
  * component), waits one tick, and asserts the rendered HTML.
@@ -31,8 +31,8 @@ const resolveBundle = (page) => {
 const [page = "admin", scenario = "ready"] = process.argv.slice(2);
 const allowed =
   (page === "admin" && scenario === "ready") ||
-  (page === "home" && (scenario === "signedout" || scenario === "ready"));
-if (!allowed) throw new Error("usage: node tools/smoke.mjs <admin ready|home signedout|home ready>");
+  (page === "feed" && (scenario === "signedout" || scenario === "ready"));
+if (!allowed) throw new Error("usage: node tools/smoke.mjs <admin ready|feed signedout|feed ready>");
 const bundlePath = resolveBundle(page);
 
 class El {
@@ -43,6 +43,9 @@ class El {
     this.attributes = new Map();
     this.parentNode = null;
     this._text = null;
+    // Svelte's style directive writes `element.style.cssText` (or calls
+    // setProperty/removeProperty for object styles); give it a plain target.
+    this.style = { cssText: "", setProperty() {}, removeProperty() {} };
   }
   // Real DOM aliases Svelte's runtime reads (e.g. the input `checked`
   // setter probes nodeName/namespaceURI before touching the property).
@@ -305,10 +308,10 @@ globalThis.sessionStorage = {
   setItem: () => {},
   removeItem: () => {},
 };
-// The member home reads the invite fragment and may clean the URL.
+// The feed reads the invite fragment and may clean the URL.
 globalThis.location = {
   origin: "http://localhost",
-  pathname: "/_relay/home.html",
+  pathname: "/",
   search: "",
   hash: "",
 };
@@ -369,6 +372,13 @@ globalThis.fetch = (..._args) => {
   if (page === "admin") {
     return Promise.reject(new Error("the host console must not fetch before sign-in"));
   }
+  const url = String(_args[0]);
+  if (url.includes("/feed")) {
+    return Promise.resolve({ ok: true, status: 200, statusText: "OK", json: async () => ({ posts: [POST] }) });
+  }
+  if (url.includes("/people")) {
+    return Promise.resolve({ ok: true, status: 200, statusText: "OK", json: async () => ({ members: [] }) });
+  }
   if (scenario === "signedout") {
     return Promise.resolve({
       ok: false,
@@ -376,10 +386,6 @@ globalThis.fetch = (..._args) => {
       statusText: "Unauthorized",
       json: async () => ({ error: { code: "session_required", message: "sign in" } }),
     });
-  }
-  const url = String(_args[0]);
-  if (url.includes("/feed")) {
-    return Promise.resolve({ ok: true, status: 200, statusText: "OK", json: async () => ({ posts: [POST] }) });
   }
   return Promise.resolve({ ok: true, status: 200, statusText: "OK", json: async () => ME });
 };
@@ -418,17 +424,16 @@ if (page === "admin") {
   assert(html.includes("Connect"), "connect button rendered");
   assert(fetchCalls === 0, "fetch was never called (no saved token)");
 } else if (scenario === "signedout") {
-  assert(html.includes("You need"), "invitation prompt rendered");
-  assert(html.includes("an invitation"), "invitation copy rendered");
-  assert(html.includes("Open my home"), "sign-in action rendered");
-  assert(fetchCalls === 1, "the page asked for /me once");
+  assert(html.includes("Sign in"), "guest sign-in action rendered");
+  assert(html.includes("Sunday walk"), "public feed post rendered");
+  assert(fetchCalls === 3, "the page asked for /me, /feed and /people once each");
 } else {
-  assert(html.includes("Welcome,"), "welcome heading rendered");
   assert(html.includes("Alice"), "member name rendered");
   assert(html.includes("my-group"), "node name rendered");
-  assert(html.includes("Publish a page"), "publish action rendered");
+  assert(html.includes("Publish"), "publish nav rendered");
+  assert(html.includes("sign out"), "sign-out action rendered");
   assert(html.includes("Sunday walk"), "feed post rendered");
-  assert(fetchCalls === 2, "the page asked for /me and /feed once");
+  assert(fetchCalls === 3, "the page asked for /me, /feed and /people once each");
 }
 
 console.log(`${label} ✓`);

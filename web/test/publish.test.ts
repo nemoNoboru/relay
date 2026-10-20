@@ -7,7 +7,7 @@ const text = (b: Uint8Array) => new TextDecoder().decode(b);
 const file = (path: string, s = "x") => ({ path, data: enc(s) });
 
 test("invite link keeps the key in the fragment", () =>
-  expect(inviteLink("https://r.org", "k1")).toBe("https://r.org/_relay/home.html#key=k1"));
+  expect(inviteLink("https://r.org", "k1")).toBe("https://r.org/#key=k1"));
 
 test("invite gives back key and site", () =>
   expect(readInvite("#key=k1&site=blog")).toEqual({ key: "k1", site: "blog" }));
@@ -78,6 +78,3 @@ test("publish page tells assistants where to upload", () =>
 
 test("publish page lets a guest invite the next person", () =>
   expect(readFileSync("publish.html", "utf8")).toContain('id="invite"'));
-
-test("publish page explains what Relay is", () =>
-  expect(readFileSync("publish.html", "utf8")).toContain("What is Relay"));

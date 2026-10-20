@@ -8,6 +8,7 @@
     next,
     loading = false,
     error = "",
+    signedIn = false,
     onLoadMore,
     onComment,
     onDeleteComment,
@@ -16,6 +17,7 @@
     next?: string;
     loading?: boolean;
     error?: string;
+    signedIn?: boolean;
     onLoadMore: () => void;
     onComment: (site: string, body: string) => Promise<void>;
     onDeleteComment: (site: string, id: string) => Promise<void>;
@@ -36,14 +38,14 @@
   });
 </script>
 
-<div class="feedlist">
+<div class="feed">
   {#each posts as post (post.id)}
-    <PostCard {post} {onComment} {onDeleteComment} />
+    <PostCard {post} {signedIn} {onComment} {onDeleteComment} />
   {/each}
 </div>
 
 {#if loading}
-  <p class="hint feed-loading">Loading more…</p>
+  <p class="feed-loading">Loading more…</p>
 {/if}
 {#if error}
   <p class="warn">{error}</p>
