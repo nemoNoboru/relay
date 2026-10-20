@@ -3,13 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relay — a micro-social network for you and your real friends</title>
-<meta name="description" content="Relay is a micro-social network for you and your real friends: photos, links, writing and little websites on a server one of you keeps. Invite only. No accounts.">
+<title>Run a Relay — a micro-social network for you and your real friends</title>
+<meta name="description" content="Relay is a micro-social network you run yourselves: one binary, one data directory, invitation links instead of accounts.">
 <meta name="theme-color" content="#141210">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Relay — a micro-social network for you and your real friends">
-<meta property="og:description" content="A small social space you run yourselves: photos, links, writing and little websites on a server one of you keeps. Invitation only. No accounts.">
-<meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/fonts/fonts.css">
 <link rel="stylesheet" href="./styles.css">
 </head>
@@ -17,224 +13,47 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="#top"><span class="mark">R</span> RELAY</a>
+    <a class="brand" href="/"><span class="mark">R</span> relay</a>
     <nav class="main">
-      <a href="#what">What it is</a>
-      <a href="#how">Invitations</a>
-      <a href="#build">What's next</a>
+      <a href="/">Home</a>
       <a href="./technicals.html">Technicals</a>
     </nav>
-    <span class="stamp">Hosted by a friend</span>
   </div>
 </header>
 
-<main id="top">
-
-  <!-- HERO -->
+<main>
   <section class="hero">
     <div class="wrap">
-      <div class="claim">
-        <span class="kicker">Your people · your server · your place</span>
-        <h1>A <span class="rev">micro-social</span><br>network for you<br>and your <span class="red">real friends</span></h1>
-        <p class="lead"><b>Relay is a third place for your people.</b> Share photos, links, writing and little websites on a server one of you keeps. Invitation only. No accounts. Nobody counting.</p>
-        <div class="actions">
-          <a class="btn solid" href="#keep">Keep a node</a>
-          <a class="btn" href="./technicals.html">How it works</a>
-        </div>
-        <p class="meta">4–29 friends · Invitation links, not sign-ups<br>Hosted by someone you know</p>
-      </div>
+      <span class="kick">Run a node for your people</span>
+      <h1>Relay is a micro-social network you run yourselves.</h1>
+      <p class="lead">One binary on a computer someone in the group keeps. Invitation links instead of accounts, no company in the middle.</p>
 
-      <div class="art" aria-hidden="true">
-        <div class="frame"></div>
-        <div class="grid"></div>
-        <div class="circle"></div>
-        <div class="wedge"></div>
-        <div class="bar"></div>
-        <div class="word">RELAY</div>
-        <div class="tag">One server · one group</div>
-      </div>
-    </div>
-  </section>
-
-  <div class="band" aria-hidden="true">
-    <div class="track">
-      <span>Your people</span><span>Your server</span><span>Your pages</span><span>No accounts</span><span>No algorithm</span>
-      <span>Your people</span><span>Your server</span><span>Your pages</span><span>No accounts</span><span>No algorithm</span>
-    </div>
-  </div>
-
-  <!-- WHAT -->
-  <section class="what" id="what">
-    <div class="wrap">
-      <span class="kick">What lives here</span>
-      <h2>Everything your group<br>makes, in one place</h2>
-      <div class="prims">
-        <article class="prim">
-          <span class="num">01</span>
-          <h3>A page<br>for each person</h3>
-          <p>Everyone will have a profile: the photos, links, notes and pages they shared, newest first. No follower count, no bio SEO, no blue tick.</p>
-          <p class="foot">Profile page · planned</p>
-        </article>
-        <article class="prim">
-          <span class="num">02</span>
-          <h3>A home<br>for the group</h3>
-          <p>The node's home page will show what everyone posted, in the order it happened. Small enough to actually read. No ranking, no “for you”.</p>
-          <p class="foot">Home feed · planned</p>
-        </article>
-        <article class="prim">
-          <span class="num">03</span>
-          <h3>A post is<br>a page</h3>
-          <p>A post is a small website: a photo set, a link with a note, a piece of writing, a page you made. Comments sit underneath. No reposts.</p>
-          <p class="foot">Microwebsites · hosting live</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- INVITES -->
-  <section class="invites" id="how">
-    <div class="wrap">
-      <div class="invite-copy">
-        <span class="kick">Invitations, not accounts</span>
-        <h2>Your people<br>vouch for<br>your people</h2>
-        <p><b>There is no sign-up.</b> An invitation link carries a key. Opening it makes the browser a member of this node. That is the whole account system: no email, no password, no recovery questions.</p>
-        <p>A member can invite someone they trust. The host can revoke a person and everyone they brought in with one action. The group grows by vouching, not by going viral.</p>
-        <p class="aside"><a href="https://github.com/nemoNoboru/relay/blob/main/docs/invites.md">How invitations work</a></p>
-      </div>
-
-      <div class="treeboard" aria-label="An invitation tree: the host invites Alice, Bob and Dana; Alice invites two more people. Revoking Alice cuts off her branch." role="img">
-        <div class="tree-root">
-          <span class="tlabel">The node</span>
-          <b>my-group</b>
-          <small>kept by one of you</small>
-        </div>
-        <div class="tstem" aria-hidden="true"></div>
-        <div class="tree-level invited">
-          <div class="tmember"><span class="tlabel">invited</span><b>alice</b></div>
-          <div class="tmember"><span class="tlabel">invited</span><b>bob</b></div>
-          <div class="tmember"><span class="tlabel">invited</span><b>dana</b></div>
-        </div>
-        <div class="tstem short" aria-hidden="true"></div>
-        <div class="tree-level guests">
-          <div class="tmember small"><span class="tlabel">alice invited</span><b>sam</b></div>
-          <div class="tmember small red"><span class="tlabel">alice invited</span><b>kim</b></div>
-          <div class="tmember small ghost"><span class="tlabel">revoke alice</span><b>cut off too</b></div>
-        </div>
-        <p class="tnote">Revoke a person → everyone they invited loses their key.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- BUILD STATUS -->
-  <section class="build" id="build">
-    <div class="wrap">
-      <div class="build-head">
-        <span class="kick">The plan</span>
-        <h2>What is built.<br>What comes next.</h2>
-      </div>
-      <div class="status-grid">
-        <article class="status live">
-          <span class="tag">Today</span>
-          <h3>Hosting that works</h3>
-          <ul>
-            <li>Pages at real addresses under one host</li>
-            <li>Invitation links, delegated invites, cascade revoke</li>
-            <li>Atomic uploads and the last ten versions</li>
-            <li>One binary, one data directory, one backup</li>
-            <li>A host console for invitations and members</li>
-            <li>Open an invite once, stay signed in</li>
-            <li>A welcome page and editable profile</li>
-            <li>An infinite home feed and a profile for each person</li>
-            <li>Post pages that keep the page and its author together</li>
-            <li>Comments under every post, with host moderation</li>
-            <li>Note, link, gallery, article, songs, videos, carousel, Jet Set Radio and Longform templates</li>
-            <li>Install and share your own template tar</li>
-          </ul>
-        </article>
-        <article class="status next">
-          <span class="tag">Next</span>
-          <h3>The place around it</h3>
-          <ul>
-            <li>Backup/export and invite expiry</li>
-            <li>Host tools for limits and moderation polish</li>
-            <li>An embeddable comment panel on an isolated origin</li>
-          </ul>
-        </article>
-      </div>
-      <p class="aside">Built in the open, in phases. <a href="https://github.com/nemoNoboru/relay/blob/main/docs/pivot-plan.md">Read the pivot plan</a> · <a href="https://github.com/nemoNoboru/relay/blob/main/docs/product.md">What Relay is</a></p>
-    </div>
-  </section>
-
-  <!-- KEEP A NODE -->
-  <section class="keep" id="keep">
-    <div class="wrap">
-      <div class="keep-copy">
-        <span class="kick">Keep a node</span>
-        <h2>One command.<br>Your own press.</h2>
-        <p>An old laptop is enough. The node starts with the password <code>relay</code>; open the host console, change it, then make the first invitation.</p>
-<pre>curl -sSfL \
-  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+      <pre>curl -sSfL https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
 
 relay node --name my-group --data ~/relay --listen :8080</pre>
-        <ol class="steps">
-          <li><b>Sign in</b> at <a href="./_relay/admin.html">/_relay/admin.html</a> with <code>relay</code>, then choose your own password.</li>
-          <li><b>Make an invite</b> for each person. They open the link, drop a page, and are live.</li>
-          <li><b>They invite others</b> in turn. Revoke one key and everyone below it is cut off too.</li>
-        </ol>
-        <p class="aside"><a href="./technicals.html">Docker, Kubernetes and backups</a> · <a href="./_relay/publish.html">Open the publish page</a></p>
-      </div>
 
-      <div class="art small" aria-hidden="true">
-        <div class="frame"></div>
-        <div class="grid"></div>
-        <div class="circle"></div>
-        <div class="wedge"></div>
-        <div class="bar"></div>
-        <div class="word">NODE</div>
-        <div class="tag">No cloud required</div>
-      </div>
-    </div>
-  </section>
+      <ol class="steps">
+        <li><b>Sign in</b> at <a href="/_relay/admin.html">/_relay/admin.html</a> with <code>relay</code>, then choose your own password.</li>
+        <li><b>Make an invite</b> for each person. They open the link and are members.</li>
+        <li><b>They share pages and invite others.</b> Revoke one key and its branch is cut off.</li>
+      </ol>
 
-  <section class="cta">
-    <div class="wrap">
-      <h2>Keep the server.<br><em>Invite your people.</em></h2>
       <div class="actions">
-        <a class="btn solid" href="#keep">Keep a node</a>
+        <a class="btn solid" href="./technicals.html">How it works</a>
         <a class="btn" href="https://github.com/nemoNoboru/relay">Source</a>
       </div>
-      <p class="sub">No accounts · No ads · No algorithm · No growth plan</p>
     </div>
   </section>
-
 </main>
 
 <footer>
   <div class="wrap">
-    <p class="big">A place that belongs <em>to the people in it.</em></p>
     <p class="fine">
-      Free software · Owned by no one<br>
-      <a href="./technicals.html">Technicals</a> · <a href="https://github.com/nemoNoboru/relay">Source</a> · <a href="https://github.com/nemoNoboru/relay/blob/main/users-guide.md">User guide</a><br>
-      Red wedge after El Lissitzky, 1919
+      Free software · owned by no one<br>
+      <a href="./technicals.html">Technicals</a> · <a href="https://github.com/nemoNoboru/relay/blob/main/users-guide.md">User guide</a> · <a href="https://github.com/nemoNoboru/relay">Source</a>
     </p>
   </div>
 </footer>
 
-<script>
-  for (const pre of document.querySelectorAll('main pre')) {
-    const box = document.createElement('div');
-    const btn = document.createElement('button');
-    box.className = 'code';
-    btn.className = 'copy';
-    btn.type = 'button';
-    btn.textContent = 'Copy';
-    btn.onclick = () => navigator.clipboard.writeText(pre.innerText).then(() => {
-      btn.textContent = 'Copied';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
-    });
-    pre.replaceWith(box);
-    box.append(pre, btn);
-  }
-</script>
 </body>
 </html>
