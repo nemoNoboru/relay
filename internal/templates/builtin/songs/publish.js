@@ -12,7 +12,7 @@ const descriptionOf = (data) => String(data.get("description") ?? "");
 const trackName = (file) => String(file.name ?? "track").replace(/\.[^.]+$/, "");
 const selected = () => [...input.files];
 
-const style = `.tracks{list-style:none;display:flex;flex-direction:column;gap:14px;margin:1.4rem 0}.track{border:3px solid var(--ink);padding:12px 14px;background:var(--paper2)}.track b{display:block;font-family:ui-monospace,monospace;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}.track audio{width:100%;display:block}`;
+const style = `.tracks{list-style:none;display:flex;flex-direction:column;gap:14px;margin:1.4rem 0}.track{border:1px solid var(--hair);border-radius:12px;padding:12px 14px;background:var(--paper2)}.track b{display:block;font-family:Figtree,system-ui,sans-serif;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}.track audio{width:100%;display:block}`;
 
 const render = (data, sources) =>
   page({

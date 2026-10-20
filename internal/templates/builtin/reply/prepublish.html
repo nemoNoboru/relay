@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New reply — Relay</title>
+<link rel="stylesheet" href="/_relay/template/runtime.css">
+</head>
+<body class="tpl">
+<header class="tpl-bar">
+  <a class="tpl-brand" href="/"><span class="tpl-mark">R</span> RELAY</a>
+  <span class="tpl-note">New reply</span>
+</header>
+<div class="tpl-wrap">
+  <section class="tpl-card">
+    <span class="tpl-kicker">Reply</span>
+    <h1>Answer someone</h1>
+    <form id="form" class="tpl-form">
+      <div class="tpl-field">
+        <label for="url">In reply to</label>
+        <input id="url" name="url" type="url" required placeholder="https://…/the-post">
+      </div>
+      <div class="tpl-field">
+        <label for="body">Reply</label>
+        <textarea id="body" name="body" rows="6" required maxlength="12000" placeholder="What you'd say back. **bold**, *italic*, and [links](https://example.org) work."></textarea>
+      </div>
+      <div class="tpl-actions">
+        <button class="tpl-btn solid" type="submit" id="go">Publish reply</button>
+        <a class="tpl-btn" href="/">Cancel</a>
+      </div>
+      <p class="tpl-error" id="error" hidden></p>
+    </form>
+  </section>
+  <section class="tpl-preview">
+    <h2>Preview</h2>
+    <iframe class="tpl-frame" id="preview" title="Reply preview"></iframe>
+  </section>
+</div>
+<p class="tpl-foot"><a href="/_relay/publish.html">All publishing options</a></p>
+<script type="module" src="./publish.js"></script>
+</body>
+</html>

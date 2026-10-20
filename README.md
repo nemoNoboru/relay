@@ -30,7 +30,7 @@ through Phase 4; Phase 5 is host operations. Read
 - a member welcome page: open an invite once, stay signed in, edit your profile
 - an infinite chronological home feed, profile pages, and post wrappers with cover images
 - comments directly under every post in the feed and profile, with own-comment deletion and host moderation
-- nine post templates (Note, Link, Gallery, Article, Songs, Videos, Carousel, Jet Set Radio, Longform), a template picker, and member-installable template tars
+- eleven post templates (Note, Link, Gallery, Article, Songs, Videos, Carousel, Jet Set Radio, Longform, Reply, Event), a template picker, and member-installable template tars
 - `relay index` to backfill posts from sites that predate the index
 - native HTTPS or a reverse proxy
 
@@ -154,7 +154,7 @@ alongside the deploy skill every node serves at
 
 **Stage 0 (hosting MVP) and Phases 1–4 of the pivot are built.** Phases 1–3
 added the member cookie and welcome, post indexing/feed/profiles/wrappers,
-comments, and host comment deletion. Phase 4 adds nine templates, the publish
+comments, and host comment deletion. Phase 4 adds eleven templates, the publish
 endpoint, the template picker, and member-installable template tars. The next
 shippable step is Phase 5: host operations. See [`docs/pivot-plan.md`](docs/pivot-plan.md).
 

@@ -27,7 +27,7 @@ func TestBuiltinTemplatesAreListed(t *testing.T) {
 			t.Fatalf("%s manifest = %+v", info.ID, info.Template)
 		}
 	}
-	for _, id := range []string{"note", "link", "gallery", "article", "songs", "videos", "carousel", "jetset", "longform"} {
+	for _, id := range []string{"note", "link", "gallery", "article", "songs", "videos", "carousel", "jetset", "longform", "reply", "event"} {
 		if !ids[id] {
 			t.Fatalf("builtin template %q missing", id)
 		}
