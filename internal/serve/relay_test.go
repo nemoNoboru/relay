@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -278,6 +279,34 @@ func TestRelayRejectsBadWebhook(t *testing.T) {
 	rec := doRelay(t, rl, http.MethodPost, "/_relay/v1/relay", token, `{"url":"https://x.example","webhook":"ftp://hook.example"}`)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d %s, want 400", rec.Code, rec.Body)
+	}
+}
+
+func TestOEmbedURL(t *testing.T) {
+	cases := []struct{ src, want string }{
+		{"https://www.youtube.com/watch?v=abc", "https://www.youtube.com/oembed?url=" + url.QueryEscape("https://www.youtube.com/watch?v=abc") + "&format=json"},
+		{"https://youtu.be/abc", "https://www.youtube.com/oembed?url=" + url.QueryEscape("https://youtu.be/abc") + "&format=json"},
+		{"https://vimeo.com/123", "https://vimeo.com/api/oembed.json?url=" + url.QueryEscape("https://vimeo.com/123")},
+		{"https://example.com/", ""},
+	}
+	for _, tc := range cases {
+		if got := oembedURL(tc.src); got != tc.want {
+			t.Fatalf("oembedURL(%q) = %q, want %q", tc.src, got, tc.want)
+		}
+	}
+}
+
+func TestFetchOEmbed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"title":"You Should Check Out the Indie Web","author_name":"You've Got Kat","thumbnail_url":"https://i.ytimg.com/vi/abc/hqdefault.jpg"}`)
+	}))
+	defer srv.Close()
+	reply, err := fetchOEmbed(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply.Title != "You Should Check Out the Indie Web" || reply.AuthorName != "You've Got Kat" || reply.Thumbnail == "" {
+		t.Fatalf("reply = %+v", reply)
 	}
 }
 

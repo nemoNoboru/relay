@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -434,7 +435,7 @@ func relayDownload(ctx context.Context, source, dir string) (string, error) {
 		"--no-overwrites",
 		"--playlist-items", "1-24",
 		"--max-downloads", "24",
-		"--max-filesize", fmt.Sprintf("%dB", relayMaxPage),
+		"--max-filesize", strconv.FormatInt(relayMaxPage, 10),
 		"--write-thumbnail",
 		"--print", "%(title)s",
 		"-o", filepath.Join(dir, "%(id)s.%(ext)s"),
@@ -455,20 +456,72 @@ func relayDownload(ctx context.Context, source, dir string) (string, error) {
 	return "", nil
 }
 
+// oembedReply is the small slice of an oEmbed response the card needs.
+type oembedReply struct {
+	Title      string `json:"title"`
+	AuthorName string `json:"author_name"`
+	Thumbnail  string `json:"thumbnail_url"`
+}
+
+// oembedURL returns a provider's public oEmbed endpoint for a page, or ""
+// when the host has no known endpoint. It exists for hosts (YouTube, Vimeo)
+// that serve a metadata-free shell to anonymous clients.
+func oembedURL(source string) string {
+	u, err := url.Parse(source)
+	if err != nil {
+		return ""
+	}
+	host := strings.ToLower(u.Host)
+	switch {
+	case host == "youtube.com", host == "www.youtube.com", host == "m.youtube.com", host == "youtu.be":
+		return "https://www.youtube.com/oembed?url=" + url.QueryEscape(source) + "&format=json"
+	case host == "vimeo.com", strings.HasSuffix(host, ".vimeo.com"):
+		return "https://vimeo.com/api/oembed.json?url=" + url.QueryEscape(source)
+	}
+	return ""
+}
+
+func fetchOEmbed(ctx context.Context, raw string) (oembedReply, error) {
+	var reply oembedReply
+	b, err := httpGet(ctx, raw, 64<<10)
+	if err != nil {
+		return reply, err
+	}
+	if err := json.Unmarshal(b, &reply); err != nil {
+		return reply, fmt.Errorf("parse oembed: %w", err)
+	}
+	return reply, nil
+}
+
 // relayFetch builds the fallback card: the page's social preview metadata
-// plus a downloaded copy of its preview image.
+// plus a downloaded copy of its preview image. A known provider's oEmbed
+// endpoint is authoritative for the title (cleaner than og:title, and still
+// served when the page is a metadata-free login shell) and fills the
+// thumbnail when the page carried none.
 func relayFetch(ctx context.Context, source string) (relayCard, error) {
 	var card relayCard
-	page, err := httpGet(ctx, source, relayMaxHTML)
-	if err != nil {
-		return card, err
+	var image string
+	if page, err := httpGet(ctx, source, relayMaxHTML); err == nil {
+		meta := extractMeta(string(page))
+		card.Title = meta.title
+		card.Description = meta.description
+		image = meta.image
 	}
-	meta := extractMeta(string(page))
-	card.Title = meta.title
-	card.Description = meta.description
-	if meta.image != "" {
-		imgURL, err := resolveURL(source, meta.image)
-		if err == nil {
+	if oe := oembedURL(source); oe != "" {
+		if om, err := fetchOEmbed(ctx, oe); err == nil {
+			if om.Title != "" {
+				card.Title = om.Title
+			}
+			if card.Description == "" {
+				card.Description = om.AuthorName
+			}
+			if image == "" {
+				image = om.Thumbnail
+			}
+		}
+	}
+	if image != "" {
+		if imgURL, err := resolveURL(source, image); err == nil {
 			if b, ext, err := httpGetImage(ctx, imgURL); err == nil {
 				card.Image, card.ImageExt = b, ext
 			}
