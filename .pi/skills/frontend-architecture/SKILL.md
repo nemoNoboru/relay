@@ -9,8 +9,8 @@ The engineering standard for Relay's owner-facing frontend in `web/`. It covers
 the **public feed** (`feed.html`, served at `/`), **profiles** (`people.html`),
 the **post wrapper** (`post.html`), the **host console** (`admin.html`), the
 **publish page** (`publish.html`), and the **deploy guide** (`deploy.html`).
-The public landing (`host.html`) and technicals page are hand-written/generated
-HTML at the repository root and are not part of this bundle.
+The public landing (`host.html`) and the why page (`why.html`) are
+hand-written HTML at the repository root and are not part of this bundle.
 
 The product is a micro-social network for a group of friends. The frontend must
 not promise features that are not built. The pivot plan is

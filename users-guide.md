@@ -40,8 +40,6 @@ relay node --name my-group --data /var/lib/relay --listen :8080
 - Open `{origin}/_relay/admin.html`, sign in, and choose a new password before
   inviting anyone.
 - For HTTPS, pass `--tls-cert` and `--tls-key`, or put a reverse proxy in front.
-- Kubernetes and the other options are in
-  [`technicals.html`](technicals.html).
 
 Keep the data directory backed up. It contains the posts, the versions, the
 invitation keys, and the admin password.

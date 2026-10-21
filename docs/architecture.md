@@ -169,9 +169,9 @@ is never half-written.
 
 ### Embedded public site and owner UI
 
-`site.go` embeds `host.html`, `technicals.html`, and `styles.css` from the repo
+`site.go` embeds `host.html`, `why.html`, and `styles.css` from the repo
 root, plus the self-hosted webfonts in `web/fonts`. `internal/serve/landing.go`
-maps `/` to the built feed shell, `/host` to `host.html`, and `/technicals.html`
+maps `/` to the built feed shell, `/host` to `host.html`, and `/why`
 and `/styles.css` to their files; `serve.Fonts` serves the fonts at `/fonts/`.
 Everything else falls through to site serving.
 
@@ -202,7 +202,7 @@ cleanup. They polled endpoints the node never served.
   publish helpers), and a DOM-stub smoke test of the built home and host
   console. Go tests cover cursor pagination, comments, template manifests,
   install/remove, and publish validation.
-- Site: `index.html` and `technicals.html` are hand-written HTML. There is no
+- Site: `host.html` and `why.html` are hand-written HTML. There is no
   page generator; edits go directly into the files.
 - `make check` runs all of it; CI runs the same gates.
 
