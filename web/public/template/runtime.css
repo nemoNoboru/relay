@@ -11,7 +11,7 @@
 body.tpl{background:var(--paper);color:var(--ink);font-family:var(--body);font-weight:300;line-height:1.55;min-height:100vh}
 .tpl-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;background:rgba(240,230,210,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair);padding:0 22px;height:58px;position:sticky;top:0;z-index:5}
 .tpl-brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:700;font-size:.78rem;letter-spacing:.08em;text-transform:lowercase;color:var(--ink);text-decoration:none}
-.tpl-mark{display:grid;place-items:center;width:28px;height:28px;background:var(--red);color:var(--paper);border-radius:8px;font-family:var(--display);font-weight:800;font-size:1rem}
+.tpl-mark{display:block;width:20px;height:20px;background:var(--red);clip-path:polygon(0 0,100% 50%,0 100%);transform:rotate(-4deg);flex:0 0 auto}
 .tpl-note{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
 .tpl-wrap{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:26px;max-width:820px;margin:0 auto;padding:28px 22px 50px;align-items:start}
 .tpl-card{border:1px solid var(--hair);border-radius:12px;background:var(--surface);padding:24px 22px}
