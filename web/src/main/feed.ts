@@ -14,7 +14,7 @@ import type { ApiError } from "../api/client";
 import { initialFeed } from "../feed/state";
 import type { FeedState } from "../feed/state";
 import { readToken } from "../invite";
-import { addComment as addCommentOp, deleteComment as deleteCommentOp, establishSession, fetchFeed, fetchMe, fetchMembers, signOut } from "../member/ops";
+import { addComment as addCommentOp, deleteComment as deleteCommentOp, deletePost as deletePostOp, establishSession, fetchFeed, fetchMe, fetchMembers, signOut } from "../member/ops";
 import FeedApp from "../ui/Feed.svelte";
 
 const root = document.getElementById("app");
@@ -103,6 +103,15 @@ const removeComment = async (site: string, id: string): Promise<void> => {
   }
 };
 
+const removePost = async (site: string): Promise<void> => {
+  try {
+    await run(deletePostOp(site));
+    store.update((s) => ({ ...s, posts: s.posts.filter((p) => p.site !== site) }));
+  } catch (err) {
+    throw new Error((err as ApiError).message);
+  }
+};
+
 const load = async (): Promise<void> => {
   set({ phase: "loading", error: undefined, signInError: undefined });
   try {
@@ -170,6 +179,7 @@ mount(FeedApp, {
     onLoadMore: () => void loadMore(),
     onComment: comment,
     onDeleteComment: removeComment,
+    onDeletePost: removePost,
   },
 });
 

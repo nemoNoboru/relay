@@ -14,6 +14,7 @@
     onLoadMore,
     onComment,
     onDeleteComment,
+    onDeletePost,
   }: {
     feed: Writable<FeedState>;
     onSignIn: (token: string) => void;
@@ -21,6 +22,7 @@
     onLoadMore: () => void;
     onComment: (site: string, body: string) => Promise<void>;
     onDeleteComment: (site: string, id: string) => Promise<void>;
+    onDeletePost: (site: string) => Promise<void>;
   } = $props();
 </script>
 
@@ -55,9 +57,11 @@
           loading={$feed.loadingMore ?? false}
           error={$feed.feedError}
           signedIn={$feed.me !== undefined}
+          viewerId={$feed.me?.member.id}
           {onLoadMore}
           {onComment}
           {onDeleteComment}
+          {onDeletePost}
         >
           {#snippet children()}
             <a class="publish-cta" href="/_relay/publish.html">Publish your post</a>

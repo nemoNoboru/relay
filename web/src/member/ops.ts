@@ -77,3 +77,9 @@ export const deleteComment = (id: string): Effect.Effect<void, ApiError, Client>
     const client = yield* Client;
     return yield* client.del(`/_relay/v1/comments/${encodeURIComponent(id)}`);
   });
+
+export const deletePost = (site: string): Effect.Effect<void, ApiError, Client> =>
+  Effect.gen(function* () {
+    const client = yield* Client;
+    return yield* client.del(`/_relay/v1/posts/${encodeURIComponent(site)}`);
+  });

@@ -187,30 +187,9 @@ func (a *Admin) deletePost(w http.ResponseWriter, r *http.Request, site string) 
 		writeError(w, http.StatusBadRequest, "bad_name", err.Error())
 		return
 	}
-	if err := a.versions.Remove(name); err != nil {
+	if err := removeSite(name, a.versions, a.posts, a.comments, a.ks, a.reload); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", err.Error())
 		return
-	}
-	if a.posts != nil {
-		if _, err := a.posts.Delete(string(name)); err != nil {
-			writeError(w, http.StatusInternalServerError, "internal", err.Error())
-			return
-		}
-	}
-	if a.comments != nil {
-		if _, err := a.comments.DeletePost(string(name)); err != nil {
-			// The site and index are already gone; only the comment sweep
-			// failed. Report it, do not fail the delete.
-			fmt.Fprintf(os.Stderr, "serve: delete comments for %s: %v\n", name, err)
-		}
-	}
-	if err := a.ks.ForgetSite(string(name)); err != nil {
-		fmt.Fprintf(os.Stderr, "serve: forget site %s: %v\n", name, err)
-	}
-	if a.reload != nil {
-		if err := a.reload(); err != nil {
-			fmt.Fprintf(os.Stderr, "serve: reload after delete %s: %v\n", name, err)
-		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"site": string(name)})
 }

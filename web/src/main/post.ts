@@ -6,7 +6,7 @@ import { writable } from "svelte/store";
 import { Client } from "../api/client";
 import type { ApiError } from "../api/client";
 import { readToken } from "../invite";
-import { addComment, deleteComment, establishSession, fetchComments, fetchMe, fetchPost, signOut } from "../member/ops";
+import { addComment, deleteComment, deletePost, establishSession, fetchComments, fetchMe, fetchPost, signOut } from "../member/ops";
 import { initialPost } from "../post/state";
 import type { PostState } from "../post/state";
 import PostApp from "../ui/PostPage.svelte";
@@ -65,6 +65,16 @@ const removeComment = async (id: string): Promise<void> => {
   }
 };
 
+const removePost = async (): Promise<void> => {
+  set({ busy: true, commentError: undefined, notice: undefined });
+  try {
+    await run(deletePost(site));
+    location.assign("/");
+  } catch (err) {
+    set({ busy: false, commentError: (err as ApiError).message });
+  }
+};
+
 const signIn = async (raw: string): Promise<void> => {
   const token = readToken(raw);
   if (token === "") {
@@ -104,6 +114,7 @@ mount(PostApp, {
     onSignOut: () => void leave(),
     onComment: (body: string) => void comment(body),
     onDeleteComment: (id: string) => void removeComment(id),
+    onDeletePost: () => void removePost(),
   },
 });
 

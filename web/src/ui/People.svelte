@@ -15,6 +15,7 @@
     onLoadMore,
     onComment,
     onDeleteComment,
+    onDeletePost,
     onSave,
   }: {
     people: Writable<PeopleState>;
@@ -23,6 +24,7 @@
     onLoadMore: () => void;
     onComment: (site: string, body: string) => Promise<void>;
     onDeleteComment: (site: string, id: string) => Promise<void>;
+    onDeletePost: (site: string) => Promise<void>;
     onSave: (displayName: string, bio: string) => void;
   } = $props();
 </script>
@@ -115,9 +117,11 @@
             loading={$people.loadingMore ?? false}
             error={$people.error}
             signedIn={$people.me !== undefined}
+            viewerId={$people.me?.member.id}
             {onLoadMore}
             {onComment}
             {onDeleteComment}
+            {onDeletePost}
           />
         {/if}
       </section>

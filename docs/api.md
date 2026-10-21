@@ -211,10 +211,16 @@ around it. Auth is the member cookie or an invitation bearer token.
 |---|---|---|
 | `GET` | `/_relay/v1/feed?cursor=…&limit=…` | `{posts: [...], next?}`, newest first |
 | `GET` | `/_relay/v1/posts/<site>` | `{post}` |
+| `DELETE` | `/_relay/v1/posts/<site>` | `{site}` (the member's own post only) |
 | `GET` | `/_relay/v1/people/<member-id>?cursor=…&limit=…` | `{member, posts, total, next?}` |
 
 `limit` defaults to 10, max 50. `next` is an opaque cursor for infinite scroll;
 omit it on the first request and send it back for the next page.
+
+`DELETE /_relay/v1/posts/<site>` removes the member's own post — its files and
+snapshots, index entry, comments, and ownership record. A member cannot
+remove someone else's post (`403 not_owner`); the host removes any post with
+`DELETE /_relay/v1/admin/posts/<site>`.
 
 Post:
 
