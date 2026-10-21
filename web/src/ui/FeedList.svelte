@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
+
   import type { Post } from "../member/schema";
   import PostCard from "./PostCard.svelte";
 
@@ -12,6 +14,7 @@
     onLoadMore,
     onComment,
     onDeleteComment,
+    children,
   }: {
     posts: ReadonlyArray<Post>;
     next?: string;
@@ -21,6 +24,7 @@
     onLoadMore: () => void;
     onComment: (site: string, body: string) => Promise<void>;
     onDeleteComment: (site: string, id: string) => Promise<void>;
+    children?: Snippet;
   } = $props();
 
   let sentinel = $state<HTMLDivElement>();
@@ -39,6 +43,7 @@
 </script>
 
 <div class="feed">
+  {#if children}{@render children()}{/if}
   {#each posts as post (post.id)}
     <PostCard {post} {signedIn} {onComment} {onDeleteComment} />
   {/each}

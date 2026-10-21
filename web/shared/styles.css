@@ -81,7 +81,7 @@ nav.main a.active{opacity:1;border-color:var(--red)}
 .publish-cta{
   display:block;width:100%;text-align:center;background:var(--red);color:var(--paper);
   font-family:var(--display);font-weight:700;font-size:1.05rem;letter-spacing:.01em;
-  padding:14px 18px;border-radius:var(--r-card);margin:4px 0 22px;
+  padding:14px 18px;border-radius:var(--r-card);margin:0;
   transition:background .15s;
 }
 .publish-cta:hover{background:var(--red-deep)}

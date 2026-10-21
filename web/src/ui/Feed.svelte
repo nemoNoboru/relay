@@ -47,7 +47,6 @@
     {:else if $feed.phase === "error"}
       <p class="warn">{$feed.error ?? "The node did not answer."}</p>
     {:else}
-      <a class="publish-cta" href="/_relay/publish.html">Publish your post</a>
       <PeopleStrip members={$feed.members ?? []} signedIn={$feed.me !== undefined} />
       {#if $feed.posts.length > 0}
         <FeedList
@@ -59,11 +58,18 @@
           {onLoadMore}
           {onComment}
           {onDeleteComment}
-        />
+        >
+          {#snippet children()}
+            <a class="publish-cta" href="/_relay/publish.html">Publish your post</a>
+          {/snippet}
+        </FeedList>
       {:else}
-        <div class="emptyfeed">
-          <h3>Nothing here yet.</h3>
-          {#if $feed.me}<a class="btn solid" href="/_relay/publish.html">Publish</a>{/if}
+        <div class="feed">
+          <a class="publish-cta" href="/_relay/publish.html">Publish your post</a>
+          <div class="emptyfeed">
+            <h3>Nothing here yet.</h3>
+            {#if $feed.me}<a class="btn solid" href="/_relay/publish.html">Publish</a>{/if}
+          </div>
         </div>
       {/if}
     {/if}
