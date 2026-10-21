@@ -14,6 +14,7 @@ import (
 // requests are always two or more segments (/<node>/<site>/...).
 var landingFiles = map[string]string{
 	"/host":            "host.html",
+	"/why":             "why.html",
 	"/technicals.html": "technicals.html",
 	"/styles.css":      "styles.css",
 }

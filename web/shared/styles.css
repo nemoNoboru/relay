@@ -59,6 +59,27 @@ nav.main a.active{opacity:1;border-color:var(--red)}
 /* page container: the single root that wraps Shell + content */
 .page > main{max-width:820px;margin:0 auto;padding:34px 22px 90px}
 
+/* ---------- home masthead ---------- */
+.masthead{padding:10px 0 24px}
+.masthead-title{
+  display:inline-block;font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,6vw,3.4rem);
+  line-height:1;letter-spacing:.01em;background:var(--ink);color:var(--paper);
+  padding:8px 18px 12px;border-radius:12px;
+  box-shadow:6px 6px 0 var(--red);
+}
+.masthead-sub{margin-top:18px;font-weight:300;font-size:1.05rem;opacity:.9;max-width:56ch}
+.masthead-sub a{color:var(--red);border-bottom:1px solid var(--red)}
+.masthead-sub a:hover{color:var(--red-deep);border-color:var(--red-deep)}
+
+/* ---------- publish call-to-action banner ---------- */
+.publish-cta{
+  display:block;width:100%;text-align:center;background:var(--red);color:var(--paper);
+  font-family:var(--display);font-weight:700;font-size:1.05rem;letter-spacing:.01em;
+  padding:14px 18px;border-radius:var(--r-card);margin:4px 0 22px;
+  transition:background .15s;
+}
+.publish-cta:hover{background:var(--red-deep)}
+
 /* ---------- people strip ---------- */
 .people{display:flex;align-items:flex-start;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--hair);overflow-x:auto}
 .person{display:flex;flex-direction:column;align-items:center;gap:7px;flex:0 0 auto;width:58px}
