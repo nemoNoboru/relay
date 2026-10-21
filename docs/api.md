@@ -23,7 +23,6 @@ otherwise. The pivot adds a member cookie; see [`invites.md`](invites.md).
 |---|---|---|---|
 | `GET` | `/` | none | Embedded landing page |
 | `GET` | `/index.html` | none | 301 to `/` |
-| `GET` | `/technicals.html` | none | Embedded technicals page |
 | `GET` | `/styles.css` | none | Embedded stylesheet |
 | `GET` | `/<node>/<site>/…` | none | Static site file |
 | `GET` | `/healthz` | none | `200 text/plain` with `ok` |
@@ -491,6 +490,6 @@ feed, post, and profile pages carry `h-feed`/`h-entry`/`h-card` markup.
 - The tar deploy and invite endpoints keep working across the pivot.
 - A future breaking change gets a new version prefix (`/_relay/v2/…`) and a
   deprecation note in this file.
-- The public site paths (`/`, `/index.html`, `/technicals.html`, `/styles.css`)
+- The public site paths (`/`, `/index.html`, `/styles.css`)
   stay stable. `manifesto.html` is removed; a redirect may be kept for one
   release.

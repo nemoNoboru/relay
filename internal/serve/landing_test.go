@@ -17,7 +17,6 @@ func TestLandingServesHostSite(t *testing.T) {
 	}{
 		{path: "/host", wantType: "text/html", wantContent: "Relay"},
 		{path: "/why", wantType: "text/html", wantContent: "Why"},
-		{path: "/technicals.html", wantType: "text/html", wantContent: "Technicals"},
 		{path: "/styles.css", wantType: "text/css", wantContent: "Relay"},
 	}
 	for _, tc := range cases {

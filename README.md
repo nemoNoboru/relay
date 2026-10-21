@@ -57,8 +57,6 @@ docker run -d --name relay --restart unless-stopped \
   ghcr.io/nemonoboru/relay:latest --name my-group
 ```
 
-Kubernetes and HTTPS options are in [`technicals.html`](technicals.html).
-
 ## Publish a page
 
 The easy way: open the invitation link, press **Publish a page** on your home,
@@ -90,7 +88,6 @@ sunday-walk ./my-page`.
 | [`docs/publishing.md`](docs/publishing.md) | Posts, microwebsites, templates, the publish protocol |
 | [`docs/architecture.md`](docs/architecture.md) | How the node is built today and what the pivot adds |
 | [`docs/api.md`](docs/api.md) | Current endpoints and the planned API |
-| [`technicals.html`](technicals.html) | **Public page.** How it works and how to run it |
 | [`web/README.md`](web/README.md) | The owner UI (Svelte + Vite, embedded in the binary) |
 | [`docs/pivot.md`](docs/pivot.md) | The original pivot brief, kept as the source note |
 | [`docs/navigation-pivot.md`](docs/navigation-pivot.md) | **Proposal.** Feed-first navigation: `/` as the public feed, `/host` as the landing, one chrome |
@@ -145,7 +142,7 @@ make build   # owner UI first, then the relay binary
 make run     # run the existing binary without rebuilding
 ```
 
-`index.html` and `technicals.html` are written by hand. Edit the HTML directly.
+`host.html` and `why.html` are written by hand. Edit the HTML directly.
 Engineering standards for Go and the frontend live in [`.pi/skills/`](.pi/skills),
 alongside the deploy skill every node serves at
 `/_relay/skills/relay-deploy/SKILL.md`.

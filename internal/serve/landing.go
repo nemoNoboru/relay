@@ -13,15 +13,14 @@ import (
 // These paths are single-segment and can never be a valid node name; site
 // requests are always two or more segments (/<node>/<site>/...).
 var landingFiles = map[string]string{
-	"/host":            "host.html",
-	"/why":             "why.html",
-	"/technicals.html": "technicals.html",
-	"/styles.css":      "styles.css",
+	"/host":       "host.html",
+	"/why":        "why.html",
+	"/styles.css": "styles.css",
 }
 
 // Landing serves the node's front door: the public feed at /, the hosting
-// pitch at /host, and the technicals/stylesheet companions. Every other path
-// is delegated to next (the site registry).
+// pitch at /host, the why page at /why, and the stylesheet companion.
+// Every other path is delegated to next (the site registry).
 func Landing(next http.Handler) http.Handler {
 	dist, err := fs.Sub(webui.FS, "dist")
 	if err != nil {
