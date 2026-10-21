@@ -11,9 +11,11 @@
     loading = false,
     error = "",
     signedIn = false,
+    viewerId,
     onLoadMore,
     onComment,
     onDeleteComment,
+    onDeletePost,
     children,
   }: {
     posts: ReadonlyArray<Post>;
@@ -21,9 +23,11 @@
     loading?: boolean;
     error?: string;
     signedIn?: boolean;
+    viewerId?: string;
     onLoadMore: () => void;
     onComment: (site: string, body: string) => Promise<void>;
     onDeleteComment: (site: string, id: string) => Promise<void>;
+    onDeletePost?: (site: string) => Promise<void>;
     children?: Snippet;
   } = $props();
 
@@ -45,7 +49,7 @@
 <div class="feed">
   {#if children}{@render children()}{/if}
   {#each posts as post (post.id)}
-    <PostCard {post} {signedIn} {onComment} {onDeleteComment} />
+    <PostCard {post} {signedIn} {viewerId} {onComment} {onDeleteComment} {onDeletePost} />
   {/each}
 </div>
 

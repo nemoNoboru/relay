@@ -6,7 +6,7 @@ import { get, writable } from "svelte/store";
 import { Client } from "../api/client";
 import type { ApiError } from "../api/client";
 import { readToken } from "../invite";
-import { addComment as addCommentOp, deleteComment as deleteCommentOp, establishSession, fetchMe, fetchMembers, fetchProfile, saveProfile, signOut } from "../member/ops";
+import { addComment as addCommentOp, deleteComment as deleteCommentOp, deletePost as deletePostOp, establishSession, fetchMe, fetchMembers, fetchProfile, saveProfile, signOut } from "../member/ops";
 import { initialPeople } from "../people/state";
 import type { PeopleState } from "../people/state";
 import PeopleApp from "../ui/People.svelte";
@@ -88,6 +88,20 @@ const removeComment = async (site: string, id: string): Promise<void> => {
   }
 };
 
+const removePost = async (site: string): Promise<void> => {
+  try {
+    await run(deletePostOp(site));
+    store.update((s) => ({
+      ...s,
+      profile: s.profile
+        ? { ...s.profile, posts: s.profile.posts.filter((p) => p.site !== site) }
+        : s.profile,
+    }));
+  } catch (err) {
+    throw new Error((err as ApiError).message);
+  }
+};
+
 const save = async (displayName: string, bio: string): Promise<void> => {
   set({ busy: true, actionError: undefined, notice: undefined });
   try {
@@ -138,6 +152,7 @@ mount(PeopleApp, {
     onLoadMore: () => void loadMore(),
     onComment: comment,
     onDeleteComment: removeComment,
+    onDeletePost: removePost,
     onSave: (displayName: string, bio: string) => void save(displayName, bio),
   },
 });

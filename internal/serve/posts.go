@@ -2,7 +2,9 @@ package serve
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -43,15 +45,23 @@ type Posts struct {
 	posts     *social.Store
 	comments  *social.CommentStore
 	templates *TemplateStore
+	versions  *Versions
+	reload    func() error
 }
 
-// NewPosts returns the post index handler for a node.
-func NewPosts(node domain.Name, ks *KeyStore, posts *social.Store, comments *social.CommentStore, templates *TemplateStore) *Posts {
-	return &Posts{node: node, ks: ks, posts: posts, comments: comments, templates: templates}
+// NewPosts returns the post index handler for a node. versions and reload
+// back the member post deletion path; they may be nil in read-only tests.
+func NewPosts(node domain.Name, ks *KeyStore, posts *social.Store, comments *social.CommentStore, templates *TemplateStore, versions *Versions, reload func() error) *Posts {
+	return &Posts{node: node, ks: ks, posts: posts, comments: comments, templates: templates, versions: versions, reload: reload}
 }
 
 // ServeHTTP routes the post index surface.
 func (p *Posts) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimSuffix(r.URL.Path, "/")
+	if r.Method == http.MethodDelete && strings.HasPrefix(path, "/_relay/v1/posts/") {
+		p.delete(w, r, strings.TrimPrefix(path, "/_relay/v1/posts/"))
+		return
+	}
 	if r.Method != http.MethodGet {
 		http.NotFound(w, r)
 		return
@@ -59,7 +69,6 @@ func (p *Posts) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Reads are public; the viewer is resolved only to mark a comment "mine".
 	// A guest has an empty id, so mine is always false for them.
 	viewer, _, _ := memberFromRequest(p.ks, r)
-	path := strings.TrimSuffix(r.URL.Path, "/")
 	switch {
 	case path == "/_relay/v1/feed":
 		p.feed(w, r, viewer.ID)
@@ -95,6 +104,73 @@ func (p *Posts) post(w http.ResponseWriter, viewerID, site string) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"post": p.views([]social.Post{post}, viewerID)[0]})
+}
+
+// delete removes a member's own post. A member cannot remove someone
+// else's; the host removes any post through the admin surface.
+func (p *Posts) delete(w http.ResponseWriter, r *http.Request, site string) {
+	if !sameOrigin(r) {
+		writeError(w, http.StatusForbidden, "bad_origin", "request origin does not match this node")
+		return
+	}
+	member, _, ok := memberFromRequest(p.ks, r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "session_required", "open your invitation link to sign in")
+		return
+	}
+	if site == "" || strings.Contains(site, "/") {
+		writeError(w, http.StatusNotFound, "not_found", "no post")
+		return
+	}
+	post, ok := p.posts.Get(site)
+	if !ok {
+		writeError(w, http.StatusNotFound, "not_found", "no post "+site)
+		return
+	}
+	if post.Member != member.ID {
+		writeError(w, http.StatusForbidden, "not_owner", "that post belongs to someone else")
+		return
+	}
+	name, err := domain.ParseName(site)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_name", err.Error())
+		return
+	}
+	if err := removeSite(name, p.versions, p.posts, p.comments, p.ks, p.reload); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"site": string(name)})
+}
+
+// removeSite deletes a site's files and snapshots, its post index entry, its
+// comments, and its ownership record, then reloads the serving registry.
+// posts, comments, ks, and reload may be nil; the files are always removed.
+func removeSite(name domain.Name, versions *Versions, posts *social.Store, comments *social.CommentStore, ks *KeyStore, reload func() error) error {
+	if err := versions.Remove(name); err != nil {
+		return fmt.Errorf("remove site files: %w", err)
+	}
+	if posts != nil {
+		if _, err := posts.Delete(string(name)); err != nil {
+			return fmt.Errorf("remove post index: %w", err)
+		}
+	}
+	if comments != nil {
+		if _, err := comments.DeletePost(string(name)); err != nil {
+			fmt.Fprintf(os.Stderr, "serve: delete comments for %s: %v\n", name, err)
+		}
+	}
+	if ks != nil {
+		if err := ks.ForgetSite(string(name)); err != nil {
+			fmt.Fprintf(os.Stderr, "serve: forget site %s: %v\n", name, err)
+		}
+	}
+	if reload != nil {
+		if err := reload(); err != nil {
+			fmt.Fprintf(os.Stderr, "serve: reload after delete %s: %v\n", name, err)
+		}
+	}
+	return nil
 }
 
 func (p *Posts) profile(w http.ResponseWriter, r *http.Request, viewerID, memberID string) {

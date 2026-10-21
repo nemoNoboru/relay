@@ -200,6 +200,7 @@ h3{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:.
 .post-sub{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;opacity:.6;line-height:1.8}
 .post-sub a{border-bottom:1px solid var(--red)}
 .post-frame{display:block;width:100%;height:min(70vh,720px);margin:26px 0 0;border:1px solid var(--hair);border-radius:var(--r-card);background:#fff}
+.post-actions{margin:18px 0 0}
 
 /* ---------- host console (softened, own header) ---------- */
 .adminapp{padding:34px 0 90px}
@@ -234,6 +235,9 @@ h3{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:.
 .comment-head a{border-bottom:1px solid var(--red)}
 .comment-head span{opacity:.6}
 .comment-delete{margin-left:auto;background:transparent;border:0;border-bottom:1px solid var(--red);color:var(--red);font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;padding:0 0 1px}
+.post-delete{background:transparent;border:0;border-bottom:1px solid var(--red);color:var(--red);font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;padding:0 0 1px;white-space:nowrap}
+.post-delete:hover{opacity:.7}
+.post-delete:disabled{opacity:.4;cursor:default}
 .comment-body{font-weight:300;font-size:.98rem;margin-top:6px;max-width:64ch;opacity:.9}
 .comment-body p{margin:0 0 8px}
 .comment-body p:last-child{margin-bottom:0}

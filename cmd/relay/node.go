@@ -101,7 +101,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	reindex := func(name domain.Name) error {
 		return serve.IndexSite(posts, *data, name)
 	}
-	admin := serve.NewAdmin(token, keys, versions, comments, reload, reindex, func(t string) error {
+	admin := serve.NewAdmin(token, keys, versions, posts, comments, reload, reindex, func(t string) error {
 		return writeTokenFile(tokenPath, t)
 	})
 	ui, err := serve.UIHandler()
@@ -119,7 +119,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.Handle("/_relay/v1/session", session)
 	mux.Handle("/_relay/v1/me", session)
 	templateStore := serve.NewTemplateStore(*data)
-	postIndex := serve.NewPosts(node, keys, posts, comments, templateStore)
+	postIndex := serve.NewPosts(node, keys, posts, comments, templateStore, versions, reload)
 	commentAPI := serve.NewComments(keys, posts, comments)
 	templateAPI := serve.NewTemplates(templateStore, keys)
 	publisher := serve.NewPublisher(node, uploader, templateStore, keys)

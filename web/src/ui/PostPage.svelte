@@ -13,12 +13,14 @@
     onSignOut,
     onComment,
     onDeleteComment,
+    onDeletePost,
   }: {
     postState: Writable<PostState>;
     onSignIn: (token: string) => void;
     onSignOut: () => void;
     onComment: (body: string) => void;
     onDeleteComment: (id: string) => void;
+    onDeletePost: () => void;
   } = $props();
 </script>
 
@@ -49,6 +51,18 @@
           · <a href={$postState.post.url}>open the page on its own</a>
         </p>
       </header>
+
+      {#if $postState.me && $postState.post.member === $postState.me.member.id}
+        <p class="post-actions">
+          <button
+            class="post-delete"
+            type="button"
+            onclick={() => {
+              if (window.confirm("Remove this post? It deletes the page and its comments.")) onDeletePost();
+            }}
+          >Delete post</button>
+        </p>
+      {/if}
 
       <iframe class="post-frame" src={$postState.post.url} title={$postState.post.title} sandbox="allow-scripts allow-popups allow-forms allow-downloads"></iframe>
 

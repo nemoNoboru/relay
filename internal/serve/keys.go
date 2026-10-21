@@ -405,6 +405,18 @@ func (ks *KeyStore) RecordSite(site, user string) error {
 	return ks.persist()
 }
 
+// ForgetSite drops a site's ownership record. A no-op when the site is not
+// recorded.
+func (ks *KeyStore) ForgetSite(site string) error {
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	if _, ok := ks.file.Sites[site]; !ok {
+		return nil
+	}
+	delete(ks.file.Sites, site)
+	return ks.persist()
+}
+
 // Overview returns a sorted read view of the store.
 func (ks *KeyStore) Overview() Overview {
 	ks.mu.RLock()

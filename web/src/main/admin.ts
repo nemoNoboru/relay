@@ -13,7 +13,7 @@ import type { Writable } from "svelte/store";
 
 import { Client } from "../api/client";
 import type { ApiError } from "../api/client";
-import { changeToken, createKey, deleteComment, fetchOverview, revokeKey, rotateKey } from "../admin/ops";
+import { changeToken, createKey, deleteComment, deletePost, fetchOverview, revokeKey, rotateKey } from "../admin/ops";
 import { initialAdmin } from "../admin/state";
 import type { AdminState } from "../admin/state";
 import AdminApp from "../ui/Admin.svelte";
@@ -121,6 +121,19 @@ const removeComment = (id: string): void => {
   );
 };
 
+const removePost = (site: string): void => {
+  const tok = get(store).token;
+  if (tok === "") return;
+  set({ busy: true, actionError: undefined });
+  void run(deletePost(tok, site)).then(
+    () => {
+      set({ busy: false, notice: `Page ${site} removed`, actionError: undefined });
+      refreshQuietly(tok);
+    },
+    (err: ApiError) => set({ busy: false, actionError: err.message }),
+  );
+};
+
 const refresh = (): void => {
   const tok = get(store).token;
   if (tok === "") return;
@@ -162,6 +175,7 @@ mount(AdminApp, {
     onRevoke: revoke,
     onRotate: rotate,
     onDeleteComment: removeComment,
+    onDeletePost: removePost,
     onRefresh: refresh,
     onDismiss: dismiss,
     onLogout: logout,

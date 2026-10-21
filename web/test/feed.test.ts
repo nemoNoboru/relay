@@ -20,6 +20,7 @@ const renderFeed = (state: FeedState): PromiseLike<string> =>
       onLoadMore: noop,
       onComment: async () => {},
       onDeleteComment: async () => {},
+      onDeletePost: async () => {},
     },
   }).then((out) => out.body);
 
@@ -60,6 +61,7 @@ describe("Feed.svelte", () => {
     expect(html).toContain("Sign in");
     expect(html).toContain("Run your own Relay");
     expect(html).not.toContain("Add a comment");
+    expect(html).not.toContain(">Delete<");
   });
 
   it("renders member identity and a comment form", async () => {
@@ -68,6 +70,7 @@ describe("Feed.svelte", () => {
     expect(html).toContain("my-group");
     expect(html).toContain("sign out");
     expect(html).toContain("Add a comment…");
+    expect(html).toContain(">Delete<");
   });
 
   it("shows an empty state with a publish action for members", async () => {

@@ -48,6 +48,7 @@ const renderPeople = (state: PeopleState): PromiseLike<string> =>
       onLoadMore: noop,
       onComment: async () => {},
       onDeleteComment: async () => {},
+      onDeletePost: async () => {},
       onSave: noop,
     },
   }).then((out) => out.body);

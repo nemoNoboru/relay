@@ -96,7 +96,7 @@ func newTestNode(t *testing.T) (http.Handler, string) {
 		return err
 	}
 	up := serve.NewUploader("mynode", data, ks, versions, nil, serve.MaxDeployBytes, reload)
-	admin := serve.NewAdmin("admin-secret", ks, versions, nil, reload, nil, nil)
+	admin := serve.NewAdmin("admin-secret", ks, versions, nil, nil, reload, nil, nil)
 
 	mux := http.NewServeMux()
 	mux.Handle("/_relay/v1/admin", admin)

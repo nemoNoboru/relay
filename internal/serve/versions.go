@@ -161,6 +161,17 @@ func (v *Versions) Prune(name domain.Name) error {
 	return nil
 }
 
+// Remove deletes the live site and all of its snapshots. Removing a site
+// that does not exist is a no-op.
+func (v *Versions) Remove(name domain.Name) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if err := os.RemoveAll(v.siteDir(name)); err != nil {
+		return err
+	}
+	return os.RemoveAll(v.root(name))
+}
+
 func (v *Versions) listLocked(name domain.Name) ([]Version, error) {
 	entries, err := os.ReadDir(v.root(name))
 	if errors.Is(err, os.ErrNotExist) {

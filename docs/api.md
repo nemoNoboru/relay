@@ -53,6 +53,7 @@ Missing or wrong credentials are `401 bad_token`.
 | `GET` | `/_relay/v1/admin/sites/{site}/versions` | — | `{site, versions}` |
 | `POST` | `/_relay/v1/admin/sites/{site}/rollback` | `{ "version": "…" }` or `{}` | `{site, version}` |
 | `DELETE` | `/_relay/v1/admin/comments/{id}` | — | `204` (delete any comment) |
+| `DELETE` | `/_relay/v1/admin/posts/{site}` | — | `{site}` (delete the page, its index entry, comments, and history) |
 
 The new admin token must be at least 8 characters and cannot be the default
 `relay`. A node that has never changed it reports `mustChangeToken: true`.
@@ -210,10 +211,16 @@ around it. Auth is the member cookie or an invitation bearer token.
 |---|---|---|
 | `GET` | `/_relay/v1/feed?cursor=…&limit=…` | `{posts: [...], next?}`, newest first |
 | `GET` | `/_relay/v1/posts/<site>` | `{post}` |
+| `DELETE` | `/_relay/v1/posts/<site>` | `{site}` (the member's own post only) |
 | `GET` | `/_relay/v1/people/<member-id>?cursor=…&limit=…` | `{member, posts, total, next?}` |
 
 `limit` defaults to 10, max 50. `next` is an opaque cursor for infinite scroll;
 omit it on the first request and send it back for the next page.
+
+`DELETE /_relay/v1/posts/<site>` removes the member's own post — its files and
+snapshots, index entry, comments, and ownership record. A member cannot
+remove someone else's post (`403 not_owner`); the host removes any post with
+`DELETE /_relay/v1/admin/posts/<site>`.
 
 Post:
 
@@ -496,7 +503,6 @@ built; Phase 5 is host operations. The product rules are in
 | `GET` | `/_relay/v1/admin/posts` | host | Post list, including hidden |
 | `POST` | `/_relay/v1/admin/posts/<site>/hide` | host | `{post}` |
 | `POST` | `/_relay/v1/admin/posts/<site>/unhide` | host | `{post}` |
-| `DELETE` | `/_relay/v1/admin/posts/<site>` | host | Delete the site and its index entry |
 | `GET` | `/_relay/v1/admin/members` | host | Members and invite tree |
 | `PATCH` | `/_relay/v1/admin/members/<id>` | host | Edit display name/bio |
 

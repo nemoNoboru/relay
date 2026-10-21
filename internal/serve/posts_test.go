@@ -3,6 +3,7 @@ package serve_test
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -51,7 +52,7 @@ func newPostsHandler(t *testing.T) (http.Handler, *serve.KeyStore, *social.Store
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewPosts("mynode", ks, store, comments, serve.NewTemplateStore(data)), ks, store, comments, at, ak, bt, bk
+	return serve.NewPosts("mynode", ks, store, comments, serve.NewTemplateStore(data), serve.NewVersions(data), nil), ks, store, comments, at, ak, bt, bk
 }
 
 func TestFeedIsChronologicalAndPublic(t *testing.T) {
@@ -223,5 +224,44 @@ func TestPostCarriesCoverImage(t *testing.T) {
 	}
 	if reply.Post.ImageURL != "/mynode/cover/assets/cover.svg" {
 		t.Fatalf("imageUrl = %q", reply.Post.ImageURL)
+	}
+}
+
+func TestMemberDeletesOwnPost(t *testing.T) {
+	h, _, store, _, at, ak, bt, _ := newPostsHandler(t)
+	if _, err := store.Upsert(social.Post{Site: "mine", Member: ak.ID, Title: "Mine"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// The owner can delete their own post.
+	req := httptest.NewRequest(http.MethodDelete, "/_relay/v1/posts/mine", nil)
+	req.Header.Set("Authorization", "Bearer "+at)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("own delete = %d %s", rec.Code, rec.Body.String())
+	}
+	if _, ok := store.Get("mine"); ok {
+		t.Fatalf("post still indexed after own delete")
+	}
+
+	// Another member cannot delete it.
+	if _, err := store.Upsert(social.Post{Site: "alices", Member: ak.ID, Title: "Alices"}); err != nil {
+		t.Fatal(err)
+	}
+	req = httptest.NewRequest(http.MethodDelete, "/_relay/v1/posts/alices", nil)
+	req.Header.Set("Authorization", "Bearer "+bt)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("foreign delete = %d, want 403", rec.Code)
+	}
+
+	// A guest cannot delete at all.
+	req = httptest.NewRequest(http.MethodDelete, "/_relay/v1/posts/alices", nil)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("anon delete = %d, want 401", rec.Code)
 	}
 }

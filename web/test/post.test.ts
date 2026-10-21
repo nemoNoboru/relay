@@ -41,6 +41,7 @@ const renderPost = (state: PostState): PromiseLike<string> =>
       onSignOut: noop,
       onComment: noop,
       onDeleteComment: noop,
+      onDeletePost: noop,
     },
   }).then((out) => out.body);
 
@@ -54,6 +55,7 @@ describe("PostPage.svelte", () => {
     expect(html).toContain('src="/my-group/sunday-walk/"');
     expect(html).toContain("Comments");
     expect(html).not.toContain("Reply");
+    expect(html).not.toContain("Delete post");
   });
 
   it("shows the comment form to a member", async () => {
@@ -61,6 +63,7 @@ describe("PostPage.svelte", () => {
     expect(html).toContain("Add a comment…");
     expect(html).toContain("Reply");
     expect(html).toContain("sign out");
+    expect(html).toContain("Delete post");
   });
 
   it("renders comments with the sanitized body and delete for own comments", async () => {

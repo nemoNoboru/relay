@@ -9,14 +9,37 @@
   let {
     post,
     signedIn,
+    viewerId,
     onComment,
     onDeleteComment,
+    onDeletePost,
   }: {
     post: Post;
     signedIn: boolean;
+    viewerId?: string;
     onComment: (site: string, body: string) => Promise<void>;
     onDeleteComment: (site: string, id: string) => Promise<void>;
+    onDeletePost?: (site: string) => Promise<void>;
   } = $props();
+
+  let busy = $state(false);
+  let error = $state("");
+
+  const own = $derived(viewerId !== undefined && post.member === viewerId);
+
+  const remove = async (): Promise<void> => {
+    if (!onDeletePost || busy) return;
+    if (!window.confirm("Remove this post? It deletes the page and its comments.")) return;
+    busy = true;
+    error = "";
+    try {
+      await onDeletePost(post.site);
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Could not delete the post.";
+    } finally {
+      busy = false;
+    }
+  };
 </script>
 
 <article class="card">
@@ -27,7 +50,13 @@
       <span class="when">{shortDate(post.publishedAt)}</span>
     </div>
     <span class="chip">{post.templateName ?? post.template}</span>
+    {#if own}
+      <button class="post-delete" type="button" onclick={() => void remove()} disabled={busy}>
+        {busy ? "Deleting…" : "Delete"}
+      </button>
+    {/if}
   </div>
+  {#if error}<span class="identity-error">{error}</span>{/if}
 
   {#if post.imageUrl}
     <a class="cover" href={post.postUrl}>

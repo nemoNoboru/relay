@@ -34,6 +34,7 @@ type Admin struct {
 	token    [sha256.Size]byte
 	ks       *KeyStore
 	versions *Versions
+	posts    *social.Store
 	comments *social.CommentStore
 	reload   func() error
 	reindex  func(domain.Name) error
@@ -41,14 +42,15 @@ type Admin struct {
 }
 
 // NewAdmin returns an admin handler that authorizes with token, operates on
-// ks, versions, and comments, calls reload and reindex after a rollback, and
-// calls save to persist a changed admin token. comments, reload, reindex, and
-// save may be nil.
-func NewAdmin(token string, ks *KeyStore, versions *Versions, comments *social.CommentStore, reload func() error, reindex func(domain.Name) error, save func(string) error) *Admin {
+// ks, versions, posts, and comments, calls reload and reindex after a
+// rollback or delete, and calls save to persist a changed admin token.
+// posts, comments, reload, reindex, and save may be nil.
+func NewAdmin(token string, ks *KeyStore, versions *Versions, posts *social.Store, comments *social.CommentStore, reload func() error, reindex func(domain.Name) error, save func(string) error) *Admin {
 	return &Admin{
 		token:    sha256.Sum256([]byte(token)),
 		ks:       ks,
 		versions: versions,
+		posts:    posts,
 		comments: comments,
 		reload:   reload,
 		reindex:  reindex,
@@ -91,6 +93,8 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.serveKey(w, r, strings.TrimPrefix(p, "/_relay/v1/admin/keys/"))
 	case r.Method == http.MethodDelete && strings.HasPrefix(p, "/_relay/v1/admin/comments/"):
 		a.deleteComment(w, strings.TrimPrefix(p, "/_relay/v1/admin/comments/"))
+	case r.Method == http.MethodDelete && strings.HasPrefix(p, "/_relay/v1/admin/posts/"):
+		a.deletePost(w, r, strings.TrimPrefix(p, "/_relay/v1/admin/posts/"))
 	default:
 		http.NotFound(w, r)
 	}
@@ -173,6 +177,21 @@ func (a *Admin) deleteComment(w http.ResponseWriter, id string) {
 	} else {
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+// deletePost removes a site's files, snapshots, index entry, comments, and
+// ownership record, then reloads the serving registry so the site is gone.
+func (a *Admin) deletePost(w http.ResponseWriter, r *http.Request, site string) {
+	name, err := domain.ParseName(site)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_name", err.Error())
+		return
+	}
+	if err := removeSite(name, a.versions, a.posts, a.comments, a.ks, a.reload); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"site": string(name)})
 }
 
 // authorized reports whether r carries the admin token as a bearer token.
