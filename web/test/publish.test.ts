@@ -78,3 +78,11 @@ test("publish page tells assistants where to upload", () =>
 
 test("publish page lets a guest invite the next person", () =>
   expect(readFileSync("publish.html", "utf8")).toContain('id="invite"'));
+
+test("publish page leads with a relay-a-url form", () => {
+  const html = readFileSync("publish.html", "utf8");
+  expect(html).toContain("Relay a url");
+  expect(html).toContain('id="relay"');
+  expect(html).toContain('id="relay-url"');
+  expect(html).toContain('id="relay-go"');
+});

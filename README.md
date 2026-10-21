@@ -31,6 +31,7 @@ through Phase 4; Phase 5 is host operations. Read
 - an infinite chronological home feed, profile pages, and post wrappers with cover images
 - comments directly under every post in the feed and profile, with own-comment deletion and host moderation
 - eleven post templates (Note, Link, Gallery, Article, Songs, Videos, Carousel, Jet Set Radio, Longform, Reply, Event), a template picker, and member-installable template tars
+- "Relay a url" on the publish page: re-host a video, song, photo, or page from a link (yt-dlp download, with a social-preview card as the fallback)
 - `relay index` to backfill posts from sites that predate the index
 - native HTTPS or a reverse proxy
 

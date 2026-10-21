@@ -393,6 +393,72 @@ Errors:
 The existing tar deploy endpoint remains. A plain upload becomes a post with
 `template: "custom"`.
 
+### Relay a url
+
+Member-only. The publish page's "Relay a url" section re-hosts what a link
+points at. The node runs [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) out of
+process to download the content; when it downloads a file or set of files
+(an image, a video, a song, a gallery), the files are hosted directly as a
+new page. When it downloads nothing (or `yt-dlp` is not installed), the node
+falls back to a share card built from the page's social preview metadata and
+the url itself. Both paths publish a normal site and index it as a post.
+
+| Method | Path | Auth | Body | Result |
+|---|---|---|---|---|
+| `POST` | `/_relay/v1/relay` | deploy key or member cookie | `{ "url": "…", "webhook": "…" }` | `202 {job}` |
+| `GET` | `/_relay/v1/relay/<id>` | deploy key or member cookie | — | `{job}` |
+
+Starting a job returns immediately; the download runs in the background and
+is polled with the second endpoint. The `webhook` field is optional: when
+set to a full http(s) url, the node `POST`s the finished job (the same JSON
+as the poll endpoint) to that url once the job is `done` or `failed`.
+Delivery is best-effort and never changes the job result.
+
+Third parties use the same member credential the members post with: send the
+invitation key as a bearer token. A bot (Telegram, Discord, a cron job) can
+relay by POSTing here and either poll the job or pass a `webhook` url to get
+the result pushed back.
+
+```json
+{
+  "id": "rj_…",
+  "source": "https://…",
+  "status": "running",
+  "created": "2026-10-19T16:04:00Z"
+}
+```
+
+`status` is `running`, `done`, or `failed`. When `done`, the job carries the
+post and the live address:
+
+```json
+{
+  "id": "rj_…",
+  "source": "https://…",
+  "status": "done",
+  "title": "Sunday walk",
+  "kind": "media",
+  "site": "sunday-walk",
+  "url": "/mynode/sunday-walk/",
+  "postUrl": "/_relay/posts/sunday-walk",
+  "created": "2026-10-19T16:04:00Z"
+}
+```
+
+`kind` is `media` when files were downloaded and `card` for the social
+preview fallback. When `failed`, `error` carries a short reason.
+
+Errors:
+
+| `code` | HTTP | Meaning |
+|---|---|---|
+| `bad_url` | 400 | Missing or non-http(s) url |
+| `bad_webhook` | 400 | `webhook` is not a full http(s) url |
+| `too_many` | 429 | The node already has the maximum jobs running |
+| `session_required` | 401 | No live member credential |
+| `bad_origin` | 403 | Cross-origin write |
+| `not_found` | 404 | Unknown job id |
+
 ### CLI
 
 ```

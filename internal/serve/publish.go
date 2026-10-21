@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/nemoNoboru/relay/internal/domain"
@@ -97,7 +96,7 @@ func (p *Publisher) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var name domain.Name
 	if strings.TrimSpace(req.Site) == "" {
-		name = p.uniqueSite(slugify(title))
+		name = p.uploader.uniqueSite(slugify(title))
 	} else {
 		parsed, err := domain.ParseName(strings.TrimSpace(req.Site))
 		if err != nil {
@@ -233,35 +232,9 @@ func decodePublishFile(file PublishFile) ([]byte, error) {
 	return []byte(file.Content), nil
 }
 
-// uniqueSite derives a free site name from a title. Explicit site names are
-// left alone: the current rule still lets a live member replace a site.
-func (p *Publisher) uniqueSite(base string) domain.Name {
-	base = strings.Trim(strings.ToLower(base), "-")
-	if base == "" {
-		base = "post"
-	}
-	for i := 1; i < 1000; i++ {
-		candidate := base
-		if i > 1 {
-			suffix := "-" + strconv.Itoa(i)
-			if len(candidate)+len(suffix) > 63 {
-				candidate = candidate[:63-len(suffix)]
-			}
-			candidate += suffix
-		}
-		if p.uploader.posts != nil {
-			if _, ok := p.uploader.posts.Get(candidate); ok {
-				continue
-			}
-		}
-		if _, err := os.Stat(filepath.Join(p.uploader.sitesDir, candidate)); err == nil {
-			continue
-		}
-		return domain.Name(candidate)
-	}
-	return "post"
-}
-
+// slugify turns a title into a candidate site name. Site uniqueness is the
+// uploader's rule (Uploader.uniqueSite), shared by the template publisher
+// and the url relayer.
 func slugify(s string) string {
 	var b strings.Builder
 	lastDash := false

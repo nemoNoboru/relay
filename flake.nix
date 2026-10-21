@@ -42,6 +42,9 @@
             imagemagick
             ffmpeg
 
+            # The publish page's "Relay a url" re-hosting
+            yt-dlp
+
             # A watcher for local iteration
             watchexec
           ];

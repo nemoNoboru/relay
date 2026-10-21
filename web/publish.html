@@ -22,6 +22,20 @@
     </header>
 
     <main class="wrap">
+      <section class="pubcard relaycard" id="relay-section">
+        <span class="kick">Re-host a link</span>
+        <h2>Relay a url</h2>
+        <p class="pubsub">Paste a video, song, photo or page. Relay downloads it and hosts it here.</p>
+        <form id="relay" class="relay">
+          <label class="sr" for="relay-url">Target url</label>
+          <div class="relay-row">
+            <input type="url" id="relay-url" required autocomplete="off" placeholder="https://…" spellcheck="false" />
+            <button class="btn solid" id="relay-go" type="submit">Relay</button>
+          </div>
+          <p class="result" id="relay-status" role="status" hidden></p>
+        </form>
+      </section>
+
       <section class="templatesbar" id="templates-section" hidden>
         <span class="kick">Start from a template</span>
         <h2>Make a post</h2>
