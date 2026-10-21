@@ -5,11 +5,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/nemoNoboru/relay/internal/domain"
 	"github.com/nemoNoboru/relay/internal/serve"
+	"github.com/nemoNoboru/relay/internal/social"
 )
 
 const adminToken = "admin-secret"
@@ -21,7 +24,7 @@ func newAdmin(t *testing.T) (*serve.Admin, *serve.KeyStore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewAdmin(adminToken, ks, serve.NewVersions(data), nil, nil, nil, nil), ks
+	return serve.NewAdmin(adminToken, ks, serve.NewVersions(data), nil, nil, nil, nil, nil), ks
 }
 
 // doJSON issues a request to the admin handler with an optional bearer token
@@ -122,7 +125,7 @@ func TestAdminChangeToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	saved := ""
-	a := serve.NewAdmin(serve.DefaultAdminToken, ks, serve.NewVersions(data), nil, nil, nil, func(s string) error {
+	a := serve.NewAdmin(serve.DefaultAdminToken, ks, serve.NewVersions(data), nil, nil, nil, nil, func(s string) error {
 		saved = s
 		return nil
 	})
@@ -294,7 +297,7 @@ func newAdminNode(t *testing.T) (*serve.Admin, *serve.Registry, http.Handler, st
 		return err
 	}
 	up := serve.NewUploader("mynode", data, ks, versions, nil, serve.MaxDeployBytes, reload)
-	return serve.NewAdmin(adminToken, ks, versions, nil, reload, nil, nil), reg, up, token
+	return serve.NewAdmin(adminToken, ks, versions, nil, nil, reload, nil, nil), reg, up, token
 }
 
 func deploySite(t *testing.T, up http.Handler, token, site, content string) {
@@ -423,7 +426,7 @@ func TestAdminRollbackReindexes(t *testing.T) {
 	deploySite(t, up, token, "blog", "v2")
 
 	var reindexed string
-	admin := serve.NewAdmin(adminToken, ks, versions, nil, reload, func(name domain.Name) error {
+	admin := serve.NewAdmin(adminToken, ks, versions, nil, nil, reload, func(name domain.Name) error {
 		reindexed = string(name)
 		return nil
 	}, nil)
@@ -432,5 +435,69 @@ func TestAdminRollbackReindexes(t *testing.T) {
 	}
 	if reindexed != "blog" {
 		t.Fatalf("reindexed = %q, want blog", reindexed)
+	}
+}
+
+// TestAdminDeletePost removes a site's files, index entry, comments, and
+// ownership record in one DELETE.
+func TestAdminDeletePost(t *testing.T) {
+	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, key, err := ks.Create("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ks.RecordSite("blog", "alice"); err != nil {
+		t.Fatal(err)
+	}
+	posts, err := social.NewStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := posts.Upsert(social.Post{Site: "blog", Member: key.ID, Title: "Blog"}); err != nil {
+		t.Fatal(err)
+	}
+	comments, err := social.NewCommentStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := comments.Add(social.Comment{Post: "blog", Member: key.ID, Body: "hi"}); err != nil {
+		t.Fatal(err)
+	}
+	versions := serve.NewVersions(data)
+	siteDir := filepath.Join(data, "sites", "blog")
+	if err := os.MkdirAll(siteDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(siteDir, "index.html"), []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reloaded := 0
+	admin := serve.NewAdmin(adminToken, ks, versions, posts, comments, func() error {
+		reloaded++
+		return nil
+	}, nil, nil)
+
+	rec := doJSON(t, admin, http.MethodDelete, "/_relay/v1/admin/posts/blog", adminToken, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("delete = %d %s", rec.Code, rec.Body.String())
+	}
+	if reloaded != 1 {
+		t.Fatalf("reload calls = %d, want 1", reloaded)
+	}
+	if _, err := os.Stat(siteDir); !os.IsNotExist(err) {
+		t.Fatalf("site dir still exists (err=%v)", err)
+	}
+	if _, ok := posts.Get("blog"); ok {
+		t.Fatalf("post still indexed")
+	}
+	if got := comments.List("blog"); len(got) != 0 {
+		t.Fatalf("comments = %d, want 0", len(got))
+	}
+	if user := ks.SiteUser("blog"); user != "" {
+		t.Fatalf("owner = %q, want empty", user)
 	}
 }

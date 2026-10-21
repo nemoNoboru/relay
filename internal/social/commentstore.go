@@ -161,6 +161,32 @@ func (s *CommentStore) Delete(id string) (Comment, bool, error) {
 	return Comment{}, false, nil
 }
 
+// DeletePost removes every comment on a post, returning the number removed.
+// A post with no comments is a no-op.
+func (s *CommentStore) DeletePost(post string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	kept := make([]Comment, 0, len(s.file.Comments))
+	removed := 0
+	for _, c := range s.file.Comments {
+		if c.Post == post {
+			removed++
+			continue
+		}
+		kept = append(kept, c)
+	}
+	if removed == 0 {
+		return 0, nil
+	}
+	before := s.file.Comments
+	s.file.Comments = kept
+	if err := s.persist(); err != nil {
+		s.file.Comments = before
+		return 0, err
+	}
+	return removed, nil
+}
+
 func trimComment(body string) string {
 	return strings.TrimSpace(body)
 }

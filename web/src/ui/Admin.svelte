@@ -19,6 +19,7 @@
     onRevoke,
     onRotate,
     onDeleteComment,
+    onDeletePost,
     onRefresh,
     onDismiss,
     onLogout,
@@ -30,6 +31,7 @@
     onRevoke: (id: string) => void;
     onRotate: (id: string) => void;
     onDeleteComment: (id: string) => void;
+    onDeletePost: (site: string) => void;
     onRefresh: () => void;
     onDismiss: () => void;
     onLogout: () => void;
@@ -238,13 +240,24 @@
           {:else}
             <ul class="friends">
               {#each sitesByUser($admin.overview) as u (u.user)}
-                <li class="friend">
-                  <span>
-                    <b>{u.user}</b>
-                    <small>{u.sites.length} page{u.sites.length === 1 ? "" : "s"}</small>
-                  </span>
-                  <code>{u.sites.join(" · ")}</code>
-                </li>
+                {#each u.sites as site (site)}
+                  <li class="friend">
+                    <span>
+                      <b>{u.user}</b>
+                      <small><code>{site}</code></small>
+                    </span>
+                    <div class="row-actions">
+                      <a class="btn" href={"/_relay/posts/" + site}>View</a>
+                      <button
+                        class="btn"
+                        onclick={() => {
+                          if (window.confirm(`Remove "${site}"? This deletes the page and its history.`)) onDeletePost(site);
+                        }}
+                        disabled={$admin.busy}
+                      >Delete</button>
+                    </div>
+                  </li>
+                {/each}
               {/each}
             </ul>
           {/if}

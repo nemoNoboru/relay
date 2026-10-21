@@ -53,6 +53,7 @@ Missing or wrong credentials are `401 bad_token`.
 | `GET` | `/_relay/v1/admin/sites/{site}/versions` | — | `{site, versions}` |
 | `POST` | `/_relay/v1/admin/sites/{site}/rollback` | `{ "version": "…" }` or `{}` | `{site, version}` |
 | `DELETE` | `/_relay/v1/admin/comments/{id}` | — | `204` (delete any comment) |
+| `DELETE` | `/_relay/v1/admin/posts/{site}` | — | `{site}` (delete the page, its index entry, comments, and history) |
 
 The new admin token must be at least 8 characters and cannot be the default
 `relay`. A node that has never changed it reports `mustChangeToken: true`.
@@ -496,7 +497,6 @@ built; Phase 5 is host operations. The product rules are in
 | `GET` | `/_relay/v1/admin/posts` | host | Post list, including hidden |
 | `POST` | `/_relay/v1/admin/posts/<site>/hide` | host | `{post}` |
 | `POST` | `/_relay/v1/admin/posts/<site>/unhide` | host | `{post}` |
-| `DELETE` | `/_relay/v1/admin/posts/<site>` | host | Delete the site and its index entry |
 | `GET` | `/_relay/v1/admin/members` | host | Members and invite tree |
 | `PATCH` | `/_relay/v1/admin/members/<id>` | host | Edit display name/bio |
 

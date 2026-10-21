@@ -123,7 +123,7 @@ func TestAdminDeletesAnyCommentAndOverviewLists(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &added); err != nil {
 		t.Fatal(err)
 	}
-	admin := serve.NewAdmin(adminToken, ks, serve.NewVersions(t.TempDir()), comments, nil, nil, nil)
+	admin := serve.NewAdmin(adminToken, ks, serve.NewVersions(t.TempDir()), nil, comments, nil, nil, nil)
 	rec = doJSON(t, admin, http.MethodGet, "/_relay/v1/admin", adminToken, "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("overview = %d %s", rec.Code, rec.Body)

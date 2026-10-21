@@ -33,6 +33,7 @@ const renderAdmin = (state: AdminState): PromiseLike<string> =>
       onRevoke: noop,
       onRotate: noop,
       onDeleteComment: noop,
+      onDeletePost: noop,
       onRefresh: noop,
       onDismiss: noop,
       onLogout: noop,
@@ -134,14 +135,14 @@ describe("Admin.svelte ready", () => {
     expect(html).toContain("alice-blog");
   });
 
-  it("groups sites by user", async () => {
+  it("lists each page with view and delete actions", async () => {
     const html = await renderAdmin(ready(OVERVIEW));
     expect(html).toContain("Pages by member");
     expect(html).toContain("alice-blog");
     expect(html).toContain("zine");
     expect(html).toContain("bob-site");
-    expect(html).toContain("2 pages");
-    expect(html).toContain("1 page");
+    expect(html).toContain(">View<");
+    expect(html).toContain(">Delete<");
   });
 
   it("renders the empty states", async () => {

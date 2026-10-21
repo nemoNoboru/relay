@@ -101,7 +101,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	reindex := func(name domain.Name) error {
 		return serve.IndexSite(posts, *data, name)
 	}
-	admin := serve.NewAdmin(token, keys, versions, comments, reload, reindex, func(t string) error {
+	admin := serve.NewAdmin(token, keys, versions, posts, comments, reload, reindex, func(t string) error {
 		return writeTokenFile(tokenPath, t)
 	})
 	ui, err := serve.UIHandler()
