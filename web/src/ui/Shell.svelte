@@ -34,7 +34,7 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="/"><span class="mark">R</span> {brand}</a>
+    <a class="brand" href="/"><span class="mark" aria-hidden="true"></span> {brand}</a>
     <nav class="main" aria-label="Primary">
       <a href="/" class:active={active === "home"}>Home</a>
       <a href="/_relay/publish.html" class:active={active === "publish"}>Publish</a>
