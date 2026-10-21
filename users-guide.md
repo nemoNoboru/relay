@@ -104,6 +104,19 @@ relay template remove --data /var/lib/relay my-template
 Template code runs in the browser on the node origin. Only install templates
 from people you trust.
 
+### Relay a url
+
+The publish page leads with **Relay a url**. Paste a link to a video, song,
+photo, or any page and press **Relay**. The node downloads what the link
+points at and hosts it as a new page — the video, song, or image files
+straight, or a card with the page's preview image, title, and the original
+url when there is nothing to download.
+
+Downloads use [yt-dlp](https://github.com/yt-dlp/yt-dlp). If it is not
+installed, or it can't download anything, the node still makes the share
+card. The container image ships yt-dlp; on a self-built node install it
+(`apt install yt-dlp`, `brew install yt-dlp`, …) for the download path.
+
 ### The home feed, profiles, and post pages
 
 - **Your home** is an infinite scroll of every member's posts, newest first.

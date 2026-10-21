@@ -33,7 +33,10 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 
 # ---------- Stage 3: runtime ----------
 FROM alpine:3.21
-RUN addgroup -S relay && adduser -S -G relay relay \
+# yt-dlp + ffmpeg power the publish page's "Relay a url" re-hosting; the
+# node still works without them (it falls back to a share card).
+RUN apk add --no-cache yt-dlp ffmpeg ca-certificates \
+    && addgroup -S relay && adduser -S -G relay relay \
     && mkdir -p /data && chown relay:relay /data
 COPY --from=build /relay /usr/local/bin/relay
 USER relay

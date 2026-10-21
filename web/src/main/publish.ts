@@ -1,7 +1,8 @@
 import { Effect } from "effect";
 
-import { Client } from "../api/client";
+import { ApiError, Client } from "../api/client";
 import { establishSession, fetchMe } from "../member/ops";
+import { relayJob, relayUrl } from "../relay/ops";
 import { fetchTemplates } from "../templates/ops";
 import { assistantPrompt, body, inviteLink, readInvite, toSite, type SiteFile } from "../publish";
 
@@ -193,6 +194,77 @@ copyai.addEventListener("click", async () => {
   await navigator.clipboard.writeText(assistantPrompt(location.origin, key.value || "YOUR-KEY", site.value));
   copyai.textContent = "Copied";
   setTimeout(() => (copyai.textContent = "Copy instructions for Claude"), 2500);
+});
+
+const relayForm = $<HTMLFormElement>("relay");
+const relayURL = $<HTMLInputElement>("relay-url");
+const relayGo = $<HTMLButtonElement>("relay-go");
+const relayStatus = $("relay-status");
+let relayTimer: number | undefined;
+
+const sayRelay = (...parts: Array<string | Node>) => {
+  relayStatus.hidden = false;
+  relayStatus.replaceChildren(...parts);
+};
+
+const stopRelay = () => {
+  if (relayTimer !== undefined) {
+    window.clearInterval(relayTimer);
+    relayTimer = undefined;
+  }
+};
+window.addEventListener("pagehide", stopRelay);
+
+const live = (path: string) => {
+  const href = new URL(path, location.origin).href;
+  return Object.assign(document.createElement("a"), { href, textContent: href });
+};
+
+const watchRelay = (id: string) => {
+  stopRelay();
+  relayTimer = window.setInterval(() => {
+    void run(relayJob(id, key.value || undefined))
+      .then((job) => {
+        if (job.status === "running") return;
+        stopRelay();
+        relayGo.disabled = false;
+        if (job.status === "done" && job.url) {
+          const parts: Array<string | Node> = [];
+          if (job.title) parts.push(job.title, " · ");
+          parts.push("Live at ", live(job.url));
+          sayRelay(...parts);
+        } else {
+          sayRelay(job.error ?? "Relaying didn't finish.");
+        }
+      })
+      .catch(() => {
+        stopRelay();
+        relayGo.disabled = false;
+        sayRelay("Couldn't reach the server. Try again.");
+      });
+  }, 2000);
+};
+
+relayForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const url = relayURL.value.trim();
+  if (!url) return;
+  relayGo.disabled = true;
+  sayRelay("Relaying…");
+  try {
+    const job = await run(relayUrl(url, key.value || undefined));
+    sayRelay("Relaying…");
+    watchRelay(job.id);
+  } catch (err) {
+    relayGo.disabled = false;
+    if (err instanceof ApiError && err.status === 401) {
+      sayRelay("Sign in first — paste your invitation link in the Publish card below.");
+    } else if (err instanceof ApiError && err.status === 400) {
+      sayRelay("That doesn't look like a full http or https url.");
+    } else {
+      sayRelay("Couldn't relay it. Try again.");
+    }
+  }
 });
 
 const read = async (path: string, f: File): Promise<SiteFile> => ({ path, data: new Uint8Array(await f.arrayBuffer()) });

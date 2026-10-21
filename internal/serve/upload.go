@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/nemoNoboru/relay/internal/domain"
@@ -278,6 +279,36 @@ func safeJoin(dest, name string) (string, error) {
 		return "", fmt.Errorf("path escapes the site: %q", name)
 	}
 	return full, nil
+}
+
+// uniqueSite derives a free site name from a slug. It is shared by the
+// template publisher and the url relayer; both need a name that is not
+// already taken by an indexed post or a site folder.
+func (u *Uploader) uniqueSite(base string) domain.Name {
+	base = strings.Trim(strings.ToLower(base), "-")
+	if base == "" {
+		base = "post"
+	}
+	for i := 1; i < 1000; i++ {
+		candidate := base
+		if i > 1 {
+			suffix := "-" + strconv.Itoa(i)
+			if len(candidate)+len(suffix) > 63 {
+				candidate = candidate[:63-len(suffix)]
+			}
+			candidate += suffix
+		}
+		if u.posts != nil {
+			if _, ok := u.posts.Get(candidate); ok {
+				continue
+			}
+		}
+		if _, err := os.Stat(filepath.Join(u.sitesDir, candidate)); err == nil {
+			continue
+		}
+		return domain.Name(candidate)
+	}
+	return domain.Name(base)
 }
 
 // errorEnvelope is the API's error shape (docs/api.md).

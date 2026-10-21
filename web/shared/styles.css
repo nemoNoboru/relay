@@ -289,6 +289,17 @@ h3{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:.
 .templates-install input[type=file]{font-family:var(--mono);font-size:.7rem;max-width:100%}
 .templates-install .result{margin:0 16px 16px;border:1px solid var(--hair);background:var(--paper-2);padding:10px 12px;font-family:var(--mono);font-size:.68rem}
 
+/* ---------- relay a url ---------- */
+.relaycard{margin-top:34px}
+.relaycard .relay{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.relay-row{display:flex;gap:10px;align-items:stretch}
+.relay-row input{flex:1;min-width:0;font-family:var(--body);font-size:.95rem;padding:11px 13px;border:1px solid var(--hair);border-radius:var(--r-inner);background:var(--paper);color:var(--ink)}
+.relay-row input::placeholder{color:rgba(20,18,16,.45)}
+.relay-row input:focus{outline:none;border-color:var(--red)}
+.relay .result{max-width:720px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:560px){.relay-row{flex-direction:column;align-items:stretch}}
+
 /* ---------- small screens ---------- */
 @media(max-width:880px){.admin-head{flex-direction:column;align-items:flex-start}}
 @media(max-width:640px){
