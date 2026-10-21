@@ -35,11 +35,19 @@
   />
 
   <main>
+    <section class="masthead">
+      <h1 class="masthead-title">Relay</h1>
+      <p class="masthead-sub">
+        A micro-social network for you and your friends — <a href="/why">see why</a>
+      </p>
+    </section>
+
     {#if $feed.phase === "loading"}
       <p class="feed-loading">…</p>
     {:else if $feed.phase === "error"}
       <p class="warn">{$feed.error ?? "The node did not answer."}</p>
     {:else}
+      <a class="publish-cta" href="/_relay/publish.html">Publish your post</a>
       <PeopleStrip members={$feed.members ?? []} signedIn={$feed.me !== undefined} />
       {#if $feed.posts.length > 0}
         <FeedList

@@ -16,6 +16,7 @@ func TestLandingServesHostSite(t *testing.T) {
 		wantContent string // substring of the served body
 	}{
 		{path: "/host", wantType: "text/html", wantContent: "Relay"},
+		{path: "/why", wantType: "text/html", wantContent: "Why"},
 		{path: "/technicals.html", wantType: "text/html", wantContent: "Technicals"},
 		{path: "/styles.css", wantType: "text/css", wantContent: "Relay"},
 	}
