@@ -22,7 +22,7 @@ RUN cd web && npm run build
 FROM golang:1.26-alpine AS build
 ARG VERSION=dev
 WORKDIR /src
-COPY go.mod ./
+COPY go.mod go.sum ./
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 COPY web/embed.go ./web/embed.go
