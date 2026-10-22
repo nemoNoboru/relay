@@ -160,7 +160,7 @@ func TestUploadRecordsSiteOwner(t *testing.T) {
 		t.Fatalf("deploy = %d", rec.Code)
 	}
 	ov := ks.Overview()
-	if len(ov.Sites) != 1 || ov.Sites[0].Site != "blog" || ov.Sites[0].User != "alice" {
+	if len(ov.Sites) != 1 || ov.Sites[0].Site != "blog" || ov.Sites[0].Label != "alice" {
 		t.Fatalf("sites = %+v, want blog->alice", ov.Sites)
 	}
 }

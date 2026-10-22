@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"regexp"
+
+	"github.com/nemoNoboru/relay/internal/domain"
 )
 
 // TemplateField describes one field a template's prepublish form expects.
@@ -32,8 +33,6 @@ type Template struct {
 
 // ErrBadTemplate is returned for a missing or malformed template manifest.
 var ErrBadTemplate = errors.New("invalid template")
-
-var templateIDRE = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 
 // LoadTemplate reads relay-template.json from a template folder and checks
 // that its entry and script exist.
@@ -63,7 +62,7 @@ func (t Template) Validate(fsys fs.FS) error {
 	if t.Schema != 1 {
 		return fmt.Errorf("%w: schema must be 1", ErrBadTemplate)
 	}
-	if !templateIDRE.MatchString(t.ID) {
+	if !domain.ValidName(t.ID) {
 		return fmt.Errorf("%w: bad id %q", ErrBadTemplate, t.ID)
 	}
 	if t.Name == "" {

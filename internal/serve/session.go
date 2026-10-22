@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -21,26 +20,32 @@ const memberCookie = "relay_member"
 // itself can live longer; the member can always re-open the invite link.
 const sessionLifetime = 30 * 24 * 60 * 60 // 30 days, in seconds
 
+// loginMinInterval throttles password login attempts per username. It is an
+// in-memory guard, not a security boundary; the node is a small group.
+const loginMinInterval = 2 * time.Second
+
 // NodeView is the small, member-facing description of the node.
 type NodeView struct {
 	Name    string `json:"name"`
 	Members int    `json:"members"`
 }
 
-// Session handles the member session and profile surface:
+// Session handles the member session, login, and profile surface:
 //
 //	POST   /_relay/v1/session   exchange an invitation token for a cookie
+//	POST   /_relay/v1/login     sign in with username + password
 //	DELETE /_relay/v1/session   clear the cookie
 //	GET    /_relay/v1/me        current member + node view
 //	PATCH  /_relay/v1/me        update display name and bio
 type Session struct {
 	node domain.Name
 	ks   *KeyStore
+	rate *rateGuard
 }
 
 // NewSession returns the session handler for a node.
 func NewSession(node domain.Name, ks *KeyStore) *Session {
-	return &Session{node: node, ks: ks}
+	return &Session{node: node, ks: ks, rate: newRateGuard(loginMinInterval)}
 }
 
 // ServeHTTP routes the member session surface. Everything else is 404.
@@ -49,6 +54,8 @@ func (s *Session) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case p == "/_relay/v1/session" && r.Method == http.MethodPost:
 		s.create(w, r)
+	case p == "/_relay/v1/login" && r.Method == http.MethodPost:
+		s.login(w, r)
 	case p == "/_relay/v1/session" && r.Method == http.MethodDelete:
 		if !sameOrigin(r) {
 			writeError(w, http.StatusForbidden, "bad_origin", "request origin does not match this node")
@@ -71,7 +78,9 @@ func (s *Session) create(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
 	var req struct {
-		Token string `json:"token"`
+		Token    string `json:"token"`
+		Username string `json:"username"`
+		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "body must be JSON: "+err.Error())
@@ -87,8 +96,30 @@ func (s *Session) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "bad_token", "invalid or revoked invitation")
 		return
 	}
+	if req.Username != "" || req.Password != "" {
+		if req.Username == "" || req.Password == "" {
+			writeError(w, http.StatusBadRequest, "bad_request", "username and password are required together")
+			return
+		}
+		if _, found, err := s.ks.SetCredentials(member.ID, req.Username, req.Password); err != nil {
+			switch {
+			case errors.Is(err, ErrBadUser), errors.Is(err, ErrBadPassword):
+				writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+			case errors.Is(err, ErrUsernameTaken):
+				writeError(w, http.StatusConflict, "username_taken", err.Error())
+			default:
+				writeError(w, http.StatusInternalServerError, "internal", err.Error())
+			}
+			return
+		} else if !found {
+			// The member was resolved from the token above, so a missing key
+			// here means it was revoked mid-request.
+			writeError(w, http.StatusUnauthorized, "bad_token", "invalid or revoked invitation")
+			return
+		}
+	}
 	s.setCookie(w, r, token)
-	writeJSON(w, http.StatusOK, map[string]any{"member": member, "node": s.nodeView()})
+	writeJSON(w, http.StatusOK, s.memberReply(member))
 }
 
 func (s *Session) clear(w http.ResponseWriter) {
@@ -104,13 +135,53 @@ func (s *Session) clear(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// login authenticates a member by username and password and sets the same
+// member cookie the invitation exchange sets. Unknown usernames and wrong
+// passwords return the identical bad_credentials error.
+func (s *Session) login(w http.ResponseWriter, r *http.Request) {
+	if !sameOrigin(r) {
+		writeError(w, http.StatusForbidden, "bad_origin", "request origin does not match this node")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "body must be JSON: "+err.Error())
+		return
+	}
+	username := strings.TrimSpace(req.Username)
+	if username == "" || req.Password == "" {
+		writeError(w, http.StatusUnauthorized, "bad_credentials", "invalid username or password")
+		return
+	}
+	if !s.rate.allow(strings.ToLower(username)) {
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "wait a moment before trying again")
+		return
+	}
+	token, ok := s.ks.AuthenticatePassword(username, req.Password)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "bad_credentials", "invalid username or password")
+		return
+	}
+	member, ok := s.ks.MemberByToken(token)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "bad_credentials", "invalid username or password")
+		return
+	}
+	s.setCookie(w, r, token)
+	writeJSON(w, http.StatusOK, s.memberReply(member))
+}
+
 func (s *Session) me(w http.ResponseWriter, r *http.Request) {
 	member, _, ok := memberFromRequest(s.ks, r)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "session_required", "open your invitation link to sign in")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"member": member, "node": s.nodeView()})
+	writeJSON(w, http.StatusOK, s.memberReply(member))
 }
 
 func (s *Session) update(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +212,7 @@ func (s *Session) update(w http.ResponseWriter, r *http.Request) {
 	case !found:
 		writeError(w, http.StatusUnauthorized, "session_required", "open your invitation link to sign in")
 	default:
-		writeJSON(w, http.StatusOK, map[string]any{"member": member, "node": s.nodeView()})
+		writeJSON(w, http.StatusOK, s.memberReply(member))
 	}
 }
 
@@ -178,21 +249,12 @@ func (s *Session) nodeView() NodeView {
 	return NodeView{Name: string(s.node), Members: s.ks.LiveCount()}
 }
 
-func requestIsHTTPS(r *http.Request) bool {
-	return r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+// memberReply is the session surface's response: the member view, the node
+// summary, and the member's own username (empty until credentials are set).
+func (s *Session) memberReply(m Member) map[string]any {
+	return map[string]any{"member": m, "node": s.nodeView(), "username": s.ks.UsernameByID(m.ID)}
 }
 
-// sameOrigin rejects a mutating request whose Origin does not match this
-// node. A missing Origin is allowed: SameSite=Lax already stops cross-site
-// cookie writes, and non-browser clients (curl, assistants) do not send one.
-func sameOrigin(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
-	u, err := url.Parse(origin)
-	if err != nil || u.Host == "" {
-		return false
-	}
-	return strings.EqualFold(u.Host, r.Host)
+func requestIsHTTPS(r *http.Request) bool {
+	return r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 }

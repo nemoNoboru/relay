@@ -42,3 +42,37 @@ func TestParseName(t *testing.T) {
 		})
 	}
 }
+
+func TestValidName(t *testing.T) {
+	cases := map[string]bool{
+		"a":       true,
+		"mynode":  true,
+		"abc-123": true,
+		"MyNode":  false,
+		"-abc":    false,
+		"abc-":    false,
+		"a_b":     false,
+		"":        false,
+	}
+	for in, want := range cases {
+		if got := domain.ValidName(in); got != want {
+			t.Errorf("ValidName(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestValidLabel(t *testing.T) {
+	cases := map[string]bool{
+		"alice":    true,
+		"Alice_01": true,
+		"a.b-c":    true,
+		"":         false,
+		"a/b":      false,
+		"a b":      false,
+	}
+	for in, want := range cases {
+		if got := domain.ValidLabel(in); got != want {
+			t.Errorf("ValidLabel(%q) = %v, want %v", in, got, want)
+		}
+	}
+}

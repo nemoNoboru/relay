@@ -9,6 +9,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/nemoNoboru/relay/internal/persist"
 )
 
 // Store persists the post index in <dataDir>/posts.json. Writes are
@@ -48,25 +50,9 @@ func (s *Store) load() error {
 	return nil
 }
 
-// persist writes the index to a temp file and renames it into place.
-// Callers hold the write lock.
+// persist writes the index atomically. Callers hold the write lock.
 func (s *Store) persist() error {
-	b, err := json.MarshalIndent(s.file, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
-		return err
-	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, s.path); err != nil {
-		os.Remove(tmp)
-		return err
-	}
-	return nil
+	return persist.WriteJSON(s.path, s.file, 0o644)
 }
 
 // List returns a copy of the index, newest first.

@@ -1,6 +1,6 @@
 // Command relay is the Relay node: one binary that serves this node's
-// sites, accepts site uploads, and hosts the owner UI. This file holds
-// the command dispatch; key.go and node.go hold the two subcommands.
+// sites, accepts site uploads, and hosts the owner UI. This file holds the
+// command dispatch and usage text; each other file holds one subcommand.
 package main
 
 import (
@@ -28,8 +28,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "version":
 		fmt.Fprintln(stdout, "relay", version)
 		return 0
-	case "key":
-		return runKey(args[1:], stdout, stderr)
 	case "deploy":
 		return runDeploy(args[1:], stdout, stderr)
 	case "rollback":
@@ -53,7 +51,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 func usage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
   relay version          print the version
-  relay key new [-o f]   generate an Ed25519 key file (not the invite flow)
   relay deploy --origin <url> --site <n> [--token <t>] [--insecure] <folder>
                          upload a folder as page <n> (replaces it atomically)
   relay rollback --origin <url> --site <n> [--admin-token <t>] [--to <v>] [--insecure]

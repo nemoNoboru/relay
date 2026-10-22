@@ -38,6 +38,8 @@ const renderAdmin = (state: AdminState): PromiseLike<string> =>
       onDismiss: noop,
       onLogout: noop,
       onChangeToken: noop,
+      onSetCredentials: noop,
+      onClearCredentials: noop,
     },
   }).then((out) => out.body);
 
@@ -45,7 +47,7 @@ const locked = (): AdminState => ({ token: "", phase: "locked", busy: false });
 
 const OVERVIEW: AdminOverview = {
   keys: [
-    { id: "dk_1", user: "alice", token: "tok-alice-1234567890", created: "2026-01-01T00:00:00Z", revoked: false },
+    { id: "dk_1", user: "alice", token: "tok-alice-1234567890", created: "2026-01-01T00:00:00Z", revoked: false, username: "alice" },
     { id: "dk_2", user: "bob", token: "tok-bob-9876543210", created: "2026-01-02T00:00:00Z", revoked: true },
   ],
   sites: [
@@ -112,6 +114,13 @@ describe("Admin.svelte ready", () => {
     expect(html).toContain("Rotate");
     expect(html).toContain("Revoke");
     expect(html).toContain("Create invitation");
+  });
+
+  it("shows each member's login username when set", async () => {
+    const html = await renderAdmin(ready(OVERVIEW));
+    expect(html).toContain("@alice");
+    expect(html).toContain("no login");
+    expect(html).toContain(">Login<");
   });
 
   it("masks tokens until revealed", async () => {

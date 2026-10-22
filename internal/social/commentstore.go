@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nemoNoboru/relay/internal/persist"
 )
 
 // CommentStore persists comments in <dataDir>/comments.json. Writes are
@@ -50,22 +52,7 @@ func (s *CommentStore) load() error {
 }
 
 func (s *CommentStore) persist() error {
-	b, err := json.MarshalIndent(s.file, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
-		return err
-	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, s.path); err != nil {
-		os.Remove(tmp)
-		return err
-	}
-	return nil
+	return persist.WriteJSON(s.path, s.file, 0o644)
 }
 
 // Add appends a comment, assigning an id and timestamp.

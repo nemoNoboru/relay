@@ -7,6 +7,15 @@ import (
 	"testing"
 )
 
+func mustLanding(t *testing.T, next http.Handler) http.Handler {
+	t.Helper()
+	h, err := Landing(next)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h
+}
+
 // TestLandingServesHostSite pins that the hosting pitch and its companions
 // serve from the embedded public site with the right content types.
 func TestLandingServesHostSite(t *testing.T) {
@@ -25,7 +34,7 @@ func TestLandingServesHostSite(t *testing.T) {
 				t.Fatalf("Landing served nothing for %q and fell through to next", r.URL.Path)
 			})
 			rec := httptest.NewRecorder()
-			Landing(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+			mustLanding(t, next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
 			if rec.Code != http.StatusOK {
 				t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 			}
@@ -47,7 +56,7 @@ func TestLandingOwnsFeedRoot(t *testing.T) {
 		t.Fatalf("Landing delegated %q to the registry", r.URL.Path)
 	})
 	rec := httptest.NewRecorder()
-	Landing(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	mustLanding(t, next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 	if rec.Code != http.StatusOK && rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 200 (built feed) or 404 (not built)", rec.Code)
 	}
@@ -64,7 +73,7 @@ func TestLandingDelegatesOtherPaths(t *testing.T) {
 				w.WriteHeader(http.StatusTeapot)
 			})
 			rec := httptest.NewRecorder()
-			Landing(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+			mustLanding(t, next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
 			if !called {
 				t.Fatalf("Landing(%q) did not delegate to next", p)
 			}

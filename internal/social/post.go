@@ -1,6 +1,6 @@
 // Package social holds the small social layer around Relay's static sites:
-// posts, the post index, and (later) comments and templates. It is pure Go
-// model and file persistence; it does not import net/http.
+// posts, comments, templates, and the post index. It is pure Go model and
+// file persistence; it does not import net/http.
 package social
 
 import (

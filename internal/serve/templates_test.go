@@ -11,8 +11,17 @@ import (
 	"github.com/nemoNoboru/relay/internal/serve"
 )
 
+func mustTemplateStore(t *testing.T, data string) *serve.TemplateStore {
+	t.Helper()
+	store, err := serve.NewTemplateStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return store
+}
+
 func TestBuiltinTemplatesAreListed(t *testing.T) {
-	store := serve.NewTemplateStore(t.TempDir())
+	store := mustTemplateStore(t, t.TempDir())
 	list, skipped := store.List()
 	if len(skipped) != 0 {
 		t.Fatalf("skipped = %v", skipped)
@@ -35,7 +44,7 @@ func TestBuiltinTemplatesAreListed(t *testing.T) {
 }
 
 func TestTemplateOpenRejectsTraversalAndUnknown(t *testing.T) {
-	store := serve.NewTemplateStore(t.TempDir())
+	store := mustTemplateStore(t, t.TempDir())
 	for _, id := range []string{"", "../note", "nope", "_relay"} {
 		if _, _, ok := store.Open(id); ok {
 			t.Fatalf("Open(%q) succeeded", id)
@@ -56,7 +65,7 @@ func TestTemplateInstallAndRemove(t *testing.T) {
 	writeFile(t, filepath.Join(src, "relay-template.json"), `{"schema":1,"id":"zine","name":"Zine","description":"A test template.","version":"1.0.0","entry":"prepublish.html","script":"publish.js"}`)
 	writeFile(t, filepath.Join(src, "prepublish.html"), "<!doctype html><title>Zine</title>")
 	writeFile(t, filepath.Join(src, "publish.js"), "export const x = 1;")
-	store := serve.NewTemplateStore(data)
+	store := mustTemplateStore(t, data)
 	id, err := store.Install(src)
 	if err != nil || id != "zine" {
 		t.Fatalf("Install = %q %v", id, err)
@@ -76,7 +85,7 @@ func TestTemplateInstallAndRemove(t *testing.T) {
 }
 
 func TestInstallTemplateTar(t *testing.T) {
-	store := serve.NewTemplateStore(t.TempDir())
+	store := mustTemplateStore(t, t.TempDir())
 	body := tarSite(t, map[string]string{
 		"relay-template.json": `{"schema":1,"id":"zine","name":"Zine","description":"A test template.","version":"1.0.0","entry":"prepublish.html","script":"publish.js"}`,
 		"prepublish.html":     "<!doctype html><title>Zine</title>",
@@ -104,7 +113,7 @@ func TestInstallTemplateTar(t *testing.T) {
 
 func TestMemberCanInstallTemplate(t *testing.T) {
 	data := t.TempDir()
-	store := serve.NewTemplateStore(data)
+	store := mustTemplateStore(t, data)
 	ks, err := serve.NewKeyStore(data)
 	if err != nil {
 		t.Fatal(err)

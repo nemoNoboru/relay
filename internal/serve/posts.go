@@ -3,8 +3,8 @@ package serve
 import (
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -143,31 +143,34 @@ func (p *Posts) delete(w http.ResponseWriter, r *http.Request, site string) {
 	writeJSON(w, http.StatusOK, map[string]any{"site": string(name)})
 }
 
-// removeSite deletes a site's files and snapshots, its post index entry, its
-// comments, and its ownership record, then reloads the serving registry.
-// posts, comments, ks, and reload may be nil; the files are always removed.
+// removeSite deletes a site's post index entry, ownership record, comments,
+// and finally its files and snapshots, then reloads the serving registry.
+// Index and ownership are removed before the files so a bookkeeping failure
+// cannot leave an index entry or owner pointing at a site that is already
+// gone. posts, comments, ks, and reload may be nil; the files are always
+// removed.
 func removeSite(name domain.Name, versions *Versions, posts *social.Store, comments *social.CommentStore, ks *KeyStore, reload func() error) error {
-	if err := versions.Remove(name); err != nil {
-		return fmt.Errorf("remove site files: %w", err)
-	}
 	if posts != nil {
 		if _, err := posts.Delete(string(name)); err != nil {
 			return fmt.Errorf("remove post index: %w", err)
 		}
 	}
-	if comments != nil {
-		if _, err := comments.DeletePost(string(name)); err != nil {
-			fmt.Fprintf(os.Stderr, "serve: delete comments for %s: %v\n", name, err)
-		}
-	}
 	if ks != nil {
 		if err := ks.ForgetSite(string(name)); err != nil {
-			fmt.Fprintf(os.Stderr, "serve: forget site %s: %v\n", name, err)
+			return fmt.Errorf("forget site ownership: %w", err)
 		}
+	}
+	if comments != nil {
+		if _, err := comments.DeletePost(string(name)); err != nil {
+			slog.Warn("delete comments", "site", name, "err", err)
+		}
+	}
+	if err := versions.Remove(name); err != nil {
+		return fmt.Errorf("remove site files: %w", err)
 	}
 	if reload != nil {
 		if err := reload(); err != nil {
-			fmt.Fprintf(os.Stderr, "serve: reload after delete %s: %v\n", name, err)
+			slog.Warn("reload after delete", "site", name, "err", err)
 		}
 	}
 	return nil

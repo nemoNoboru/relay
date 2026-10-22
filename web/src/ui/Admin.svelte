@@ -24,6 +24,8 @@
     onDismiss,
     onLogout,
     onChangeToken,
+    onSetCredentials,
+    onClearCredentials,
   }: {
     admin: Writable<AdminState>;
     onConnect: (token: string) => void;
@@ -36,12 +38,17 @@
     onDismiss: () => void;
     onLogout: () => void;
     onChangeToken: (token: string) => void;
+    onSetCredentials: (id: string, username: string, password: string) => void;
+    onClearCredentials: (id: string) => void;
   } = $props();
 
   let tokenInput = $state("");
   let userInput = $state("");
   let newTokenInput = $state("");
   let revealed = $state<Record<string, boolean>>({});
+  let credsOpen = $state<Record<string, boolean>>({});
+  let credUser = $state("");
+  let credPass = $state("");
 
   /** Pages grouped by member. Pure. */
   const sitesByUser = (ov: AdminOverview | undefined): { user: string; sites: string[] }[] => {
@@ -73,6 +80,17 @@
 
   const toggleReveal = (id: string): void => {
     revealed = { ...revealed, [id]: !revealed[id] };
+  };
+
+  const toggleCreds = (k: DeployKey): void => {
+    const open = !credsOpen[k.id];
+    // One credentials form at a time, so the shared inputs always show the
+    // key being edited.
+    credsOpen = { [k.id]: open };
+    if (open) {
+      credUser = k.username ?? "";
+      credPass = "";
+    }
   };
 
   const copy = (text: string): void => {
@@ -178,7 +196,7 @@
                       <li class="keyrow">
                         <div class="keymeta">
                           <code>{k.id}</code>
-                          <small>{k.created} · {k.revoked ? "revoked" : "active"}</small>
+                          <small>{k.created} · {k.revoked ? "revoked" : "active"}{k.username ? ` · @${k.username}` : " · no login"}</small>
                         </div>
                         <div class="keytoken">
                           {#if revealed[k.id]}
@@ -196,10 +214,27 @@
                             <button class="btn solid invite-short" onclick={() => invite(k)}>{invited === k.id ? "Copied" : "Invite"}</button>
                             <button class="btn" onclick={() => onRotate(k.id)} disabled={$admin.busy}>Rotate</button>
                             <button class="btn" onclick={() => onRevoke(k.id)} disabled={$admin.busy}>Revoke</button>
+                            <button class="btn" onclick={() => toggleCreds(k)} disabled={$admin.busy}>Login</button>
                           {:else}
                             <span class="hint">revoked</span>
                           {/if}
                         </div>
+                        {#if credsOpen[k.id]}
+                          <form class="creds-form" onsubmit={(e) => { e.preventDefault(); onSetCredentials(k.id, credUser, credPass); }}>
+                            <div class="field">
+                              <label for={`creds-user-${k.id}`}>username</label>
+                              <input id={`creds-user-${k.id}`} type="text" bind:value={credUser} autocomplete="off" />
+                            </div>
+                            <div class="field">
+                              <label for={`creds-pass-${k.id}`}>temporary password</label>
+                              <input id={`creds-pass-${k.id}`} type="password" bind:value={credPass} autocomplete="new-password" />
+                            </div>
+                            <div class="row-actions">
+                              <button class="btn solid" type="submit" disabled={$admin.busy}>Save login</button>
+                              <button class="btn" type="button" onclick={() => onClearCredentials(k.id)} disabled={$admin.busy}>Clear login</button>
+                            </div>
+                          </form>
+                        {/if}
                       </li>
                     {/each}
                   </ul>

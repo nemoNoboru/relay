@@ -52,7 +52,7 @@ func newPostsHandler(t *testing.T) (http.Handler, *serve.KeyStore, *social.Store
 	if err != nil {
 		t.Fatal(err)
 	}
-	return serve.NewPosts("mynode", ks, store, comments, serve.NewTemplateStore(data), serve.NewVersions(data), nil), ks, store, comments, at, ak, bt, bk
+	return serve.NewPosts("mynode", ks, store, comments, mustTemplateStore(t, data), serve.NewVersions(data), nil), ks, store, comments, at, ak, bt, bk
 }
 
 func TestFeedIsChronologicalAndPublic(t *testing.T) {
@@ -147,6 +147,10 @@ func TestPostLookup(t *testing.T) {
 // TestIndexSiteReadsSidecar pins the rollback reindex path.
 func TestIndexSiteReadsSidecar(t *testing.T) {
 	data := t.TempDir()
+	ks, err := serve.NewKeyStore(data)
+	if err != nil {
+		t.Fatal(err)
+	}
 	store, err := social.NewStore(data)
 	if err != nil {
 		t.Fatal(err)
@@ -162,7 +166,7 @@ func TestIndexSiteReadsSidecar(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "relay-post.json"), []byte(`{"title":"After","summary":"sidecar","template":"note","member":"dk_2"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := serve.IndexSite(store, data, "blog"); err != nil {
+	if err := serve.IndexSite(store, ks, data, "blog"); err != nil {
 		t.Fatal(err)
 	}
 	post, ok := store.Get("blog")

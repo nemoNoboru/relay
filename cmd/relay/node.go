@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/nemoNoboru/relay/internal/domain"
+	"github.com/nemoNoboru/relay/internal/persist"
 	"github.com/nemoNoboru/relay/internal/serve"
 	"github.com/nemoNoboru/relay/internal/social"
 )
@@ -60,6 +61,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	}
 
 	logger := slog.New(slog.NewJSONHandler(stderr, nil))
+	slog.SetDefault(logger)
 	token, err := resolveAdminToken(*data, *adminToken, logger)
 	if err != nil {
 		fmt.Fprintf(stderr, "relay: admin token: %v\n", err)
@@ -99,7 +101,7 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	uploader := serve.NewUploader(node, *data, keys, versions, posts, serve.MaxDeployBytes, reload)
 	tokenPath := filepath.Join(*data, "admin-token")
 	reindex := func(name domain.Name) error {
-		return serve.IndexSite(posts, *data, name)
+		return serve.IndexSite(posts, keys, *data, name)
 	}
 	admin := serve.NewAdmin(token, keys, versions, posts, comments, reload, reindex, func(t string) error {
 		return writeTokenFile(tokenPath, t)
@@ -117,13 +119,25 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.Handle("/_relay/v1/invites", serve.NewInvites(keys))
 	session := serve.NewSession(node, keys)
 	mux.Handle("/_relay/v1/session", session)
+	mux.Handle("/_relay/v1/login", session)
 	mux.Handle("/_relay/v1/me", session)
-	templateStore := serve.NewTemplateStore(*data)
+	templateStore, err := serve.NewTemplateStore(*data)
+	if err != nil {
+		fmt.Fprintf(stderr, "relay: templates: %v\n", err)
+		return 1
+	}
 	postIndex := serve.NewPosts(node, keys, posts, comments, templateStore, versions, reload)
 	commentAPI := serve.NewComments(keys, posts, comments)
 	templateAPI := serve.NewTemplates(templateStore, keys)
 	publisher := serve.NewPublisher(node, uploader, templateStore, keys)
 	relayer := serve.NewRelayer(node, keys, uploader)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := relayer.Shutdown(ctx); err != nil {
+			logger.Error("relayer shutdown", "err", err)
+		}
+	}()
 	mux.Handle("/_relay/v1/feed", postIndex)
 	mux.Handle("/_relay/v1/people", postIndex)
 	mux.Handle("/_relay/v1/people/", postIndex)
@@ -136,10 +150,20 @@ func runNode(args []string, stdout, stderr io.Writer) int {
 	mux.Handle("/_relay/templates/", templateAPI)
 	mux.Handle("/_relay/v1/", uploader)
 	mux.Handle("/_relay/", ui)
-	mux.Handle("/fonts/", serve.Fonts())
+	fonts, err := serve.Fonts()
+	if err != nil {
+		fmt.Fprintf(stderr, "relay: fonts: %v\n", err)
+		return 1
+	}
+	mux.Handle("/fonts/", fonts)
 	// The node root serves the embedded landing page and its companions;
 	// everything else (sites at /<node>/<site>/...) goes to the registry.
-	mux.Handle("/", serve.Landing(registry.Handler()))
+	landing, err := serve.Landing(registry.Handler())
+	if err != nil {
+		fmt.Fprintf(stderr, "relay: owner UI: %v\n", err)
+		return 1
+	}
+	mux.Handle("/", landing)
 
 	logger.Info("relay node listening", "node", string(node), "addr", *listen, "tls", *tlsCert != "")
 	srv := &http.Server{
@@ -212,16 +236,10 @@ func resolveAdminToken(dataDir, explicit string, logger *slog.Logger) (string, e
 		return "", err
 	}
 	logger.Warn("no admin token set; using the default — change it at /_relay/admin.html",
-		"token", serve.DefaultAdminToken, "file", path)
+		"using-default-token", true, "file", path)
 	return serve.DefaultAdminToken, nil
 }
 
 func writeTokenFile(path, token string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, []byte(token+"\n"), 0o600); err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	return nil
+	return persist.WriteFile(path, []byte(token+"\n"), 0o600)
 }

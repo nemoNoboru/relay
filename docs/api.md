@@ -22,12 +22,11 @@ otherwise. The pivot adds a member cookie; see [`invites.md`](invites.md).
 | Method | Path | Auth | Result |
 |---|---|---|---|
 | `GET` | `/` | none | Embedded landing page |
-| `GET` | `/index.html` | none | 301 to `/` |
+| `GET` | `/index.html` | none | 404 (falls through to the site registry) |
 | `GET` | `/styles.css` | none | Embedded stylesheet |
 | `GET` | `/<node>/<site>/…` | none | Static site file |
 | `GET` | `/healthz` | none | `200 text/plain` with `ok` |
-| `GET` | `/_relay/` | none | 302 to `/_relay/home.html` |
-| `GET` | `/_relay/home.html` | none (page); cookie for member data | Member welcome shell |
+| `GET` | `/_relay/` | none | 302 to `/` |
 | `GET` | `/_relay/admin.html` | none (page) | Host console shell |
 | `GET` | `/_relay/publish.html` | none (page) | Publish page |
 | `GET` | `/_relay/deploy.html` | none (page) | Step-by-step upload page |
@@ -49,6 +48,8 @@ Missing or wrong credentials are `401 bad_token`.
 | `POST` | `/_relay/v1/admin/keys` | `{ "user": "alice" }` | `201 {key, token}` |
 | `POST` | `/_relay/v1/admin/keys/{id}/revoke` | — | `{key}` (cascades to invited keys) |
 | `POST` | `/_relay/v1/admin/keys/{id}/rotate` | — | `201 {key, token}` |
+| `POST` | `/_relay/v1/admin/keys/{id}/credentials` | `{ "username": "…", "password": "…" }` | `{key}` |
+| `DELETE` | `/_relay/v1/admin/keys/{id}/credentials` | — | `{key}` (clear only the credential fields) |
 | `GET` | `/_relay/v1/admin/sites/{site}` | — | `{site, versions}` |
 | `GET` | `/_relay/v1/admin/sites/{site}/versions` | — | `{site, versions}` |
 | `POST` | `/_relay/v1/admin/sites/{site}/rollback` | `{ "version": "…" }` or `{}` | `{site, version}` |
@@ -73,7 +74,8 @@ any comment.
   "revoked": false,
   "invitedBy": "dk_…",
   "displayName": "Alice",
-  "bio": "Runs the reading group."
+  "bio": "Runs the reading group.",
+  "username": "alice"
 }
 ```
 
@@ -117,10 +119,11 @@ not need to paste the key again.
 
 | Method | Path | Auth | Body | Result |
 |---|---|---|---|---|
-| `POST` | `/_relay/v1/session` | invite token in body | `{ "token": "…" }` | `200 {member, node}`, sets cookie |
+| `POST` | `/_relay/v1/session` | invite token in body | `{ "token": "…" }` | `200 {member, node, username}`, sets cookie |
+| `POST` | `/_relay/v1/login` | none | `{ "username": "…", "password": "…" }` | `200 {member, node, username}`, sets cookie |
 | `DELETE` | `/_relay/v1/session` | cookie | — | `204`, clears cookie |
-| `GET` | `/_relay/v1/me` | cookie or bearer | — | `{member, node}` |
-| `PATCH` | `/_relay/v1/me` | cookie or bearer | `{ "displayName": "…", "bio": "…" }` | `{member, node}` |
+| `GET` | `/_relay/v1/me` | cookie or bearer | — | `{member, node, username}` |
+| `PATCH` | `/_relay/v1/me` | cookie or bearer | `{ "displayName": "…", "bio": "…" }` | `{member, node, username}` |
 
 `member`:
 
@@ -149,8 +152,18 @@ Signing out clears the cookie but does not revoke the key.
 `displayName` and `bio` are optional. An empty display name falls back to the
 last segment of `user`. Limits: display name 63 characters, bio 280.
 
-Errors: `401 session_required` when there is no live member credential, and
-`400 bad_profile` for an invalid display name or bio.
+`username` is the member's own login username, empty until they set
+credentials. `POST /_relay/v1/session` also accepts optional `username` and
+`password` fields, so the first open of an invitation can set the return
+credentials in the same request; omitting both keeps the invitation-only path.
+`POST /_relay/v1/login` signs a member back in with those credentials and sets
+the same `relay_member` cookie whose value is the invitation token.
+
+Errors: `401 session_required` when there is no live member credential,
+`400 bad_profile` for an invalid display name or bio, `401 bad_credentials`
+for an unknown username or wrong password (identical for both), and
+`429 rate_limited` for repeated login attempts within a short window.
+Duplicate usernames return `409 username_taken`.
 
 ### Deploy
 

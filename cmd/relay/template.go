@@ -24,7 +24,12 @@ func runTemplate(args []string, stdout, stderr io.Writer) int {
 			templateUsage(stderr)
 			return 2
 		}
-		list, skipped := serve.NewTemplateStore(*data).List()
+		store, err := serve.NewTemplateStore(*data)
+		if err != nil {
+			fmt.Fprintf(stderr, "relay: templates: %v\n", err)
+			return 1
+		}
+		list, skipped := store.List()
 		for _, s := range skipped {
 			fmt.Fprintf(stderr, "relay: skipping template: %s\n", s)
 		}
@@ -44,7 +49,12 @@ func runTemplate(args []string, stdout, stderr io.Writer) int {
 			templateUsage(stderr)
 			return 2
 		}
-		id, err := serve.NewTemplateStore(*data).Install(fs.Arg(0))
+		store, err := serve.NewTemplateStore(*data)
+		if err != nil {
+			fmt.Fprintf(stderr, "relay: templates: %v\n", err)
+			return 1
+		}
+		id, err := store.Install(fs.Arg(0))
 		if err != nil {
 			fmt.Fprintf(stderr, "relay: install template: %v\n", err)
 			return 1
@@ -59,7 +69,12 @@ func runTemplate(args []string, stdout, stderr io.Writer) int {
 			templateUsage(stderr)
 			return 2
 		}
-		if err := serve.NewTemplateStore(*data).Remove(fs.Arg(0)); err != nil {
+		store, err := serve.NewTemplateStore(*data)
+		if err != nil {
+			fmt.Fprintf(stderr, "relay: templates: %v\n", err)
+			return 1
+		}
+		if err := store.Remove(fs.Arg(0)); err != nil {
 			fmt.Fprintf(stderr, "relay: remove template: %v\n", err)
 			return 1
 		}
