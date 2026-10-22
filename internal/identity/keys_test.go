@@ -1,4 +1,4 @@
-package serve_test
+package identity_test
 
 import (
 	"os"
@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nemoNoboru/relay/internal/serve"
+	"github.com/nemoNoboru/relay/internal/identity"
 )
 
 // TestKeyStoreCreateAuthenticate pins the happy path: mint a key, the token
 // authenticates as its user, and a wrong token does not.
 func TestKeyStoreCreateAuthenticate(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestKeyStoreCreateAuthenticate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if token == "" || key.ID == "" || key.User != "alice" || key.Revoked || key.Token != token {
+	if token == "" || key.ID == "" || key.Label != "alice" || key.Revoked || key.Token != token {
 		t.Fatalf("key = %+v, token = %q", key, token)
 	}
 	if user, ok := ks.Authenticate(token); !ok || user != "alice" {
@@ -33,12 +33,12 @@ func TestKeyStoreCreateAuthenticate(t *testing.T) {
 
 // TestKeyStoreRejectsBadUser pins the user-label grammar.
 func TestKeyStoreRejectsBadUser(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, user := range []string{"", "  ", "has space", "a/b", ">64" + strings.Repeat("x", 64)} {
-		if _, _, err := ks.Create(user); err != serve.ErrBadUser {
+		if _, _, err := ks.Create(user); err != identity.ErrBadUser {
 			t.Fatalf("Create(%q) err = %v, want ErrBadUser", user, err)
 		}
 	}
@@ -47,7 +47,7 @@ func TestKeyStoreRejectsBadUser(t *testing.T) {
 // TestKeyStoreRevoke pins that revocation is immediate, idempotent, and
 // stops authentication.
 func TestKeyStoreRevoke(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestKeyStoreRevoke(t *testing.T) {
 // TestKeyStoreInvite pins delegated invites: a live key mints a child key
 // whose label carries the chain.
 func TestKeyStoreInvite(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,13 +84,13 @@ func TestKeyStoreInvite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key.User != "alice/bob" {
-		t.Fatalf("invited user = %q, want alice/bob", key.User)
+	if key.Label != "alice/bob" {
+		t.Fatalf("invited user = %q, want alice/bob", key.Label)
 	}
 	if user, ok := ks.Authenticate(bob); !ok || user != "alice/bob" {
 		t.Fatalf("Authenticate(bob) = %q, %v; want alice/bob, true", user, ok)
 	}
-	if _, _, err := ks.Invite("wrong", "eve"); err != serve.ErrBadInviter {
+	if _, _, err := ks.Invite("wrong", "eve"); err != identity.ErrBadInviter {
 		t.Fatalf("Invite(wrong) err = %v, want ErrBadInviter", err)
 	}
 }
@@ -98,7 +98,7 @@ func TestKeyStoreInvite(t *testing.T) {
 // TestKeyStoreRevokeCascades pins that revoking a key revokes everyone it
 // invited, however deep the chain.
 func TestKeyStoreRevokeCascades(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestKeyStoreRevokeCascades(t *testing.T) {
 // TestKeyStoreRotate pins that rotation mints a new live token and kills the
 // old one, keeping the same user.
 func TestKeyStoreRotate(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestKeyStoreRotate(t *testing.T) {
 	if err != nil || !found {
 		t.Fatalf("rotate = found %v, err %v", found, err)
 	}
-	if newToken == "" || newToken == oldToken || newKey.ID == oldKey.ID || newKey.User != "alice" {
+	if newToken == "" || newToken == oldToken || newKey.ID == oldKey.ID || newKey.Label != "alice" {
 		t.Fatalf("new = %q / %+v, old = %q / %+v", newToken, newKey, oldToken, oldKey)
 	}
 	if _, ok := ks.Authenticate(oldToken); ok {
@@ -155,7 +155,7 @@ func TestKeyStoreRotate(t *testing.T) {
 
 // TestKeyStoreRecordSite pins site attribution and its persistence.
 func TestKeyStoreRecordSite(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,12 +175,12 @@ func TestKeyStoreRecordSite(t *testing.T) {
 	for _, s := range ov.Sites {
 		switch s.Site {
 		case "blog":
-			if s.User != "bob" {
-				t.Fatalf("blog owner = %q, want bob", s.User)
+			if s.Label != "bob" {
+				t.Fatalf("blog owner = %q, want bob", s.Label)
 			}
 		case "zine":
-			if s.User != "alice" {
-				t.Fatalf("zine owner = %q, want alice", s.User)
+			if s.Label != "alice" {
+				t.Fatalf("zine owner = %q, want alice", s.Label)
 			}
 		default:
 			t.Fatalf("unexpected site %q", s.Site)
@@ -193,7 +193,7 @@ func TestKeyStoreRecordSite(t *testing.T) {
 // the store file is 0600.
 func TestKeyStorePersists(t *testing.T) {
 	data := t.TempDir()
-	ks, err := serve.NewKeyStore(data)
+	ks, err := identity.NewKeyStore(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestKeyStorePersists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	reloaded, err := serve.NewKeyStore(data)
+	reloaded, err := identity.NewKeyStore(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestKeyStorePersists(t *testing.T) {
 // TestKeyStoreTokensAreUnique pins that minted tokens do not collide (smoke,
 // not a guarantee).
 func TestKeyStoreTokensAreUnique(t *testing.T) {
-	ks, err := serve.NewKeyStore(t.TempDir())
+	ks, err := identity.NewKeyStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

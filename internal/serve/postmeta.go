@@ -2,8 +2,11 @@ package serve
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
+
+	"github.com/nemoNoboru/relay/internal/persist"
 )
 
 // postMeta is the portable sidecar written into a post's folder. The
@@ -20,11 +23,14 @@ type postMeta struct {
 
 func readPostMeta(dir string) postMeta {
 	var m postMeta
-	b, err := os.ReadFile(filepath.Join(dir, "relay-post.json"))
+	path := filepath.Join(dir, "relay-post.json")
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return m
 	}
-	_ = json.Unmarshal(b, &m) // a malformed sidecar falls back to defaults
+	if err := json.Unmarshal(b, &m); err != nil {
+		slog.Warn("parse post metadata", "path", path, "err", err)
+	}
 	return m
 }
 
@@ -33,5 +39,5 @@ func writePostMeta(dir string, m postMeta) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "relay-post.json"), append(b, '\n'), 0o644)
+	return persist.WriteFile(filepath.Join(dir, "relay-post.json"), append(b, '\n'), 0o644)
 }

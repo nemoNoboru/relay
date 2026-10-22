@@ -22,8 +22,12 @@ func TestFontsServesEmbedded(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.path, func(t *testing.T) {
+			h, err := Fonts()
+			if err != nil {
+				t.Fatal(err)
+			}
 			rec := httptest.NewRecorder()
-			Fonts().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+			h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
 			if rec.Code != http.StatusOK {
 				t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 			}

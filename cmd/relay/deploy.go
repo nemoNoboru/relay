@@ -69,7 +69,11 @@ func runDeploy(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	defer res.Body.Close()
-	respBody, _ := io.ReadAll(res.Body)
+	respBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Fprintf(stderr, "relay: deploy: read response: %v\n", err)
+		return 1
+	}
 	if res.StatusCode != http.StatusOK {
 		fmt.Fprintf(stderr, "relay: deploy failed: %s: %s\n", res.Status, strings.TrimSpace(string(respBody)))
 		return 1

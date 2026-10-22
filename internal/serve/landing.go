@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 
@@ -21,11 +22,10 @@ var landingFiles = map[string]string{
 // Landing serves the node's front door: the public feed at /, the hosting
 // pitch at /host, the why page at /why, and the stylesheet companion.
 // Every other path is delegated to next (the site registry).
-func Landing(next http.Handler) http.Handler {
+func Landing(next http.Handler) (http.Handler, error) {
 	dist, err := fs.Sub(webui.FS, "dist")
 	if err != nil {
-		// The dist tree is fixed at build time; this cannot fail.
-		panic("relay: owner UI: " + err.Error())
+		return nil, fmt.Errorf("owner UI: %w", err)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -38,5 +38,5 @@ func Landing(next http.Handler) http.Handler {
 			return
 		}
 		http.ServeFileFS(w, r, relay.SiteFS, name)
-	})
+	}), nil
 }

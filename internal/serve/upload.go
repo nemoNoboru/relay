@@ -2,10 +2,10 @@ package serve
 
 import (
 	"archive/tar"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
@@ -133,25 +133,25 @@ func (u *Uploader) savePublish(name domain.Name, staging string, member Member, 
 	post.Normalize()
 	if err := writePostMeta(staging, postMeta{
 		Title: post.Title, Summary: post.Summary, Template: post.Template, Image: post.Image,
-		Author: member.User, Member: member.ID,
+		Author: member.Label, Member: member.ID,
 	}); err != nil {
-		fmt.Fprintf(os.Stderr, "serve: write post metadata for %s: %v\n", name, err)
+		slog.Warn("write post metadata", "site", name, "err", err)
 	}
 	if err := u.commit(name, staging); err != nil {
 		return social.Post{}, "", err
 	}
 	if u.reload != nil {
 		if err := u.reload(); err != nil {
-			fmt.Fprintf(os.Stderr, "serve: reload sites after publish: %v\n", err)
+			slog.Warn("reload sites after publish", "err", err)
 		}
 	}
-	if err := u.ks.RecordSite(string(name), member.User); err != nil {
-		fmt.Fprintf(os.Stderr, "serve: record owner of %s: %v\n", name, err)
+	if err := u.ks.RecordSite(string(name), member.Label); err != nil {
+		slog.Warn("record site owner", "site", name, "err", err)
 	}
 	if u.posts != nil {
 		indexed, err := u.posts.Upsert(post)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "serve: index post %s: %v\n", name, err)
+			slog.Warn("index post", "site", name, "err", err)
 		} else {
 			post = indexed
 		}
@@ -187,13 +187,15 @@ func (u *Uploader) commit(name domain.Name, staging string) error {
 	}
 	if err := os.Rename(staging, filepath.Join(u.sitesDir, string(name))); err != nil {
 		if snapshot != "" {
-			_ = u.versions.Restore(name, snapshot) // best-effort rollback
+			if undoErr := u.versions.Restore(name, snapshot); undoErr != nil {
+				slog.Error("restore snapshot after failed deploy", "site", name, "err", undoErr)
+			}
 		}
 		return fmt.Errorf("move staging into place: %w", err)
 	}
 	if err := u.versions.Prune(name); err != nil {
 		// Non-fatal: only the retention cap is unmet.
-		fmt.Fprintf(os.Stderr, "serve: prune versions of %s: %v\n", name, err)
+		slog.Warn("prune versions", "site", name, "err", err)
 	}
 	return nil
 }
@@ -309,26 +311,4 @@ func (u *Uploader) uniqueSite(base string) domain.Name {
 		return domain.Name(candidate)
 	}
 	return domain.Name(base)
-}
-
-// errorEnvelope is the API's error shape (docs/api.md).
-type errorEnvelope struct {
-	Error struct {
-		Code    string `json:"code"`
-		Message string `json:"message"`
-	} `json:"error"`
-}
-
-// writeError writes the API's error envelope (docs/api.md).
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	e := errorEnvelope{}
-	e.Error.Code = code
-	e.Error.Message = message
-	writeJSON(w, status, e)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
 }

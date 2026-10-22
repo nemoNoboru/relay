@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -33,8 +34,8 @@ type Version struct {
 // back to one of them. The live site stays at <dataDir>/sites/<site>/.
 //
 // Snapshot and Rollback move directories by rename, so they are cheap and
-// atomic on one filesystem. The mutex serializes those moves; reads (List)
-// do not take it.
+// atomic on one filesystem. The mutex serializes those moves and the reads
+// that list them.
 type Versions struct {
 	sitesDir string
 	keep     int
@@ -106,7 +107,9 @@ func (v *Versions) Rollback(name domain.Name, id string) (string, error) {
 	}
 	if err := os.Rename(src, v.siteDir(name)); err != nil {
 		if displaced != "" {
-			_ = os.Rename(v.versionDir(name, displaced), v.siteDir(name))
+			if undoErr := os.Rename(v.versionDir(name, displaced), v.siteDir(name)); undoErr != nil {
+				slog.Error("restore displaced snapshot", "site", name, "err", undoErr)
+			}
 		}
 		return "", err
 	}

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 
@@ -65,6 +65,8 @@ func NewAdmin(token string, ks *KeyStore, versions *Versions, posts *social.Stor
 //	POST /_relay/v1/admin/keys                     create a key   { "user": "…" }
 //	POST /_relay/v1/admin/keys/{id}/revoke         revoke a key
 //	POST /_relay/v1/admin/keys/{id}/rotate         rotate a key
+//	POST /_relay/v1/admin/keys/{id}/credentials    set/change username + password
+//	DELETE /_relay/v1/admin/keys/{id}/credentials  clear username + password
 //	GET  /_relay/v1/admin/sites/{site}/versions    list rollback snapshots
 //	POST /_relay/v1/admin/sites/{site}/rollback    roll back  { "version": "…" }
 //	DELETE /_relay/v1/admin/comments/{id}          delete any comment
@@ -92,7 +94,7 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(p, "/_relay/v1/admin/keys/"):
 		a.serveKey(w, r, strings.TrimPrefix(p, "/_relay/v1/admin/keys/"))
 	case r.Method == http.MethodDelete && strings.HasPrefix(p, "/_relay/v1/admin/comments/"):
-		a.deleteComment(w, strings.TrimPrefix(p, "/_relay/v1/admin/comments/"))
+		a.deleteComment(w, r, strings.TrimPrefix(p, "/_relay/v1/admin/comments/"))
 	case r.Method == http.MethodDelete && strings.HasPrefix(p, "/_relay/v1/admin/posts/"):
 		a.deletePost(w, r, strings.TrimPrefix(p, "/_relay/v1/admin/posts/"))
 	default:
@@ -101,20 +103,20 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Admin) serveKey(w http.ResponseWriter, r *http.Request, rest string) {
-	if r.Method != http.MethodPost {
-		http.NotFound(w, r)
-		return
-	}
 	id, action, found := strings.Cut(rest, "/")
 	if !found {
 		http.NotFound(w, r)
 		return
 	}
-	switch action {
-	case "revoke":
+	switch {
+	case action == "revoke" && r.Method == http.MethodPost:
 		a.revokeKey(w, r, id)
-	case "rotate":
+	case action == "rotate" && r.Method == http.MethodPost:
 		a.rotateKey(w, r, id)
+	case action == "credentials" && r.Method == http.MethodPost:
+		a.setCredentials(w, r, id)
+	case action == "credentials" && r.Method == http.MethodDelete:
+		a.clearCredentials(w, id)
 	default:
 		http.NotFound(w, r)
 	}
@@ -161,9 +163,9 @@ func (a *Admin) recentComments() []CommentView {
 	return out
 }
 
-func (a *Admin) deleteComment(w http.ResponseWriter, id string) {
+func (a *Admin) deleteComment(w http.ResponseWriter, r *http.Request, id string) {
 	if a.comments == nil {
-		http.NotFound(w, nil)
+		http.NotFound(w, r)
 		return
 	}
 	if id == "" || strings.Contains(id, "/") {
@@ -291,6 +293,47 @@ func (a *Admin) rotateKey(w http.ResponseWriter, r *http.Request, id string) {
 	writeJSON(w, http.StatusCreated, map[string]any{"key": key, "token": token})
 }
 
+// setCredentials gives a member a username and password, or replaces the
+// current ones. It is the host's password reset.
+func (a *Admin) setCredentials(w http.ResponseWriter, r *http.Request, id string) {
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "body must be JSON: "+err.Error())
+		return
+	}
+	key, found, err := a.ks.SetCredentials(id, strings.TrimSpace(req.Username), req.Password)
+	switch {
+	case errors.Is(err, ErrBadUser), errors.Is(err, ErrBadPassword):
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+	case errors.Is(err, ErrUsernameTaken):
+		writeError(w, http.StatusConflict, "username_taken", err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+	case !found:
+		writeError(w, http.StatusNotFound, "not_found", "no deploy key "+id)
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"key": key})
+	}
+}
+
+// clearCredentials removes a member's username and password without revoking
+// the invitation or touching the invite tree.
+func (a *Admin) clearCredentials(w http.ResponseWriter, id string) {
+	key, found, err := a.ks.ClearCredentials(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	if !found {
+		writeError(w, http.StatusNotFound, "not_found", "no deploy key "+id)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"key": key})
+}
+
 func (a *Admin) listVersions(w http.ResponseWriter, r *http.Request, name domain.Name) {
 	vs, err := a.versions.List(name)
 	if err != nil {
@@ -330,19 +373,19 @@ func (a *Admin) rollbackSite(w http.ResponseWriter, r *http.Request, name domain
 		return
 	}
 	if err := a.versions.Prune(name); err != nil {
-		fmt.Fprintf(os.Stderr, "serve: prune versions of %s: %v\n", name, err)
+		slog.Warn("prune versions", "site", name, "err", err)
 	}
 	if a.reload != nil {
 		if err := a.reload(); err != nil {
 			// The rollback is on disk; only the in-memory view failed to
 			// refresh. Report it, do not fail the rollback.
-			fmt.Fprintf(os.Stderr, "serve: reload sites after rollback: %v\n", err)
+			slog.Warn("reload sites after rollback", "err", err)
 		}
 	}
 	if a.reindex != nil {
 		if err := a.reindex(name); err != nil {
 			// The rollback is on disk; the index can be repaired with relay index.
-			fmt.Fprintf(os.Stderr, "serve: reindex %s after rollback: %v\n", name, err)
+			slog.Warn("reindex after rollback", "site", name, "err", err)
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"site": string(name), "version": id})

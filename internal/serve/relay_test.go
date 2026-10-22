@@ -310,6 +310,41 @@ func TestFetchOEmbed(t *testing.T) {
 	}
 }
 
+func TestRelayShutdownCancelsJobs(t *testing.T) {
+	rl, _, _, member := newRelayerTest(t)
+	started := make(chan struct{})
+	exited := make(chan struct{})
+	rl.download = func(ctx context.Context, source, dir string) (string, error) {
+		close(started)
+		<-ctx.Done()
+		close(exited)
+		return "", ctx.Err()
+	}
+	rl.fetch = func(ctx context.Context, source string) (relayCard, error) {
+		return relayCard{}, errors.New("unused")
+	}
+
+	job := &relayJob{ID: "rj_shutdown", Source: "https://x.example/", Status: "running", Created: time.Now().UTC()}
+	rl.add(job)
+	rl.wg.Add(1)
+	go func() {
+		defer rl.wg.Done()
+		rl.run(job, member)
+	}()
+	<-started
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := rl.Shutdown(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-exited:
+	default:
+		t.Fatal("job did not exit after shutdown")
+	}
+}
+
 func TestRelayDeliversWebhook(t *testing.T) {
 	rl, _, _, member := newRelayerTest(t)
 	var got []byte

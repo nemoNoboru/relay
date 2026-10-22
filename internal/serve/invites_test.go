@@ -30,8 +30,8 @@ func TestInvitesPassesOn(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Key.User != "alice/bob" {
-		t.Fatalf("invited user = %q, want alice/bob", got.Key.User)
+	if got.Key.Label != "alice/bob" {
+		t.Fatalf("invited user = %q, want alice/bob", got.Key.Label)
 	}
 	if user, ok := ks.Authenticate(got.Token); !ok || user != "alice/bob" {
 		t.Fatalf("invited token = %q, %v; want alice/bob, true", user, ok)

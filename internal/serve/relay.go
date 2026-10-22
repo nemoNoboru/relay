@@ -1,25 +1,19 @@
-// Package serve hosts a "relay a url" surface: a member pastes a link and
-// the node re-hosts what it points at. The download runs out of process with
-// yt-dlp; when yt-dlp cannot fetch anything (or is not installed), the node
-// falls back to a share card built from the page's social preview metadata.
+// Package serve is the HTTP layer of the Relay node: static site hosting,
+// the owner UI, the member session and profile APIs, the post and comment
+// surfaces, template publishing, and the relay-a-url re-hosting surface.
+// Identity rules live in internal/identity and the social model lives in
+// internal/social; this package translates HTTP into those features.
 package serve
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"html"
-	"io"
-	"mime"
+	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -45,26 +39,6 @@ const (
 	// relayMaxPage caps a single downloaded media file.
 	relayMaxPage = 500 << 20
 )
-
-// relayHTTP is the client for the fallback card: fetching the page and its
-// preview image. The per-request timeout keeps a dead host from pinning the
-// job past its own context deadline.
-var relayHTTP = &http.Client{Timeout: 30 * time.Second}
-
-var relayImageExt = map[string]bool{
-	".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
-	".gif": true, ".avif": true, ".svg": true, ".bmp": true,
-}
-
-var relayVideoExt = map[string]bool{
-	".mp4": true, ".webm": true, ".mkv": true, ".mov": true,
-	".m4v": true, ".avi": true, ".ts": true,
-}
-
-var relayAudioExt = map[string]bool{
-	".m4a": true, ".mp3": true, ".opus": true, ".ogg": true,
-	".oga": true, ".flac": true, ".wav": true, ".aac": true, ".weba": true,
-}
 
 type relayKind int
 
@@ -116,6 +90,10 @@ type Relayer struct {
 	ks       *KeyStore
 	uploader *Uploader
 
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+
 	mu   sync.Mutex
 	jobs map[string]*relayJob
 
@@ -123,15 +101,36 @@ type Relayer struct {
 	fetch    func(ctx context.Context, source string) (relayCard, error)
 }
 
-// NewRelayer returns the relay-a-url handler for a node.
+// NewRelayer returns the relay-a-url handler for a node. The handler owns its
+// background jobs: Shutdown cancels them and waits for them to finish.
 func NewRelayer(node domain.Name, ks *KeyStore, uploader *Uploader) *Relayer {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Relayer{
 		node:     node,
 		ks:       ks,
 		uploader: uploader,
+		ctx:      ctx,
+		cancel:   cancel,
 		jobs:     map[string]*relayJob{},
 		download: relayDownload,
 		fetch:    relayFetch,
+	}
+}
+
+// Shutdown cancels in-flight relay jobs and waits for them to exit. It returns
+// ctx.Err() when the wait outlives the caller's context.
+func (rl *Relayer) Shutdown(ctx context.Context) error {
+	rl.cancel()
+	done := make(chan struct{})
+	go func() {
+		rl.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -190,7 +189,11 @@ func (rl *Relayer) start(w http.ResponseWriter, r *http.Request) {
 	}
 	job := &relayJob{ID: newRelayID(), Source: source, Status: "running", Created: time.Now().UTC(), Webhook: webhook}
 	rl.add(job)
-	go rl.run(job, member)
+	rl.wg.Add(1)
+	go func() {
+		defer rl.wg.Done()
+		rl.run(job, member)
+	}()
 	writeJSON(w, http.StatusAccepted, job)
 }
 
@@ -221,7 +224,7 @@ func (rl *Relayer) status(w http.ResponseWriter, r *http.Request, id string) {
 // context is bounded by relayJobTimeout, so the goroutine always exits and
 // the in-flight yt-dlp process is killed by its own context.
 func (rl *Relayer) run(job *relayJob, member Member) {
-	ctx, cancel := context.WithTimeout(context.Background(), relayJobTimeout)
+	ctx, cancel := context.WithTimeout(rl.ctx, relayJobTimeout)
 	defer cancel()
 	defer rl.deliver(ctx, job)
 
@@ -246,7 +249,10 @@ func (rl *Relayer) run(job *relayJob, member Member) {
 	defer os.RemoveAll(staging)
 
 	title, err := rl.download(ctx, job.Source, dlDir)
-	media := collectMedia(dlDir)
+	media, walkErr := collectMedia(dlDir)
+	if walkErr != nil {
+		slog.Warn("collect relay media", "err", walkErr)
+	}
 	if err == nil && len(media) > 0 {
 		rl.publishMedia(job, member, staging, title, media)
 		return
@@ -271,7 +277,7 @@ func (rl *Relayer) publishMedia(job *relayJob, member Member, staging, title str
 	for i, m := range media {
 		name := relayMediaName(i, len(media), strings.ToLower(filepath.Ext(m.Path)))
 		if err := copyFile(filepath.Join(staging, name), m.Path); err != nil {
-			fmt.Fprintf(os.Stderr, "serve: relay copy %s: %v\n", m.Path, err)
+			slog.Warn("relay copy", "file", m.Path, "err", err)
 			continue
 		}
 		copied = append(copied, relayMedia{Path: name, Kind: m.Kind})
@@ -318,7 +324,7 @@ func (rl *Relayer) publishCard(job *relayJob, member Member, staging string, car
 	if len(card.Image) > 0 && card.ImageExt != "" {
 		name := "preview" + card.ImageExt
 		if err := os.WriteFile(filepath.Join(staging, name), card.Image, 0o644); err != nil {
-			fmt.Fprintf(os.Stderr, "serve: relay write preview image: %v\n", err)
+			slog.Warn("relay write preview image", "err", err)
 		} else {
 			image = name
 		}
@@ -370,26 +376,26 @@ func (rl *Relayer) deliver(ctx context.Context, job *relayJob) {
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "serve: relay webhook marshal: %v\n", err)
+		slog.Warn("relay webhook marshal", "err", err)
 		return
 	}
 	dctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(dctx, http.MethodPost, job.Webhook, strings.NewReader(string(body)))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "serve: relay webhook request: %v\n", err)
+		slog.Warn("relay webhook request", "err", err)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Relay/1.0 (+webhook)")
 	resp, err := relayHTTP.Do(req)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "serve: relay webhook to %s: %v\n", job.Webhook, err)
+		slog.Warn("relay webhook delivery", "url", job.Webhook, "err", err)
 		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode > 299 {
-		fmt.Fprintf(os.Stderr, "serve: relay webhook to %s: %s\n", job.Webhook, resp.Status)
+		slog.Warn("relay webhook status", "url", job.Webhook, "status", resp.Status)
 	}
 }
 
@@ -419,448 +425,4 @@ func (rl *Relayer) countRunning() int {
 		}
 	}
 	return n
-}
-
-// relayDownload runs yt-dlp against source, writing files into dir, and
-// returns the title of the first downloaded entry. A missing yt-dlp binary is
-// an ordinary error: the caller falls back to the share card.
-func relayDownload(ctx context.Context, source, dir string) (string, error) {
-	exe, err := exec.LookPath("yt-dlp")
-	if err != nil {
-		return "", errors.New("yt-dlp is not installed")
-	}
-	args := []string{
-		"--no-progress",
-		"--no-warnings",
-		"--no-overwrites",
-		"--playlist-items", "1-24",
-		"--max-downloads", "24",
-		"--max-filesize", strconv.FormatInt(relayMaxPage, 10),
-		"--write-thumbnail",
-		"--print", "%(title)s",
-		"-o", filepath.Join(dir, "%(id)s.%(ext)s"),
-		source,
-	}
-	cmd := exec.CommandContext(ctx, exe, args...)
-	var out strings.Builder
-	cmd.Stdout = &out
-	cmd.Stderr = io.Discard
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-	for _, line := range strings.Split(out.String(), "\n") {
-		if s := strings.TrimSpace(line); s != "" {
-			return s, nil
-		}
-	}
-	return "", nil
-}
-
-// oembedReply is the small slice of an oEmbed response the card needs.
-type oembedReply struct {
-	Title      string `json:"title"`
-	AuthorName string `json:"author_name"`
-	Thumbnail  string `json:"thumbnail_url"`
-}
-
-// oembedURL returns a provider's public oEmbed endpoint for a page, or ""
-// when the host has no known endpoint. It exists for hosts (YouTube, Vimeo)
-// that serve a metadata-free shell to anonymous clients.
-func oembedURL(source string) string {
-	u, err := url.Parse(source)
-	if err != nil {
-		return ""
-	}
-	host := strings.ToLower(u.Host)
-	switch {
-	case host == "youtube.com", host == "www.youtube.com", host == "m.youtube.com", host == "youtu.be":
-		return "https://www.youtube.com/oembed?url=" + url.QueryEscape(source) + "&format=json"
-	case host == "vimeo.com", strings.HasSuffix(host, ".vimeo.com"):
-		return "https://vimeo.com/api/oembed.json?url=" + url.QueryEscape(source)
-	}
-	return ""
-}
-
-func fetchOEmbed(ctx context.Context, raw string) (oembedReply, error) {
-	var reply oembedReply
-	b, err := httpGet(ctx, raw, 64<<10)
-	if err != nil {
-		return reply, err
-	}
-	if err := json.Unmarshal(b, &reply); err != nil {
-		return reply, fmt.Errorf("parse oembed: %w", err)
-	}
-	return reply, nil
-}
-
-// relayFetch builds the fallback card: the page's social preview metadata
-// plus a downloaded copy of its preview image. A known provider's oEmbed
-// endpoint is authoritative for the title (cleaner than og:title, and still
-// served when the page is a metadata-free login shell) and fills the
-// thumbnail when the page carried none.
-func relayFetch(ctx context.Context, source string) (relayCard, error) {
-	var card relayCard
-	var image string
-	if page, err := httpGet(ctx, source, relayMaxHTML); err == nil {
-		meta := extractMeta(string(page))
-		card.Title = meta.title
-		card.Description = meta.description
-		image = meta.image
-	}
-	if oe := oembedURL(source); oe != "" {
-		if om, err := fetchOEmbed(ctx, oe); err == nil {
-			if om.Title != "" {
-				card.Title = om.Title
-			}
-			if card.Description == "" {
-				card.Description = om.AuthorName
-			}
-			if image == "" {
-				image = om.Thumbnail
-			}
-		}
-	}
-	if image != "" {
-		if imgURL, err := resolveURL(source, image); err == nil {
-			if b, ext, err := httpGetImage(ctx, imgURL); err == nil {
-				card.Image, card.ImageExt = b, ext
-			}
-		}
-	}
-	return card, nil
-}
-
-func httpGet(ctx context.Context, raw string, limit int64) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "Relay/1.0 (+rehost)")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,image/*;q=0.9,*/*;q=0.5")
-	resp, err := relayHTTP.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetch %s: %s", raw, resp.Status)
-	}
-	return io.ReadAll(io.LimitReader(resp.Body, limit))
-}
-
-// httpGetImage downloads a social preview image, refusing anything that is
-// not an image or over the size cap.
-func httpGetImage(ctx context.Context, raw string) ([]byte, string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
-	if err != nil {
-		return nil, "", err
-	}
-	req.Header.Set("User-Agent", "Relay/1.0 (+rehost)")
-	req.Header.Set("Accept", "image/*")
-	resp, err := relayHTTP.Do(req)
-	if err != nil {
-		return nil, "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("fetch image %s: %s", raw, resp.Status)
-	}
-	if ct := resp.Header.Get("Content-Type"); ct != "" && !strings.HasPrefix(ct, "image/") {
-		return nil, "", errors.New("not an image")
-	}
-	b, err := io.ReadAll(io.LimitReader(resp.Body, relayMaxImage))
-	if err != nil {
-		return nil, "", err
-	}
-	ext := imageExt(resp.Header.Get("Content-Type"), raw)
-	if ext == "" {
-		return nil, "", errors.New("unknown image type")
-	}
-	return b, ext, nil
-}
-
-func imageExt(contentType, raw string) string {
-	if mt, _, err := mime.ParseMediaType(contentType); err == nil {
-		switch mt {
-		case "image/jpeg":
-			return ".jpg"
-		case "image/png":
-			return ".png"
-		case "image/webp":
-			return ".webp"
-		case "image/gif":
-			return ".gif"
-		case "image/avif":
-			return ".avif"
-		case "image/svg+xml":
-			return ".svg"
-		case "image/bmp":
-			return ".bmp"
-		}
-	}
-	if u, err := url.Parse(raw); err == nil {
-		if e := strings.ToLower(filepath.Ext(u.Path)); relayImageExt[e] {
-			return e
-		}
-	}
-	return ""
-}
-
-func validateRelayURL(raw string) (string, error) {
-	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" {
-		return "", errors.New("enter a full http or https url")
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", errors.New("enter a full http or https url")
-	}
-	return u.String(), nil
-}
-
-func displayHost(raw string) string {
-	u, err := url.Parse(raw)
-	if err != nil {
-		return raw
-	}
-	return u.Host
-}
-
-func resolveURL(base, ref string) (string, error) {
-	b, err := url.Parse(base)
-	if err != nil {
-		return "", err
-	}
-	r, err := url.Parse(ref)
-	if err != nil {
-		return "", err
-	}
-	u := b.ResolveReference(r)
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", errors.New("resolved url is not http")
-	}
-	return u.String(), nil
-}
-
-func newRelayID() string {
-	id, err := GenerateToken()
-	if err != nil {
-		return fmt.Sprintf("rj_%d", time.Now().UnixNano())
-	}
-	return "rj_" + id
-}
-
-func collectMedia(dir string) []relayMedia {
-	var out []relayMedia
-	_ = filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
-		if err != nil || info == nil || info.IsDir() {
-			return nil
-		}
-		if kind, ok := relayClassify(info.Name()); ok {
-			out = append(out, relayMedia{Path: p, Kind: kind})
-		}
-		return nil
-	})
-	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
-	if len(out) > relayMaxMedia {
-		out = out[:relayMaxMedia]
-	}
-	return out
-}
-
-func relayClassify(name string) (relayKind, bool) {
-	ext := strings.ToLower(filepath.Ext(name))
-	switch {
-	case relayImageExt[ext]:
-		return relayKindImage, true
-	case relayVideoExt[ext]:
-		return relayKindVideo, true
-	case relayAudioExt[ext]:
-		return relayKindAudio, true
-	}
-	return 0, false
-}
-
-func relayKindOrder(k relayKind) int {
-	switch k {
-	case relayKindVideo:
-		return 0
-	case relayKindAudio:
-		return 1
-	default:
-		return 2
-	}
-}
-
-func relayMediaName(i, total int, ext string) string {
-	if total == 1 {
-		return "media" + ext
-	}
-	return fmt.Sprintf("media-%d%s", i+1, ext)
-}
-
-func copyFile(dst, src string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
-		return err
-	}
-	return out.Close()
-}
-
-// --- social preview extraction -------------------------------------------
-
-type relayMeta struct {
-	title, description, image string
-}
-
-var (
-	metaTagRe  = regexp.MustCompile(`(?is)<meta\b[^>]*>`)
-	metaAttrRe = regexp.MustCompile(`(?is)([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))`)
-	titleTagRe = regexp.MustCompile(`(?is)<title\b[^>]*>(.*?)</title>`)
-)
-
-// extractMeta reads the social preview fields from a page. It prefers
-// Open Graph over Twitter cards over plain <title>/<meta name=description>.
-func extractMeta(page string) relayMeta {
-	var ogTitle, twTitle, ogDesc, twDesc, metaDesc, ogImage, twImage string
-	for _, tag := range metaTagRe.FindAllString(page, -1) {
-		attrs := map[string]string{}
-		for _, m := range metaAttrRe.FindAllStringSubmatch(tag, -1) {
-			name := strings.ToLower(m[1])
-			val := m[3]
-			if val == "" {
-				val = m[4]
-			}
-			if val == "" {
-				val = m[5]
-			}
-			attrs[name] = html.UnescapeString(val)
-		}
-		prop := strings.ToLower(attrs["property"])
-		if prop == "" {
-			prop = strings.ToLower(attrs["name"])
-		}
-		content := attrs["content"]
-		switch prop {
-		case "og:title":
-			if ogTitle == "" {
-				ogTitle = content
-			}
-		case "twitter:title":
-			if twTitle == "" {
-				twTitle = content
-			}
-		case "og:description":
-			if ogDesc == "" {
-				ogDesc = content
-			}
-		case "twitter:description":
-			if twDesc == "" {
-				twDesc = content
-			}
-		case "description":
-			if metaDesc == "" {
-				metaDesc = content
-			}
-		case "og:image", "og:image:url", "og:image:secure_url":
-			if ogImage == "" {
-				ogImage = content
-			}
-		case "twitter:image", "twitter:image:src":
-			if twImage == "" {
-				twImage = content
-			}
-		}
-	}
-	htmlTitle := ""
-	if m := titleTagRe.FindStringSubmatch(page); m != nil {
-		htmlTitle = strings.TrimSpace(html.UnescapeString(m[1]))
-	}
-	return relayMeta{
-		title:       firstNonEmpty(ogTitle, twTitle, htmlTitle),
-		description: firstNonEmpty(ogDesc, twDesc, metaDesc),
-		image:       firstNonEmpty(ogImage, twImage),
-	}
-}
-
-func firstNonEmpty(vals ...string) string {
-	for _, v := range vals {
-		if s := strings.TrimSpace(v); s != "" {
-			return s
-		}
-	}
-	return ""
-}
-
-// --- generated pages ------------------------------------------------------
-
-const relayPageStyle = `:root{--ink:#141210;--paper:#f0e6d2;--surface:#fbf6e9;--red:#ce1f2b;--hair:rgba(20,18,16,.16)}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font-family:'Figtree','Nunito',system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--hair);padding:14px 20px;background:rgba(240,230,210,.92)}
-.brand{display:flex;align-items:center;gap:10px;font-family:'Nunito',system-ui,sans-serif;font-weight:800;font-size:.8rem;letter-spacing:.08em;text-decoration:none;color:var(--ink)}
-.brand .mark{display:grid;place-items:center;width:28px;height:28px;background:var(--red);color:var(--paper);border-radius:8px}
-.stamp{font-family:'Figtree',system-ui,sans-serif;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--hair);border-radius:999px;padding:4px 9px;opacity:.7}
-main{max-width:820px;margin:0 auto;padding:34px 22px 90px}
-h1{font-family:'Nunito',system-ui,sans-serif;font-weight:700;line-height:1.05;font-size:2rem;margin:0 0 10px}
-.source{font-family:'Figtree',system-ui,sans-serif;font-size:.72rem;letter-spacing:.04em;opacity:.6;margin:0 0 20px}
-.source a{color:var(--ink);border-bottom:1px solid var(--red);text-decoration:none}
-.media{display:flex;flex-direction:column;gap:16px}
-.media img{border:1px solid var(--hair);border-radius:12px;max-width:100%;height:auto;background:#fff}
-.media video{width:100%;max-height:70vh;background:#000;border-radius:12px}
-.media audio{width:100%}
-.card{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:20px;max-width:640px}
-.card .cover{width:100%;border-radius:9px;border:1px solid var(--hair);margin-bottom:16px}
-.card h1{font-size:1.6rem}
-.card .desc{opacity:.85;margin:0 0 18px;max-width:58ch}
-.card .go{display:inline-block;font-size:.78rem;font-family:'Figtree',system-ui,sans-serif;color:var(--paper);background:var(--red);border-radius:8px;padding:9px 14px;text-decoration:none;word-break:break-all}`
-
-func relayPage(title, body string) string {
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>` + html.EscapeString(title) + `</title><style>` + relayPageStyle + `</style></head>
-<body><header class="bar"><a class="brand" href="/"><span class="mark">R</span> RELAY</a><span class="stamp">relayed</span></header>
-<main>` + body + `</main></body></html>`
-}
-
-func relayMediaPage(title, source string, media []relayMedia) string {
-	var b strings.Builder
-	b.WriteString(`<h1>` + html.EscapeString(title) + `</h1>`)
-	b.WriteString(`<p class="source">Relayed from <a href="` + html.EscapeString(source) + `">` + html.EscapeString(displayHost(source)) + `</a></p>`)
-	b.WriteString(`<div class="media">`)
-	for _, m := range media {
-		switch m.Kind {
-		case relayKindVideo:
-			b.WriteString(`<video src="` + m.Path + `" controls playsinline preload="metadata"></video>`)
-		case relayKindAudio:
-			b.WriteString(`<audio src="` + m.Path + `" controls preload="metadata"></audio>`)
-		default:
-			b.WriteString(`<img src="` + m.Path + `" alt="">`)
-		}
-	}
-	b.WriteString(`</div>`)
-	return relayPage(title, b.String())
-}
-
-func relayCardPage(title, description, image, source string) string {
-	var b strings.Builder
-	b.WriteString(`<div class="card">`)
-	if image != "" {
-		b.WriteString(`<img class="cover" src="` + html.EscapeString(image) + `" alt="">`)
-	}
-	b.WriteString(`<h1>` + html.EscapeString(title) + `</h1>`)
-	if description != "" {
-		b.WriteString(`<p class="desc">` + html.EscapeString(description) + `</p>`)
-	}
-	b.WriteString(`<a class="go" href="` + html.EscapeString(source) + `">` + html.EscapeString(source) + ` ↗</a>`)
-	b.WriteString(`</div>`)
-	return relayPage(title, b.String())
 }

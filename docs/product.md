@@ -39,6 +39,9 @@ target to satisfy.
 - **Comments.** Friends can talk under a post. There are no likes, reposts,
   follower counts, or recommendations. If you want to share something, you make
   your own post about it and link to it.
+- **A link, re-hosted.** The publish page's "Relay a url" section turns a link
+  into a normal post: it downloads the video, song, or photo with `yt-dlp`, or
+  falls back to a preview card when there is nothing to download.
 
 ## What Relay is not
 

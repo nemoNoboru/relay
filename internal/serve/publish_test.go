@@ -34,7 +34,7 @@ func newPublisher(t *testing.T) (http.Handler, *serve.KeyStore, *social.Store, s
 	}
 	versions := serve.NewVersions(data)
 	up := serve.NewUploader("mynode", data, ks, versions, posts, serve.MaxDeployBytes, nil)
-	store := serve.NewTemplateStore(data)
+	store := mustTemplateStore(t, data)
 	return serve.NewPublisher("mynode", up, store, ks), ks, posts, token, key
 }
 

@@ -15,6 +15,8 @@ export const DeployKey = Schema.Struct({
   /** RFC 3339 timestamp, rendered verbatim. */
   created: Schema.String,
   revoked: Schema.Boolean,
+  /** Login username, when the member has set one. */
+  username: Schema.optional(Schema.String),
 });
 
 export const SiteOwner = Schema.Struct({

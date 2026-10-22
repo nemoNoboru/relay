@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 
@@ -10,11 +11,10 @@ import (
 // Fonts serves the node's self-hosted webfonts and their @font-face
 // stylesheet at /fonts/, so neither the public site nor the owner UI has to
 // load fonts from Google Fonts at runtime.
-func Fonts() http.Handler {
+func Fonts() (http.Handler, error) {
 	fonts, err := fs.Sub(relay.FontsFS, "web/fonts")
 	if err != nil {
-		// The embedded tree is fixed at build time; this cannot fail.
-		panic("relay: embedded fonts: " + err.Error())
+		return nil, fmt.Errorf("embedded fonts: %w", err)
 	}
-	return http.StripPrefix("/fonts/", http.FileServer(http.FS(fonts)))
+	return http.StripPrefix("/fonts/", http.FileServer(http.FS(fonts))), nil
 }

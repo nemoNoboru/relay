@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/nemoNoboru/relay/internal/social"
@@ -36,14 +35,12 @@ type Comments struct {
 	ks       *KeyStore
 	posts    *social.Store
 	comments *social.CommentStore
-
-	mu   sync.Mutex
-	last map[string]time.Time
+	rate     *rateGuard
 }
 
 // NewComments returns the comment handler for a node.
 func NewComments(ks *KeyStore, posts *social.Store, comments *social.CommentStore) *Comments {
-	return &Comments{ks: ks, posts: posts, comments: comments, last: map[string]time.Time{}}
+	return &Comments{ks: ks, posts: posts, comments: comments, rate: newRateGuard(commentMinInterval)}
 }
 
 func (c *Comments) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -106,13 +103,10 @@ func (c *Comments) add(w http.ResponseWriter, r *http.Request, member Member, si
 		writeError(w, http.StatusBadRequest, "bad_request", "body must be JSON: "+err.Error())
 		return
 	}
-	c.mu.Lock()
-	if last, ok := c.last[member.ID]; ok && time.Since(last) < commentMinInterval {
-		c.mu.Unlock()
+	if !c.rate.allow(member.ID) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "wait a moment before commenting again")
 		return
 	}
-	c.mu.Unlock()
 	comment, err := c.comments.Add(social.Comment{Post: site, Member: member.ID, Body: req.Body})
 	if errors.Is(err, social.ErrInvalidComment) {
 		writeError(w, http.StatusBadRequest, "bad_comment", err.Error())
@@ -122,9 +116,6 @@ func (c *Comments) add(w http.ResponseWriter, r *http.Request, member Member, si
 		writeError(w, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	c.mu.Lock()
-	c.last[member.ID] = time.Now()
-	c.mu.Unlock()
 	writeJSON(w, http.StatusCreated, map[string]any{"comment": commentView(c.ks, comment, member.ID)})
 }
 

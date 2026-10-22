@@ -13,7 +13,7 @@ import type { Writable } from "svelte/store";
 
 import { Client } from "../api/client";
 import type { ApiError } from "../api/client";
-import { changeToken, createKey, deleteComment, deletePost, fetchOverview, revokeKey, rotateKey } from "../admin/ops";
+import { changeToken, clearCredentials, createKey, deleteComment, deletePost, fetchOverview, revokeKey, rotateKey, setCredentials } from "../admin/ops";
 import { initialAdmin } from "../admin/state";
 import type { AdminState } from "../admin/state";
 import AdminApp from "../ui/Admin.svelte";
@@ -108,6 +108,33 @@ const rotate = (id: string): void => {
   );
 };
 
+const setMemberCredentials = (id: string, username: string, password: string): void => {
+  const tok = get(store).token;
+  const u = username.trim();
+  if (tok === "" || u === "" || password === "") return;
+  set({ busy: true, actionError: undefined });
+  void run(setCredentials(tok, id, u, password)).then(
+    (res) => {
+      set({ busy: false, notice: `Login set for ${res.key.user}`, actionError: undefined });
+      refreshQuietly(tok);
+    },
+    (err: ApiError) => set({ busy: false, actionError: err.message }),
+  );
+};
+
+const clearMemberCredentials = (id: string): void => {
+  const tok = get(store).token;
+  if (tok === "") return;
+  set({ busy: true, actionError: undefined });
+  void run(clearCredentials(tok, id)).then(
+    () => {
+      set({ busy: false, notice: "Login cleared", actionError: undefined });
+      refreshQuietly(tok);
+    },
+    (err: ApiError) => set({ busy: false, actionError: err.message }),
+  );
+};
+
 const removeComment = (id: string): void => {
   const tok = get(store).token;
   if (tok === "") return;
@@ -174,6 +201,8 @@ mount(AdminApp, {
     onCreate: create,
     onRevoke: revoke,
     onRotate: rotate,
+    onSetCredentials: setMemberCredentials,
+    onClearCredentials: clearMemberCredentials,
     onDeleteComment: removeComment,
     onDeletePost: removePost,
     onRefresh: refresh,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
@@ -31,13 +32,12 @@ type TemplateStore struct {
 }
 
 // NewTemplateStore returns the store for a node's data directory.
-func NewTemplateStore(dataDir string) *TemplateStore {
+func NewTemplateStore(dataDir string) (*TemplateStore, error) {
 	builtin, err := fs.Sub(templates.Builtin, "builtin")
 	if err != nil {
-		// The embedded tree is fixed at build time; this cannot fail.
-		panic("relay: embedded templates: " + err.Error())
+		return nil, fmt.Errorf("embedded templates: %w", err)
 	}
-	return &TemplateStore{builtin: builtin, dir: filepath.Join(dataDir, "templates")}
+	return &TemplateStore{builtin: builtin, dir: filepath.Join(dataDir, "templates")}, nil
 }
 
 // List returns every valid template, installed entries overriding built-ins.
@@ -260,7 +260,7 @@ func (t *Templates) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (t *Templates) list(w http.ResponseWriter) {
 	list, skipped := t.store.List()
 	for _, s := range skipped {
-		fmt.Fprintf(os.Stderr, "serve: skipping template: %s\n", s)
+		slog.Warn("skipping template", "reason", s)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"templates": list})
 }

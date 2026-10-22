@@ -32,6 +32,18 @@ export const rotateKey = (token: string, id: string): Effect.Effect<KeyCreated, 
     return yield* client.post(`/_relay/v1/admin/keys/${id}/rotate`, undefined, KeyCreated, token);
   });
 
+export const setCredentials = (token: string, id: string, username: string, password: string): Effect.Effect<KeyUpdated, ApiError, Client> =>
+  Effect.gen(function* () {
+    const client = yield* Client;
+    return yield* client.post(`/_relay/v1/admin/keys/${id}/credentials`, { username, password }, KeyUpdated, token);
+  });
+
+export const clearCredentials = (token: string, id: string): Effect.Effect<void, ApiError, Client> =>
+  Effect.gen(function* () {
+    const client = yield* Client;
+    return yield* client.del(`/_relay/v1/admin/keys/${id}/credentials`, token);
+  });
+
 export const changeToken = (token: string, next: string): Effect.Effect<TokenChanged, ApiError, Client> =>
   Effect.gen(function* () {
     const client = yield* Client;

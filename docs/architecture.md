@@ -7,7 +7,9 @@ that was never built. The pivot plan is in [`pivot-plan.md`](pivot-plan.md).
 ## Current system (built)
 
 One Go binary, one data directory, the standard-library HTTP server. No
-database, no external services, no background workers.
+database. The only optional external process is `yt-dlp`, used by the
+"Relay a url" convenience to re-host a link; that work runs as a bounded
+background job.
 
 ```
 visitor ──HTTP(S)──► relay node (net/http)
@@ -24,6 +26,7 @@ visitor ──HTTP(S)──► relay node (net/http)
                        ├─ /_relay/v1/templates     template manifests
                        ├─ /_relay/templates/…      prepublish forms and assets
                        ├─ /_relay/v1/publish       template publish endpoint
+                       ├─ /_relay/v1/relay[/…]     re-host a url (background job)
                        ├─ /_relay/v1/sites/…       deploy (tar upload)
                        └─ /<node>/<site>/…         static sites on disk
 ```
@@ -48,8 +51,9 @@ relay version
    `relay`);
 3. loads sites from `<data>/sites` into a reloadable registry;
 4. opens the key store (`<data>/deploy-keys.json`);
-5. constructs the version store, uploader, admin console, invite handler, and
-   session handler;
+5. constructs the version store, uploader, admin console, invite handler,
+   session handler, and the url relayer (with a shutdown that cancels and
+   joins its background jobs);
 6. embeds the owner UI from `web/dist`;
 7. mounts the routes above;
 8. serves HTTP or HTTPS, and drains on `SIGINT`/`SIGTERM`.
@@ -64,13 +68,15 @@ internal/domain/    Name parsing, reserved names
   key/              Ed25519 key file model (CLI only, not the invite credential)
   prefix/           Node path prefix model (used by tests/early code)
 internal/route/     request path → node/site/rest
+internal/identity/
+  keys.go           invite/member keys, cascade revoke, site attribution
 internal/serve/
   sites.go          load site folders from <data>/sites
   host.go           serve /<node>/<site>/…
   registry.go       reloadable site map
   upload.go         tar upload, validation, atomic replace
   versions.go       snapshot/list/rollback, keep 10
-  keys.go           invite/member keys, cascade revoke, site attribution
+  keys.go           identity aliases (thin HTTP shim)
   invites.go        member-creates-invite endpoint
   session.go        member cookie, /me, profile update
   posts.go          feed, post, and profile JSON
@@ -81,7 +87,7 @@ internal/serve/
   admin.go          host console API (including host comment deletion)
   landing.go        embedded public site at /
   ui.go             embedded owner UI under /_relay/
-  errors.go         JSON error envelope
+  httputil.go       JSON error envelope, same-origin, rate guard
 internal/social/
   post.go           Post model, title/limit/cover rules
   store.go          posts.json, atomic writes, ordering
@@ -260,6 +266,25 @@ wrapper still uses the dedicated comments endpoint.
 Posts may carry an optional `image` path; the API exposes it as `imageUrl` and
 the feed renders it as a cover. Gallery and Article templates set it.
 
+### Relay-a-url surface
+
+The publish page's "Relay a url" section lets a member paste a link and have
+the node re-host what it points at. The node first asks `yt-dlp` to download
+media; when that fails or `yt-dlp` is absent, it builds a share card from the
+page's social preview metadata. Either way the result is published as a normal
+static post, so the social layer treats it like any other page.
+
+This is the one place Relay runs background work:
+
+- A request returns a job id immediately and the download proceeds in a
+  goroutine bounded by a per-job timeout and a small in-flight cap.
+- Jobs live in memory only. Restarting the node drops running and finished
+  jobs; a job that already published leaves a normal post behind.
+- The `Relayer` owns its goroutines: node shutdown cancels the jobs' contexts
+  and waits for them to exit before the process returns.
+- `yt-dlp` and `ffmpeg` are optional. They are spawned as subprocesses, never
+  linked into the node, and their absence degrades to the share-card path.
+
 ### Persistence boundaries
 
 - **Files** are the content: `sites/<site>/`, `templates/<t>/`. Built-ins are
@@ -280,7 +305,9 @@ the feed renders it as a cover. Gallery and Article templates set it.
 3. Template code never runs in the node process.
 4. Comments and feed require a live member cookie; posts are public by URL.
 5. No background job is required to serve a page. Optional pruning can be a CLI
-   command.
+   command. The one exception is the "Relay a url" action, which runs a bounded
+   background job and then publishes a normal static page; see
+   [Relay-a-url surface](#relay-a-url-surface).
 6. No new external dependency without a written reason. A database is not
    needed for dozens of members.
 7. The host's admin token remains separate from member invitations.
