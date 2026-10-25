@@ -1,30 +1,36 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>16 Server sheet</title>
+<html lang="en"><head><meta charset="utf-8"><title>16 Settings server sheet</title>
 <meta name="viewport" content="width=390">
 <link rel="stylesheet" href="../../web/fonts/fonts.css">
 <link rel="stylesheet" href="../shared.css">
 <link rel="stylesheet" href="../auth.css">
 </head><body>
 <div class="phone">
-  <div class="statusbar"><span>9:41</span><span class="sys"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"></span></span></div>
-  <header class="navbar large"><div class="navbar-title">Settings</div></header>
+  <div class="statusbar dark"><span>9:41</span><span class="sys"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+  <header class="navbar large">
+    <span class="geo-sun" style="width:96px;height:96px;right:-18px;top:-26px"></span>
+    <span class="geo-ring" style="width:120px;height:120px;right:40px;top:-40px;color:var(--paper);opacity:.45"></span>
+    <span class="geo-wedge" style="width:150px;height:50px;right:-30px;top:48px"></span>
+    <div class="navbar-title display" style="font-size:48px;line-height:.9">Settings</div>
+    <div class="navbar-sub">alice · relay.mansus.org</div>
+  </header>
   <main class="screen"><div class="settings">
-    <div class="section-label" style="padding-left:4px">Profile</div>
+    <div class="section-label">Profile</div>
     <div class="list">
-      <div class="row"><span class="avatar c2">A</span><div class="row-main"><div class="row-title">Alice Martins</div></div><div class="row-end">Edit <i class="ic ic-chevron chev"></i></div></div>
-      <div class="row"><div class="row-main"><div class="row-title">Username</div></div><div class="row-end">@alice</div></div>
+      <div class="row "><span class="avatar c2">A</span><div class="row-main"><div class="row-title">Alice Martins</div></div><div class="row-end">Edit <i class="ic ic-chevron chev"></i></div></div>
+      <div class="row "><div class="row-main"><div class="row-title">Username</div></div><div class="row-end username">@alice</div></div>
     </div>
-    <div class="section-label" style="padding-left:4px">Node</div>
+    <div class="section-label">Node</div>
     <div class="list">
-      <div class="row"><i class="ic ic-globe"></i><div class="row-main"><div class="row-title">Server</div></div><div class="row-end">relay.mansus.org <i class="ic ic-chevron chev"></i></div></div>
-      <div class="row muted"><i class="ic ic-communities"></i><div class="row-main"><div class="row-title">Browse nodes</div></div><span class="soon">soon</span></div>
+      <div class="row "><span class="row-ic"><i class="ic ic-globe"></i></span><div class="row-main"><div class="row-title">Server</div></div><div class="row-end">relay.mansus.org <i class="ic ic-chevron chev"></i></div></div>
+      <div class="row muted"><span class="row-ic"><i class="ic ic-communities"></i></span><div class="row-main"><div class="row-title">Browse nodes</div></div><span class="soon">soon</span></div>
     </div>
-    <div class="section-label" style="padding-left:4px">Admin</div>
+    <div class="section-label">Admin</div>
     <div class="list">
-      <div class="row"><i class="ic ic-shield"></i><div class="row-main"><div class="row-title">Moderation</div></div><i class="ic ic-chevron chev"></i></div>
+      <div class="row "><span class="row-ic"><i class="ic ic-shield"></i></span><div class="row-main"><div class="row-title">Moderation</div></div><i class="ic ic-chevron chev"></i></div>
     </div>
-    <div class="section-label" style="padding-left:4px">Account</div>
-    <div class="list">
+    <div class="section-label">Account</div>
+    <div class="list out">
       <div class="row out"><div class="row-main"><div class="row-title">Sign out</div></div></div>
     </div>
   </div></main>
@@ -36,11 +42,13 @@
   </nav>
   <div class="scrim"></div>
   <div class="sheet">
-    <div class="sheet-grab"></div>
-    <div class="sheet-title">Server</div>
+    <span class="geo-sun" style="width:90px;height:90px;right:-24px;top:-36px"></span>
+    <span class="geo-ring" style="width:100px;height:100px;right:40px;top:-50px;color:var(--ink)"></span>
+    <div class="sheet-grab" style="margin-left:0"></div>
+    <div class="sheet-title display" style="font-size:40px;line-height:.9">Change <span class="hot">server</span></div>
     <div class="field"><span class="label">Server URL</span><div class="input focus">https://relay.example.org</div></div>
-    <div class="test-ok"><i class="ic ic-check"></i><span>relay.example.org · v2.0 · 128 members</span></div>
-    <div class="sheet-actions"><button class="btn">Test connection</button><button class="btn primary">Save</button></div>
+    <div class="test-ok"><span class="flag"><i class="ic ic-check"></i></span><span>relay.example.org · v2.0 · 128 members</span></div>
+    <div class="sheet-actions"><button class="btn">Test connection</button><button class="btn primary ">Save</button></div>
     <p class="note">Switching servers signs you out.</p>
   </div>
   <div class="home-ind"></div>
