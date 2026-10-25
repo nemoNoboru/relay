@@ -118,3 +118,20 @@ Signed-in screens share the bottom tab bar: Feed · Communities · Events · Set
 | 43 | admin-member-sheet | RELY-101 | Member actions bottom sheet |
 | 44 | admin-remove-confirm | RELY-101 | Confirm removing a member |
 | 45 | admin-invites | RELY-101 | Create invite, pending and used invites |
+
+## Using this for the Expo app
+
+The mockups are the visual spec, not code to port: rebuild each screen in
+React Native and match the render. The rules for doing that (tokens, fonts,
+hard shadows as offset Views, no `borderRadius`, decoration limits) are in the
+agent skill [`.pi/skills/relay-mobile-design/SKILL.md`](../.pi/skills/relay-mobile-design/SKILL.md).
+Follow:
+
+- **Tokens:** `shared.css` `:root` is the source of truth for colours, borders,
+  shadows and the three font families.
+- **Screens:** the table above maps each screen to its `screens/<NN>-<name>.html`
+  and its render `png/<NN>-<name>.png`; 01–05 are the pattern set.
+- **Style origin:** [`reference/landing-poster.jpg`](reference/landing-poster.jpg)
+  is the Relay landing page on a phone, the look the design language comes from.
+
+This is separate from `relay-design`, which covers the owner-facing web UI.
