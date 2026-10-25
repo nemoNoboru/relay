@@ -43,7 +43,8 @@
 
    POSTER PIECES (decoration: headers, hero areas, empty states, sheet heads;
    never on top of readable content)
-     .logo  .logo.sm|lg         rotated red square with a heavy "R" (<span class="logo">R</span>)
+     .logo  .logo.sm|lg         rotated red square with a heavy "R" (<span class="logo">R</span>);
+                                .mark is a legacy alias used by the auth screens
      .wordmark                  "RELAY" in Anton, next to .logo
      .poster-head               black header band: kicker, giant .display title, geo accents,
                                 red stripe under; children .ph-top .ph-title .ph-meta
@@ -234,8 +235,8 @@ button,input,textarea{font:inherit;color:inherit}
 .mono{font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em;font-size:12px}
 
 /* ---------- poster pieces ---------- */
-.logo{position:relative;display:inline-grid;place-items:center;width:44px;height:44px;background:var(--red);color:var(--on-red);font-family:var(--display);font-size:30px;line-height:1;transform:rotate(-6deg);box-shadow:3px 3px 0 var(--ink);flex:0 0 auto}
-.logo::after{content:"";position:absolute;right:-5px;top:-5px;width:10px;height:10px;background:var(--ochre)}
+.logo,.mark{position:relative;display:inline-grid;place-items:center;width:44px;height:44px;background:var(--red);color:var(--on-red);font-family:var(--display);font-size:30px;line-height:1;transform:rotate(-6deg);box-shadow:3px 3px 0 var(--ink);flex:0 0 auto}
+.logo::after,.mark::after{content:"";position:absolute;right:-5px;top:-5px;width:10px;height:10px;background:var(--ochre)}
 .logo.sm{width:32px;height:32px;font-size:22px;box-shadow:2px 2px 0 var(--ink)}
 .logo.sm::after{width:7px;height:7px;right:-4px;top:-4px}
 .logo.lg{width:84px;height:84px;font-size:58px;box-shadow:6px 6px 0 var(--ink)}

@@ -1,6 +1,5 @@
 /* Auth + settings screens (10–17). Loaded after shared.css. */
 .auth{padding:0 24px;display:flex;flex-direction:column;height:100%}
-.mark{width:64px;height:64px;border-radius:20px;background:var(--red);color:var(--paper);display:grid;place-items:center;font-family:var(--display);font-weight:900;font-size:38px;line-height:1;padding-bottom:5px}
 .auth-head{margin-top:56px}
 .auth-head h1{font-family:var(--display);font-weight:800;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin-top:20px}
 .auth-head p{margin-top:6px;font-size:16px;opacity:.65}

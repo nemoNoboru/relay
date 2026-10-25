@@ -1,5 +1,5 @@
 /* Admin screens (40-45): classes layered on shared.css. */
-.back-btn{display:inline-flex;align-items:center;gap:2px;height:44px;margin-left:-8px;padding-right:8px;color:var(--red);font-weight:600;font-size:16px}
+.back-btn{display:inline-flex;align-items:center;gap:2px;height:44px;margin-left:-8px;padding-right:8px;color:var(--ochre);font-weight:600;font-size:16px}
 .back-btn .ic{width:22px;height:22px}
 .navbar.stack{display:block;padding:0 16px 12px}
 .navbar.stack .navbar-title{font-size:28px;font-weight:800;letter-spacing:-.01em;margin-top:0}
