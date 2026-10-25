@@ -17,6 +17,71 @@ Needs `chromium` and `node` on PATH. Output is 780×1688 (a 390×844 phone at 2x
 Emoji use Noto Color Emoji, which `render.sh` downloads into `fonts/`
 (git-ignored) on first run.
 
+## Design language
+
+Constructivist / Bauhaus poster, after the Relay landing page. Every screen
+gets character (big type, a bold header, colour blocking, one geometric
+accent), but post text, forms and lists stay plain and readable. Screens
+01–05 are the reference set; copy their patterns.
+
+- **Colour.** Cream paper `--paper` #f0e6d2, ink `--ink` #141210, signal red
+  `--red` #ce1f2b, ochre `--ochre` #dfa32a. Colour-block, don't tint: no
+  translucent red washes. Contrast rules (WCAG AA):
+  - On red, text is `--on-red` #fff8ea (5.2:1), never plain cream (4.4:1).
+  - Small red text on cream uses `--red-text` #b81a25. Plain `--red` is for
+    blocks, rules and display type 24px and up.
+  - On black, accents are ochre or cream. Red stays a block or stripe there,
+    never text.
+  - Muted text uses `--ink-2`, not opacity.
+- **Shape.** Square corners everywhere: no `border-radius` except circles in
+  decoration. Borders are 2px ink (`--line`), 3px for emphasis (buttons,
+  popovers, focus). Shadows are hard offsets only: `--shadow` (5px 5px 0 ink),
+  `--shadow-sm` (3px); use a red or ochre offset for a highlighted element.
+- **Type.** `--display` Anton is uppercase, heavy, with tight leading (~.86),
+  for headlines, titles and avatar letters; colour the key word with
+  `<span class="hot">`. `--body` Oswald is for post text, rows and paragraphs
+  (17–20px). `--mono` Space Mono, uppercase and tracked (.08–.2em), is for
+  labels, buttons, nav, tabs, metadata and counters. `.label` and
+  `.section-label` get a short red rule in front automatically.
+- **Headers.** Every screen opens with a black band and a 6px red stripe:
+  `.navbar` (compact; `.navbar.large` for a big Anton title plus an ochre
+  `.navbar-sub`), or `.poster-head` for hero screens (feed). Put
+  `.statusbar.dark` above a black band so it runs full-bleed.
+- **Decoration** goes in headers, hero areas, empty states, sheet heads and
+  active states, never over content. Use one or two shapes per screen and
+  let them bleed off the edge.
+- **Tap targets** stay at least 44px: buttons are 50px (`.sm` 44px); seg and
+  tab items are 44px or more.
+
+### Poster classes (see the shared.css header for the full list)
+
+| Class | Use |
+|---|---|
+| `.logo` (`.sm`, `.lg`) | The mark: red square rotated -6°, heavy Anton "R", ochre corner chip, hard shadow. `<span class="logo">R</span>`. `.mark` is an alias kept for the auth screens. |
+| `.wordmark` | "RELAY" in Anton, next to the logo |
+| `.poster-head` + `.ph-top` `.ph-title` `.ph-meta` | Black hero header: logo row, giant title, ochre mono meta line |
+| `.display`, `.display .hot`, `.display .ochre` | Huge Anton headline; red or ochre key word |
+| `.kicker` | Tracked mono line after a 30px red rule (above headlines) |
+| `.stamp` (`.red`, `.ochre`, `.ink`) | Tilted rectangular label for counts and states ("6 replies", "Location off") |
+| `.vtag` | Vertical "RELAY" tag with red bars |
+| `.geo-sun` `.geo-ring` `.geo-wedge` (`.flip`) `.geo-bar` `.geo-square` `.geo-quarter` | Absolutely positioned shapes; set size and position inline. The parent needs `position:relative; overflow:hidden`, and content siblings need `position:relative` to sit above them. |
+| `.grid-paper` (`.dark`) | Graph-paper background for hero blocks and frames |
+| `.stripe` | 6px red rule |
+| `.mono` | Inline Space Mono metadata |
+
+Restyled components kept their class names:
+
+- `.card`: 2px border, hard shadow, ruled `.card-foot`.
+- `.react.mine`: solid red.
+- `.btn.primary`: red, 3px ink border, hard shadow.
+- `.seg`: ink fill for `.on`.
+- `.tab.active`: red bar on top, red icon.
+- `.banner`: tilted ink tag with a red arrow block.
+- `.fab`: red square, hard shadow.
+- `.sheet`: ink edge plus a red band on top, Anton `.sheet-title`.
+- `.toggle`: square.
+- `.empty`: Anton headline, ochre disc with a red square.
+
 ## Screens
 
 Signed-in screens share the bottom tab bar: Feed · Communities · Events · Settings.
