@@ -6,33 +6,42 @@
 <link rel="stylesheet" href="../events.css">
 </head><body>
 <div class="phone">
-  <div class="statusbar"><span>9:41</span><span class="sys"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"></span></span></div>
-  <header class="navbar">
+  <div class="statusbar dark"><span>9:41</span><span class="sys"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+  <header class="navbar" style="overflow:hidden">
+    <span class="geo-quarter" style="right:0;top:0;width:76px;height:76px"></span>
     <a class="navbar-btn ink" style="margin-left:-8px"><i class="ic ic-back"></i></a>
-    <div class="navbar-title">Event</div>
+    <div class="navbar-title" style="font-size:26px">Event</div>
   </header>
   <main class="screen" style="padding-bottom:84px">
-    <div class="ev-hero">
-      <h1>Roda de samba na praça</h1>
-      <div class="ev-facts">
-        <div class="ev-fact"><i class="ic ic-events"></i><div><b>Today, 19:30</b><span>until 22:30</span></div></div>
-        <div class="ev-fact"><i class="ic ic-pin"></i><div><b>Praça Benedito Calixto</b><span>Pinheiros, São Paulo</span></div></div>
-        <div class="ev-fact"><i class="ic ic-communities"></i><div><b>Vizinhos de Pinheiros</b></div></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:12px"><span class="avatar sm c2">B</span><span style="font-size:14px;opacity:.65">Hosted by <b style="font-weight:600">bruno</b></span></div>
-      <p class="card-body">Depois da feira, a roda de samba continua na praça. Traga seu instrumento ou só a vontade de cantar. Vai ter caldo de cana e pastel na barraca do seu Zé. Em caso de chuva, a gente se muda para o coreto.</p>
-      <div class="ev-actions" style="margin-top:16px"><a class="btn primary">I’m going</a><span class="count">14 going</span></div>
+    <div class="ev-hero grid-paper">
+      <span class="geo-sun" style="width:120px;height:120px;right:-28px;top:-22px"></span>
+      <span class="geo-ring" style="width:150px;height:150px;right:-40px;top:20px;color:var(--ink)"></span>
+      <div class="kicker">Today · 19:30</div>
+      <h1>Roda de samba na <span class="hot">praça</span></h1>
+      <span class="stamp ochre">Today · 14 going</span>
+      <span class="vtag">RELAY</span>
     </div>
-    <div class="ev-replies" style="margin-top:16px">
+    <div class="ev-body">
+      <div class="ev-facts">
+        <div class="ev-fact"><span class="ic-box"><i class="ic ic-events"></i></span><div><b>Today, 19:30</b><span>until 22:30</span></div></div>
+        <div class="ev-fact"><span class="ic-box"><i class="ic ic-pin"></i></span><div><b>Praça Benedito Calixto</b><span>Pinheiros, São Paulo</span></div></div>
+        <div class="ev-fact"><span class="ic-box"><i class="ic ic-communities"></i></span><div><b>Vizinhos de Pinheiros</b></div></div>
+      </div>
+      <div class="ev-host"><span class="avatar sm c2">B</span><span>Hosted by <b>bruno</b></span></div>
+      <p class="ev-desc">Depois da feira, a roda de samba continua na praça. Traga seu instrumento ou só a vontade de cantar. Vai ter caldo de cana e pastel na barraca do seu Zé. Em caso de chuva, a gente se muda para o coreto.</p>
+      <div class="ev-actions"><a class="btn primary">I’m going</a><span class="count"><b>14</b>going</span></div>
+    </div>
+    <div class="ev-replies">
+      <h4>Replies</h4>
       
       <div class="rep"><span class="avatar sm c3">C</span><div style="flex:1"><div class="who"><b>carla</b><span class="when">40 min ago</span></div><p>Levo um tamborim! Alguém tem pandeiro sobrando?</p><div class="reactions" style="margin-top:6px"><span class="react" style="height:28px">👍 2</span></div></div></div>
-      <div style="margin-left:38px;border-left:2px solid var(--hair);padding-left:12px"><div class="rep"><span class="avatar sm c2">B</span><div style="flex:1"><div class="who"><b>bruno</b><span class="when">25 min ago</span></div><p>Eu levo dois. Chega cedo!</p></div></div></div>
+      <div class="rep-nest"><div class="rep"><span class="avatar sm c2">B</span><div style="flex:1"><div class="who"><b>bruno</b><span class="when">25 min ago</span></div><p>Eu levo dois. Chega cedo!</p></div></div></div>
       <div class="rep"><span class="avatar sm c5">E</span><div style="flex:1"><div class="who"><b>eduardo</b><span class="when">10 min ago</span></div><p>Vai ter espaço para crianças?</p></div></div>
     </div>
   </main>
-  <div style="position:absolute;left:0;right:0;bottom:0;z-index:50;background:var(--surface);border-top:1px solid var(--hair);padding:10px 12px 34px;display:flex;gap:10px;align-items:center">
-    <div class="input" style="flex:1;min-height:44px;border-radius:22px;padding:10px 16px"><span class="ph">Reply to bruno</span></div>
-    <a class="btn primary sm" style="border-radius:22px;opacity:.4">Send</a>
+  <div class="ev-replybar">
+    <div class="input"><span class="ph">Reply to bruno</span></div>
+    <a class="btn primary sm disabled">Send</a>
   </div>
   <div class="home-ind"></div>
 </div>
