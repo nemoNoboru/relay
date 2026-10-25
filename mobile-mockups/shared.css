@@ -1,0 +1,193 @@
+/* Relay mobile mockups — shared styles (390×844 phone viewport).
+   Tokens follow .pi/skills/relay-design. Fonts: link ../../web/fonts/fonts.css.
+
+   PAGE SKELETON
+     <body><div class="phone">
+       <div class="statusbar">…</div>
+       <header class="navbar">…</header>      (optional top bar)
+       <main class="screen">…</main>          (scrolls; has room for the tab bar)
+       <nav class="tabbar">…</nav>            (signed-in screens)
+       <div class="home-ind"></div>
+     </div></body>
+   Use <body class="dim"> style overlays via .scrim when a sheet is open.
+
+   COMPONENTS
+     .statusbar                 iOS-ish clock + signal icons (47px safe area)
+     .navbar  .navbar-title  .navbar-btn   top bar; .navbar.large for big titles
+     .tabbar  .tab  .tab.active   bottom tabs; icons via .ic.ic-feed|communities|events|settings
+     .ic + .ic-<name>           mask icons: feed communities events settings plus back
+                                chevron close pin chat more check bell lock globe
+     .fab                       floating "+" button
+     .banner                    "3 new posts" pill/strip
+     .card  .card-head  .avatar  .who  .when  .card-body  .place   post card
+     .reactions  .react  .react.mine  .replies-count               reaction row
+     .btn  .btn.primary|ghost|danger|block  .btn.sm                 buttons (44px tall)
+     .field  .input  .textarea  .label  .hint  .counter  .chip      form bits
+     .list  .row  .row-title  .row-sub  .row-end  .chev             grouped list rows
+     .seg  .seg > button.on                                          segmented control
+     .scrim  .sheet  .sheet-grab  .sheet-title                       bottom sheet
+     .popover  .picker                                               reaction picker
+     .empty                                                          empty state
+     .kb                                                             keyboard placeholder
+     .avatar colours: .c1 … .c6                                      */
+
+:root{
+  --red:#ce1f2b; --red-deep:#a5141f; --ink:#141210; --paper:#f0e6d2;
+  --paper-2:#e6d8bc; --ochre:#dfa32a; --hair:rgba(20,18,16,.16);
+  --surface:#fbf6e9;
+  --r-card:14px; --r-inner:10px;
+  --display:'Nunito',system-ui,sans-serif;
+  --body:'Figtree','RelayEmoji',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:390px;height:844px;overflow:hidden;background:var(--paper)}
+body{color:var(--ink);font-family:var(--body);font-weight:400;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button,input,textarea{font:inherit;color:inherit}
+
+/* ---------- phone frame ---------- */
+.phone{position:relative;width:390px;height:844px;overflow:hidden;background:var(--paper);display:flex;flex-direction:column}
+.statusbar{flex:0 0 47px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 6px 34px;font-family:var(--body);font-weight:600;font-size:15px;letter-spacing:.01em;position:relative;z-index:30}
+.statusbar .sys{display:flex;gap:6px;align-items:center}
+.statusbar .sig{display:flex;gap:2px;align-items:flex-end;height:11px}
+.statusbar .sig i{width:3px;background:var(--ink);border-radius:1px}
+.statusbar .sig i:nth-child(1){height:4px}.statusbar .sig i:nth-child(2){height:6px}.statusbar .sig i:nth-child(3){height:8px}.statusbar .sig i:nth-child(4){height:11px}
+.statusbar .batt{width:24px;height:12px;border:1.5px solid rgba(20,18,16,.5);border-radius:4px;padding:1px;position:relative}
+.statusbar .batt::before{content:"";display:block;width:75%;height:100%;background:var(--ink);border-radius:2px}
+.home-ind{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--ink);z-index:60}
+.screen{flex:1;min-height:0;overflow:hidden;position:relative}
+.screen.pad{padding:0 16px}
+
+/* ---------- icons (mask) ---------- */
+.ic{display:inline-block;width:24px;height:24px;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat;flex:0 0 auto}
+.ic-feed{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z'/%3E%3C/svg%3E")}
+.ic-communities{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3.2'/%3E%3Cpath d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/%3E%3Ccircle cx='17' cy='9' r='2.4'/%3E%3Cpath d='M17 14c2.2 0 4 1.8 4 4'/%3E%3C/svg%3E")}
+.ic-events{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='3'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E")}
+.ic-settings{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h10M18 7h2M4 17h2M10 17h10'/%3E%3Ccircle cx='16' cy='7' r='2.2'/%3E%3Ccircle cx='8' cy='17' r='2.2'/%3E%3C/svg%3E")}
+.ic-plus{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E")}
+.ic-back{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 5l-7 7 7 7'/%3E%3C/svg%3E")}
+.ic-chevron{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 5l7 7-7 7'/%3E%3C/svg%3E")}
+.ic-close{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E")}
+.ic-pin{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.800 12 21 12 21z'/%3E%3Ccircle cx='12' cy='9.500' r='2.500'/%3E%3C/svg%3E")}
+.ic-chat{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 5h16v11H9l-5 4z'/%3E%3C/svg%3E")}
+.ic-more{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='2'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3Ccircle cx='19' cy='12' r='2'/%3E%3C/svg%3E")}
+.ic-check{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.500l4.500 4.500L19 7'/%3E%3C/svg%3E")}
+.ic-bell{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 17V11a6 6 0 0 1 12 0v6l1.500 2h-15zM10 21h4'/%3E%3C/svg%3E")}
+.ic-lock{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2.500'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E")}
+.ic-globe{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18'/%3E%3C/svg%3E")}
+
+/* ---------- top bar ---------- */
+.navbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;min-height:48px;padding:0 8px 0 16px;border-bottom:1px solid var(--hair);background:rgba(240,230,210,.94);position:relative;z-index:20}
+.navbar.large{display:block;padding:6px 16px 12px}
+.navbar-title{font-family:var(--display);font-weight:700;font-size:18px;line-height:1.2;flex:1;min-width:0}
+.navbar.large .navbar-title{font-size:28px;font-weight:800;letter-spacing:-.01em}
+.navbar-sub{font-size:13px;opacity:.6;font-weight:400}
+.navbar-btn{display:grid;place-items:center;min-width:44px;height:44px;font-weight:600;font-size:16px;color:var(--red);background:none;border:0}
+.navbar-btn.ink{color:var(--ink)}
+.navbar-row{display:flex;align-items:center;justify-content:space-between}
+
+/* ---------- tab bar ---------- */
+.tabbar{flex:0 0 auto;display:flex;height:83px;padding:8px 6px 34px;background:rgba(251,246,233,.96);border-top:1px solid var(--hair);position:relative;z-index:40}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink);opacity:.5;font-size:11px;font-weight:600;letter-spacing:.02em}
+.tab .ic{width:26px;height:26px}
+.tab.active{color:var(--red);opacity:1}
+
+/* ---------- avatar ---------- */
+.avatar{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:16px;color:var(--paper);background:var(--red);flex:0 0 auto}
+.avatar.sm{width:28px;height:28px;border-radius:8px;font-size:12px}
+.avatar.lg{width:72px;height:72px;border-radius:18px;font-size:30px}
+.c1{background:var(--red)}.c2{background:#2f5d62}.c3{background:#8a5a2b}.c4{background:#3d4a7a}.c5{background:#5a6b35}.c6{background:#7a3e6b}
+
+/* ---------- feed bits ---------- */
+.feed{display:flex;flex-direction:column;gap:12px;padding:12px 16px 100px}
+.banner{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px auto 0;height:36px;padding:0 16px;border-radius:999px;background:var(--red);color:var(--paper);font-weight:600;font-size:14px;width:max-content;box-shadow:0 4px 14px rgba(20,18,16,.18)}
+.fab{position:absolute;right:18px;bottom:16px;width:56px;height:56px;border-radius:18px;background:var(--red);color:var(--paper);display:grid;place-items:center;box-shadow:0 6px 18px rgba(165,20,31,.35);z-index:35}
+.fab .ic{width:26px;height:26px}
+
+/* ---------- post card ---------- */
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-card);padding:14px 16px 8px}
+.card-head{display:flex;align-items:center;gap:11px}
+.who{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.who b{font-weight:600;font-size:16px}
+.when{font-size:12.5px;opacity:.55}
+.card-head .chip{margin-left:auto}
+.card-body{margin-top:10px;font-size:16px;line-height:1.5;font-weight:400}
+.place{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;opacity:.6;font-weight:600}
+.place .ic{width:14px;height:14px}
+.card-foot{display:flex;align-items:center;gap:6px;margin-top:6px;min-height:44px}
+
+/* ---------- reactions ---------- */
+.reactions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.react{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 10px;border-radius:999px;border:1px solid var(--hair);background:transparent;font-size:14px;font-weight:600}
+.react.mine{border-color:var(--red);background:rgba(206,31,43,.08);color:var(--red)}
+.react.add{width:32px;padding:0;justify-content:center;opacity:.55}
+.replies-count{margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:44px;font-size:14px;font-weight:600;opacity:.6}
+.replies-count .ic{width:18px;height:18px}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 22px;border-radius:14px;border:1px solid var(--hair);background:transparent;font-family:var(--body);font-weight:600;font-size:16px}
+.btn.primary{background:var(--red);border-color:var(--red);color:var(--paper)}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{border-color:transparent;color:var(--red)}
+.btn.danger{color:var(--red-deep);border-color:rgba(165,20,31,.35)}
+.btn.block{display:flex;width:100%}
+.btn.sm{height:44px;padding:0 16px;font-size:15px;border-radius:12px}
+.btn.disabled{opacity:.4}
+
+/* ---------- forms ---------- */
+.field{display:flex;flex-direction:column;gap:6px;margin-top:16px}
+.label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;opacity:.6}
+.input,.textarea{width:100%;min-height:48px;padding:12px 14px;border-radius:12px;border:1px solid var(--hair);background:var(--surface);font-size:16px;font-weight:400;line-height:1.4}
+.input.focus,.textarea.focus{border-color:var(--ink)}
+.input .ph,.textarea .ph{opacity:.4}
+.textarea{min-height:140px}
+.hint{font-size:13px;opacity:.6}
+.counter{font-size:13px;font-weight:600;opacity:.55;font-variant-numeric:tabular-nums}
+.counter.warn{color:var(--red);opacity:1}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:var(--surface);font-size:13.5px;font-weight:600}
+.chip .ic{width:15px;height:15px}
+.chip.red{color:var(--red);border-color:rgba(206,31,43,.4)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ---------- list rows ---------- */
+.list{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-card);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-top:1px solid var(--hair)}
+.list > .row:first-child{border-top:0}
+.row-main{flex:1;min-width:0}
+.row-title{font-weight:600;font-size:16px;line-height:1.25}
+.row-sub{font-size:13.5px;opacity:.6;line-height:1.3}
+.row-end{display:flex;align-items:center;gap:8px;font-size:14px;opacity:.6;font-weight:600}
+.chev{width:16px;height:16px;opacity:.4}
+.section-label{padding:20px 20px 8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;opacity:.55}
+.toggle{width:51px;height:31px;border-radius:999px;background:rgba(20,18,16,.18);position:relative;flex:0 0 auto}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.toggle.on{background:var(--red)}
+.toggle.on::after{left:22px}
+
+/* ---------- segmented control ---------- */
+.seg{display:flex;padding:3px;border-radius:12px;background:var(--paper-2);gap:2px}
+.seg > button{flex:1;height:38px;border:0;border-radius:9px;background:transparent;font-weight:600;font-size:15px;opacity:.7}
+.seg > button.on{background:var(--surface);opacity:1;box-shadow:0 1px 3px rgba(20,18,16,.15)}
+
+/* ---------- sheet & scrim ---------- */
+.scrim{position:absolute;inset:0;background:rgba(20,18,16,.42);z-index:70}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:80;background:var(--surface);border-radius:24px 24px 0 0;padding:8px 20px 38px;box-shadow:0 -8px 30px rgba(20,18,16,.18)}
+.sheet-grab{width:38px;height:5px;border-radius:3px;background:rgba(20,18,16,.22);margin:0 auto 14px}
+.sheet-title{font-family:var(--display);font-weight:800;font-size:20px;margin-bottom:6px}
+
+/* ---------- reaction picker popover ---------- */
+.popover{position:absolute;z-index:80;background:var(--surface);border:1px solid var(--hair);border-radius:999px;padding:6px;display:flex;gap:2px;box-shadow:0 10px 30px rgba(20,18,16,.25)}
+.picker button{width:44px;height:44px;border-radius:50%;border:0;background:transparent;font-size:24px;line-height:1}
+.picker button.on{background:rgba(206,31,43,.12);box-shadow:inset 0 0 0 1.5px var(--red)}
+
+/* ---------- misc ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:0 36px}
+.empty h2{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.2}
+.empty p{opacity:.65;font-size:15px}
+.empty .badge{width:72px;height:72px;border-radius:22px;background:var(--paper-2);display:grid;place-items:center;margin-bottom:6px}
+.empty .badge .ic{width:32px;height:32px}
+.kb{position:absolute;left:0;right:0;bottom:0;height:291px;background:#d4cbb8;z-index:50;border-top:1px solid var(--hair)}
+.kb::before{content:"";position:absolute;inset:12px 4px;background:repeating-linear-gradient(#e9e2d1 0 46px,transparent 46px 56px);border-radius:8px;opacity:.7}
+
+/* Emoji fallback for hosts without a system colour-emoji font (Noto Color Emoji, OFL), downloaded by render.sh and git-ignored. */
+@font-face{font-family:'RelayEmoji';src:url('./fonts/NotoColorEmoji.ttf');unicode-range:U+1F300-1FAFF,U+2600-27BF,U+FE0F,U+200D}
