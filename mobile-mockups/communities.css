@@ -1,0 +1,60 @@
+/* Communities screens (20–24). Loaded after shared.css. Poster language. */
+.comm-list{padding:18px 16px 110px;display:flex;flex-direction:column;gap:14px}
+.comm{display:flex;gap:12px;align-items:flex-start;padding:14px 14px 12px;background:var(--surface);border:var(--line);box-shadow:var(--shadow-sm);position:relative;min-height:44px}
+.comm .avatar{width:52px;height:52px;font-size:26px}
+.comm .row-title{font-family:var(--display);font-weight:400;font-size:22px;line-height:1;text-transform:uppercase;letter-spacing:.01em}
+.comm .excerpt{font-size:16px;line-height:1.3;color:var(--ink-2);margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.comm .meta{display:flex;align-items:center;gap:14px;margin-top:8px;padding-top:8px;border-top:1.5px solid var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.comm .meta .ic{width:14px;height:14px}
+.comm .meta span{display:inline-flex;align-items:center;gap:5px}
+.comm.joined-row{box-shadow:5px 5px 0 var(--red)}
+.comm .joined{position:absolute;top:-12px;right:10px;height:26px;padding:0 9px;font-size:10.5px;transform:rotate(3deg);gap:4px}
+.comm .joined .ic{width:12px;height:12px}
+.comm.off{background:var(--paper-2);border-style:dashed;box-shadow:none}
+.comm.off .avatar{background:var(--paper);color:var(--ink-2);border-color:var(--ink-2)}
+.comm.off .row-title{color:var(--ink-2)}
+.comm .oor{position:absolute;top:-12px;right:10px;height:26px;padding:0 9px;display:inline-flex;align-items:center;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:var(--paper);color:var(--ink);border:2px dashed var(--ink);transform:rotate(3deg)}
+.comm.off .meta{border-top-color:var(--ink-2);color:var(--ink-2)}
+
+/* community header: grid-paper hero with geometric accent */
+.comm-head{position:relative;overflow:hidden;padding:18px 16px 16px;display:flex;flex-direction:column;gap:12px;border-bottom:3px solid var(--ink)}
+.comm-head > :not([class^="geo-"]){position:relative;z-index:1}
+.comm-head .top{display:flex;gap:14px;align-items:center}
+.comm-head h1{font-family:var(--display);font-weight:400;font-size:40px;line-height:.9;text-transform:uppercase;max-width:230px}
+.comm-head h1 .hot{color:var(--red)}
+.comm-head p{font-size:18px;line-height:1.35}
+.comm-head .stats{display:flex;gap:8px;flex-wrap:wrap}
+.comm-head .stats .stamp{height:28px;transform:rotate(-1.5deg);background:var(--surface);color:var(--ink);gap:5px}
+.comm-head .stats .stamp .ic{width:14px;height:14px}
+.comm-head .stats .stamp.ochre{background:var(--ochre)}
+
+/* about */
+.about-block{margin:16px 16px 0}
+.about-block p{padding:14px 16px;font-size:18px;line-height:1.4}
+.about-block .row-sub{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:8px}
+.about-block .row-sub::before{content:"";width:14px;height:3px;background:var(--red)}
+.about-block .row-title{font-size:19px;margin-top:3px}
+.about-block .row{min-height:64px}
+.about-block .row > .ic{color:var(--ink)}
+.members{display:flex;align-items:center}
+.members .avatar.sm{width:36px;height:36px;margin-left:-2px;border:2px solid var(--ink)}
+.members .avatar.sm:first-child{margin-left:0}
+.members .more{margin-left:12px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.08em}
+
+/* create form */
+.slider{margin-top:0;height:44px;position:relative}
+.slider .track{position:absolute;left:0;right:0;top:17px;height:10px;background:var(--paper-2);border:var(--line)}
+.slider .fill{position:absolute;left:0;top:17px;height:10px;background:var(--red);border:var(--line);width:8.2%}
+.slider .knob{position:absolute;top:8px;left:8.2%;margin-left:-14px;width:28px;height:28px;background:var(--ink);border:3px solid var(--ink);box-shadow:3px 3px 0 var(--red)}
+.slider-ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.switch-row{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 0;border-top:1.5px solid var(--ink)}
+.switch-row .row-main{flex:1}
+.sheet.tall{padding-bottom:40px}
+
+/* sheets: poster header with accents */
+.sheet-head{position:relative;overflow:hidden;margin:-10px -20px 12px;padding:14px 20px 14px;background:var(--ink);color:var(--paper)}
+.sheet-head > :not([class^="geo-"]){position:relative;z-index:1}
+.sheet-head .sheet-title{margin:0;font-size:34px;line-height:.92}
+.sheet-head .sheet-title .ochre{color:var(--ochre)}
+.sheet-head .kicker{margin-bottom:8px}
+.sheet-head .navbar-btn{min-width:44px;height:44px;border:2px solid var(--paper);color:var(--paper)}

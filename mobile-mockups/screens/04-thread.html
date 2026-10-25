@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>04 Thread</title>
+<meta name="viewport" content="width=390">
+<link rel="stylesheet" href="../../web/fonts/fonts.css">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .reply{display:flex;gap:10px;padding-top:14px}
+  .reply .who{flex-direction:row;align-items:baseline;gap:10px}
+  .reply .who b{font-size:16px}
+  .reply p{margin-top:3px;font-size:17px;line-height:1.4}
+  .nest{margin-left:14px;border-left:3px solid var(--ink);padding-left:14px}
+  .nest .nest{border-left-color:var(--red)}
+  .more-link{display:flex;align-items:center;gap:8px;min-height:44px;font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--red-text)}
+  .more-link::before{content:"+";display:grid;place-items:center;width:20px;height:20px;background:var(--red);color:var(--on-red);font-size:14px;letter-spacing:0}
+</style>
+</head><body>
+<div class="phone">
+  <div class="statusbar dark"><span>9:41</span><span class="sys"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+  <header class="navbar" style="overflow:hidden">
+    <span class="geo-quarter" style="right:0;top:0;width:76px;height:76px"></span>
+    <a class="navbar-btn ink" style="margin-left:-8px"><i class="ic ic-back"></i></a>
+    <div class="navbar-title" style="font-size:26px">Thread</div>
+    <span class="stamp red" style="margin-right:52px;position:relative">6 replies</span>
+  </header>
+  <main class="screen" style="padding-bottom:84px">
+    <article class="card" style="margin:16px 16px 0">
+      <div class="card-head"><span class="avatar c2">B</span><div class="who"><b>bruno</b><span class="when">5 min ago · Pinheiros</span></div></div>
+      <p class="card-body" style="font-size:20px;line-height:1.38">Feira de domingo na Praça Benedito Calixto está linda hoje. Pastel de queijo e caldo de cana, quem vem?</p>
+      <div class="card-foot"><div class="reactions"><span class="react mine">🔥 4</span><span class="react">❤️ 2</span><span class="react add">+</span></div></div>
+    </article>
+    <div class="section-label" style="padding:20px 16px 0">Replies</div>
+    <div style="padding:0 16px">
+      <div class="reply"><span class="avatar sm c3">C</span><div style="flex:1"><div class="who"><b>carla</b><span class="when">3 min ago</span></div><p>Chego em meia hora, guardem um pastel!</p><div class="reactions" style="margin-top:8px"><span class="react">👍 1</span></div></div></div>
+      <div class="nest" style="margin-left:14px">
+        <div class="reply"><span class="avatar sm c2">B</span><div style="flex:1"><div class="who"><b>bruno</b><span class="when">2 min ago</span></div><p>Combinado, na barraca do meio.</p></div></div>
+        <div class="nest">
+          <div class="reply"><span class="avatar sm c3">C</span><div style="flex:1"><div class="who"><b>carla</b><span class="when">1 min ago</span></div><p>Perfeito 🙌</p></div></div>
+          <a class="more-link">Show 2 more replies</a>
+        </div>
+      </div>
+      <div class="reply" style="padding-top:8px"><span class="avatar sm c5">E</span><div style="flex:1"><div class="who"><b>eduardo</b><span class="when">just now</span></div><p>Levo meu cachorro, pode?</p></div></div>
+      <a class="more-link" style="margin-left:40px">Show 1 reply</a>
+    </div>
+  </main>
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:50;background:var(--paper);border-top:3px solid var(--ink);padding:10px 12px 34px;display:flex;gap:10px;align-items:center">
+    <div class="input" style="flex:1;min-height:44px;padding:10px 14px"><span class="ph">Reply to bruno</span></div>
+    <a class="btn primary sm disabled">Send</a>
+  </div>
+  <div class="home-ind"></div>
+</div>
+</body></html>

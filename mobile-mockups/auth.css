@@ -1,0 +1,60 @@
+/* Auth + settings screens (10–17). Loaded after shared.css. Poster language: see README. */
+.ic-warn{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M12 4v10M12 19v1'/%3E%3C/svg%3E")}
+.ic-shield{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M12 3l7 3v5c0 4.500-3 8.500-7 10-4-1.500-7-5.500-7-10V6z'/%3E%3C/svg%3E")}
+
+/* hero header (auth) */
+.auth-hero{padding-bottom:18px}
+.auth-hero .ph-title{font-size:50px;margin-top:14px}
+.auth-hero .ph-meta{margin-top:12px}
+.auth-hero .ph-top > :last-child{margin-left:0}
+.auth{padding:6px 24px 0;display:flex;flex-direction:column;height:100%}
+.auth-form{margin-top:2px}
+.auth-form .btn{margin-top:26px}
+.auth-foot{margin-top:auto;padding-bottom:50px;display:flex;flex-direction:column;align-items:center}
+.link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;font-family:var(--mono);font-weight:700;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--red-text);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}
+.link.quiet{color:var(--ink)}
+
+/* errors and test results: ink or red block with a square flag */
+.input.err{border-width:3px;padding:11px 13px;border-color:var(--red-text);box-shadow:4px 4px 0 var(--red)}
+.err-text{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red-text)}
+.err-text .ic{width:18px;height:18px}
+.alert,.test-ok,.test-err{display:flex;gap:12px;align-items:stretch;margin-top:18px;padding:0 14px 0 0;font-size:16px;font-weight:500;line-height:1.3;border:3px solid var(--ink)}
+.alert > span,.test-ok > span,.test-err > span{padding:12px 0;align-self:center}
+.alert > .flag,.test-ok > .flag,.test-err > .flag{display:grid;place-items:center;align-self:stretch;width:50px;flex:0 0 50px;padding:0;background:var(--red);color:var(--on-red)}
+.flag .ic{width:28px;height:28px}
+.alert{background:var(--ink);color:var(--paper);box-shadow:5px 5px 0 var(--red)}
+.test-ok{background:var(--ink);color:var(--paper);box-shadow:5px 5px 0 var(--ochre)}
+.test-ok > .flag{background:var(--ochre);color:var(--ink)}
+.test-err{background:var(--red);color:var(--on-red);box-shadow:5px 5px 0 var(--ink)}
+.test-err > .flag{background:var(--ink);color:var(--ochre)}
+
+/* invite card */
+.invite{display:flex;align-items:center;gap:12px;margin-top:18px;padding:10px 14px;background:var(--surface);border:var(--line);box-shadow:var(--shadow-sm)}
+.invite .who b{font-size:18px}
+.invite .who span{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.invite .stamp{margin-left:auto}
+
+/* settings */
+.navbar.large{overflow:hidden}
+.navbar.large > *{position:relative;z-index:2}
+.navbar.large > [class^="geo-"]{position:absolute;z-index:0}
+.settings{padding:0 16px 24px}
+.settings .section-label{padding:20px 4px 10px}
+.row .ic{width:22px;height:22px}
+.row.muted .row-title{color:var(--ink-2)}
+.row-ic{display:grid;place-items:center;width:34px;height:34px;background:var(--ink);color:var(--paper);flex:0 0 auto}
+.row-ic .ic{width:20px;height:20px}
+.row.muted .row-ic{background:var(--ink-2)}
+.row.out{background:var(--red);min-height:52px}
+.row.out .row-title{font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--on-red)}
+.list.out{border-width:3px}
+.soon{display:inline-flex;align-items:center;height:26px;padding:0 8px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--ink);background:var(--ochre);color:var(--ink);transform:rotate(-3deg)}
+.row-end.username{color:var(--ink)}
+
+/* server sheet */
+.sheet{overflow:hidden}
+.sheet > :not([class^="geo-"]){position:relative;z-index:1}
+.sheet .field:first-of-type{margin-top:12px}
+.sheet-actions{display:flex;gap:12px;margin-top:20px}
+.sheet-actions .btn{flex:1;padding:0 8px}
+.note{margin-top:14px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);text-align:center}
