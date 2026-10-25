@@ -7,8 +7,7 @@ import {
   getAccessToken,
   LOGIN_PATH,
   onAuthFailure,
-  REFRESH_PATH,
-  getRefreshToken,
+  refreshTokens,
   setServerUrl,
   setTokens,
   type LoginResponse,
@@ -48,13 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     async function restore() {
       try {
-        if (!(await getAccessToken()) || !(await getRefreshToken())) return
-        const res = await api.post<{ access_token: string; refresh_token?: string; user?: User }>(
-          REFRESH_PATH,
-          { refresh_token: await getRefreshToken() },
-        )
-        await setTokens(res.data.access_token, res.data.refresh_token)
-        if (!cancelled && res.data.user) setUser(res.data.user)
+        if (!(await getAccessToken())) return
+        const { user } = await refreshTokens()
+        if (!cancelled && user) setUser(user)
       } catch {
         await clearTokens()
       } finally {
@@ -69,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async ({ serverUrl, username, password }: LoginInput) => {
     if (serverUrl.trim()) await setServerUrl(serverUrl)
-    const res = await api.post<LoginResponse>(LOGIN_PATH, { username, password })
+    const res = await api.post<LoginResponse>(LOGIN_PATH, { username, password }, { skipAuthRefresh: true })
     await setTokens(res.data.access_token, res.data.refresh_token)
     setUser(res.data.user)
   }, [])

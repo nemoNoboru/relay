@@ -17,7 +17,7 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(async (k: string) => void mockSecureStore.delete(k)),
 }))
 
-import { api, DEFAULT_URL, onAuthFailure, REFRESH_PATH, setServerUrl } from '../api'
+import { api, DEFAULT_URL, LOGIN_PATH, onAuthFailure, REFRESH_PATH, setServerUrl } from '../api'
 
 type Handler = (config: InternalAxiosRequestConfig) => { status: number; data?: unknown }
 
@@ -120,5 +120,18 @@ describe('auth', () => {
     expect(seen).toHaveLength(2)
     expect(mockSecureStore.size).toBe(0)
     expect(failed).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not refresh or call onAuthFailure on a 401 from a skipAuthRefresh request (login)', async () => {
+    mockSecureStore.set('access_token', 'old')
+    mockSecureStore.set('refresh_token', 'r1')
+    const failed = jest.fn()
+    const off = onAuthFailure(failed)
+    useServer(() => ({ status: 401 }))
+    await expect(api.post(LOGIN_PATH, {}, { skipAuthRefresh: true })).rejects.toBeInstanceOf(AxiosError)
+    off()
+    expect(seen).toHaveLength(1)
+    expect(failed).not.toHaveBeenCalled()
+    expect(mockSecureStore.get('access_token')).toBe('old')
   })
 })

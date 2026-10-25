@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosError } from 'axios'
 import * as SecureStore from 'expo-secure-store'
 
 export const BASE_URL_KEY = 'relay_server_url'
@@ -26,9 +26,17 @@ export interface LoginResponse extends TokenPair {
   user: User
 }
 
-interface RetryableConfig extends InternalAxiosRequestConfig {
-  _retried?: boolean
-  _skipAuthRefresh?: boolean
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /** Do not refresh tokens or trigger onAuthFailure when this request gets a 401. */
+    skipAuthRefresh?: boolean
+    /** Set by the response interceptor once the request has been retried. */
+    authRetried?: boolean
+  }
+}
+
+export interface RefreshResponse extends TokenPair {
+  user?: User
 }
 
 export async function getBaseUrl(): Promise<string> {
@@ -71,35 +79,38 @@ api.interceptors.request.use(async (config) => {
   return config
 })
 
-let inFlightRefresh: Promise<string> | null = null
+let inFlightRefresh: Promise<RefreshResponse> | null = null
 
 /** Exchanges the stored refresh token for new tokens. Concurrent callers share one request. */
-export function refreshTokens(): Promise<string> {
+export function refreshTokens(): Promise<RefreshResponse> {
   inFlightRefresh ??= doRefresh().finally(() => {
     inFlightRefresh = null
   })
   return inFlightRefresh
 }
 
-async function doRefresh(): Promise<string> {
+async function doRefresh(): Promise<RefreshResponse> {
   const refreshToken = await getRefreshToken()
   if (!refreshToken) throw new Error('no refresh token')
-  const config: RetryableConfig = { _skipAuthRefresh: true } as RetryableConfig
-  const res = await api.post<TokenPair>(REFRESH_PATH, { refresh_token: refreshToken }, config)
+  const res = await api.post<RefreshResponse>(
+    REFRESH_PATH,
+    { refresh_token: refreshToken },
+    { skipAuthRefresh: true },
+  )
   await setTokens(res.data.access_token, res.data.refresh_token)
-  return res.data.access_token
+  return res.data
 }
 
 api.interceptors.response.use(undefined, async (error: unknown) => {
   if (!(error instanceof AxiosError) || error.response?.status !== 401 || !error.config) {
     throw error
   }
-  const original = error.config as RetryableConfig
-  if (original._retried || original._skipAuthRefresh) throw error
-  original._retried = true
+  const original = error.config
+  if (original.authRetried || original.skipAuthRefresh) throw error
+  original.authRetried = true
   try {
-    const access = await refreshTokens()
-    original.headers.set('Authorization', `Bearer ${access}`)
+    const { access_token } = await refreshTokens()
+    original.headers.set('Authorization', `Bearer ${access_token}`)
   } catch {
     await clearTokens()
     authFailureHandler?.()
