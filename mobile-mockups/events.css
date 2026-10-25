@@ -1,0 +1,61 @@
+/* Events screens (30-35). Loaded after shared.css. */
+
+.ev-seg{margin-top:10px}
+.ev-group{padding:18px 20px 8px;font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.01em}
+.ev-group small{font-family:var(--body);font-weight:600;font-size:12.5px;opacity:.5;margin-left:6px}
+.ev-list{margin:0 16px}
+.ev-list .row{align-items:flex-start;padding:12px 14px;gap:12px}
+.ev-time{flex:0 0 52px;height:52px;border-radius:12px;background:var(--paper-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--display);line-height:1.05}
+.ev-time b{font-weight:800;font-size:17px}
+.ev-time span{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.6}
+.ev-time.today{background:rgba(206,31,43,.1);color:var(--red)}
+.ev-time.today span{opacity:.85}
+.ev-meta{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:13px;font-weight:600;opacity:.6;flex-wrap:wrap}
+.ev-meta .ic{width:14px;height:14px}
+.ev-going{margin-left:auto;font-size:13px;font-weight:600;opacity:.6;white-space:nowrap;padding-top:2px}
+
+/* map */
+.map{position:absolute;inset:0;overflow:hidden;background:#ebe0c6}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;width:34px;height:34px;margin:-38px 0 0 -17px;z-index:5}
+.pin i{position:absolute;inset:0;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--red);border:2px solid var(--surface);box-shadow:0 3px 8px rgba(20,18,16,.3)}
+.pin::after{content:"";position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--surface)}
+.pin.sel{width:44px;height:44px;margin:-50px 0 0 -22px;z-index:8}
+.pin.sel i{background:var(--red-deep);box-shadow:0 0 0 5px rgba(206,31,43,.25),0 5px 12px rgba(20,18,16,.35)}
+.pin.sel::after{width:14px;height:14px;margin:-7px 0 0 -7px}
+.cluster{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:18px;border:3px solid var(--surface);box-shadow:0 0 0 6px rgba(20,18,16,.15),0 4px 10px rgba(20,18,16,.3);z-index:6}
+.me{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#3d6fd6;border:3px solid #fff;box-shadow:0 0 0 14px rgba(61,111,214,.18),0 2px 6px rgba(20,18,16,.3);z-index:4}
+.map-seg{position:absolute;left:16px;right:16px;top:12px;z-index:10}
+.map-fab{position:absolute;right:16px;width:44px;height:44px;border-radius:14px;background:var(--surface);border:1px solid var(--hair);display:grid;place-items:center;box-shadow:0 3px 10px rgba(20,18,16,.15);z-index:10}
+
+/* sheet over tab-less map */
+.ev-sheet{padding-bottom:38px}
+.ev-sheet h3{font-family:var(--display);font-weight:800;font-size:20px;line-height:1.2}
+
+/* detail */
+.ev-hero{padding:16px 16px 0}
+.ev-hero h1{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.15;letter-spacing:-.01em}
+.ev-facts{margin-top:14px}
+.ev-fact{display:flex;gap:12px;align-items:flex-start;padding:10px 0}
+.ev-fact .ic{width:20px;height:20px;margin-top:2px;color:var(--red)}
+.ev-fact b{display:block;font-weight:600;font-size:16px;line-height:1.3}
+.ev-fact span{font-size:13.5px;opacity:.6}
+.ev-actions{display:flex;align-items:center;gap:14px;margin-top:6px}
+.ev-actions .btn{flex:1}
+.ev-actions .count{font-weight:600;font-size:15px;white-space:nowrap}
+.btn.going{background:rgba(206,31,43,.08);border-color:var(--red);color:var(--red)}
+.ev-replies{margin-top:18px;border-top:1px solid var(--hair);padding:0 16px}
+.ev-replies h4{font-family:var(--display);font-weight:800;font-size:15px;padding:14px 0 0}
+.rep{display:flex;gap:10px;padding-top:14px}
+.rep .who b{font-size:15px}
+.rep p{margin-top:2px}
+
+/* create */
+.ev-form{padding:0 16px}
+.ev-form .list{margin-top:14px}
+.ev-form .row{min-height:52px}
+.ev-form .row .k{font-weight:600;font-size:15px;width:76px;flex:0 0 auto}
+.ev-form .row .v{flex:1;text-align:right;font-weight:600;font-size:15px}
+.ev-form .row .v.chipv{display:inline-block;background:var(--paper-2);border-radius:9px;padding:6px 11px;flex:0 0 auto}
+.ev-title{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.25;margin-top:16px;min-height:30px}
+.ev-title .caret{display:inline-block;width:2px;height:24px;background:var(--red);vertical-align:-4px;margin-left:1px}
