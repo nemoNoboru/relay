@@ -25,7 +25,7 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
+- Use **Expo Router** for all navigation. Routes live in `app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
 - Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - Docs: https://docs.expo.dev/router/introduction.md
 
@@ -33,6 +33,18 @@ Run lint and typecheck before declaring any task done.
 
 Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
 Docs: https://docs.expo.dev/eas/index.md
+
+## Architecture
+
+Code under `src/` is layered: `domain` <- `application` <- `infrastructure` / `presentation`, wired only in `composition`. Read the Architecture section of `README.md` before adding code.
+
+- `domain/` is pure TypeScript: immutable types, pure functions, `Result`, port interfaces. No React, axios or expo imports.
+- `application/` use cases are factories taking their ports as arguments (`makeX = (deps) => async (input) => Result`). They import only `domain`.
+- `infrastructure/` adapters are built by factories (`makeX({ deps })`); library errors become `AuthError` values at this boundary.
+- Screens in `app/` stay thin and use hooks from `src/presentation/`; only `src/composition/` may import concrete adapters.
+- No classes, DI container libraries or module-level singletons. `src/__tests__/architecture.test.ts` fails on layer violations.
+- New behavior gets a unit test using the in-memory fakes in `src/testing/`.
+- Icons: edit `assets/icon.svg` and run `npm run icons`; do not hand-edit the PNGs.
 
 ## Rules
 
