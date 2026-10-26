@@ -1,0 +1,82 @@
+[project]
+name = "relay-backend"
+version = "0.1.0"
+description = "Relay node backend (FastAPI, SQLAlchemy async, Alembic)"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "pydantic-settings",
+    "sqlalchemy[asyncio]",
+    "alembic",
+    "aiosqlite",
+    "asyncpg",
+    "python-jose",
+    "passlib",
+    "h3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+    "pytest-cov",
+    "import-linter",
+    "ruff",
+    "ty",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/relay"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "ASYNC", "S", "N", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "relay"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers point inward: api -> application -> domain <- infrastructure"
+type = "layers"
+layers = [
+    "relay.shared.api",
+    "relay.shared.infrastructure",
+    "relay.shared.application",
+    "relay.shared.domain",
+]
+exhaustive = false
+
+[[tool.importlinter.contracts]]
+name = "Domain does not import FastAPI or SQLAlchemy"
+type = "forbidden"
+source_modules = ["relay.shared.domain"]
+forbidden_modules = ["fastapi", "sqlalchemy", "starlette"]
+
+[[tool.importlinter.contracts]]
+name = "Application does not import FastAPI or SQLAlchemy"
+type = "forbidden"
+source_modules = ["relay.shared.application"]
+forbidden_modules = ["fastapi", "sqlalchemy", "starlette"]
