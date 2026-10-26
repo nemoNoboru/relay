@@ -75,7 +75,9 @@ class CreatePost:
 Application services return domain objects (entities or value objects), not
 separate transfer types. The `api` layer maps them into its Pydantic response
 schemas (for example `HealthResponse.from_domain(HealthStatus)`), so the domain
-never knows about HTTP. Repositories are `abc.ABC` classes in `domain`; the
+never knows about HTTP. Repositories are `abc.ABC` classes in `domain`; each
+context's repository subclasses the generic base `Repository[E, ID]`
+(`relay.shared.domain`, abstract `get` and `add`) and adds its own queries. The
 `UnitOfWork` ABC lives in `application` so tests can use `FakeUnitOfWork`, and
 infrastructure provides the concrete SQLAlchemy implementation. `Clock` is a
 plain class with `now()`; tests pass a `FixedClock` subclass.

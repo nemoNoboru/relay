@@ -4,6 +4,7 @@ from relay.shared.domain.errors import ConflictError, DomainError, NotFoundError
 from relay.shared.domain.events import DomainEvent
 from relay.shared.domain.health import HealthStatus
 from relay.shared.domain.models import Entity, ValueObject
+from relay.shared.domain.repository import Repository
 
 __all__ = [
     "ConflictError",
@@ -12,6 +13,7 @@ __all__ = [
     "Entity",
     "HealthStatus",
     "NotFoundError",
+    "Repository",
     "ValidationError",
     "ValueObject",
 ]
