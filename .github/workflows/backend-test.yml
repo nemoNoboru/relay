@@ -1,0 +1,73 @@
+name: Backend tests
+
+# Runs the Python backend quality gates on every push to main and every
+# pull request that touches backend/: ruff, ty, import-linter, and pytest
+# on SQLite and again against a Postgres service container. The same
+# gates run locally via the commands in backend/README.md and a fast
+# subset via pre-commit (.pre-commit-config.yaml).
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-test.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-test.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: relay
+          POSTGRES_PASSWORD: relay
+          POSTGRES_DB: relay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U relay -d relay_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: ruff check
+        run: uv run ruff check
+
+      - name: ruff format
+        run: uv run ruff format --check
+
+      - name: ty
+        run: uv run ty check
+
+      - name: import-linter
+        run: uv run lint-imports
+
+      - name: pytest (SQLite)
+        run: uv run pytest
+
+      - name: pytest (Postgres)
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://relay:relay@localhost:5432/relay_test
+        run: uv run pytest
