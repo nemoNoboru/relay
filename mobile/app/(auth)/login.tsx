@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { DEFAULT_URL } from '../../src/api'
-import { useAuth } from '../../src/auth'
-import { colors } from '../../src/theme'
+import { DEFAULT_SERVER_URL } from '../../src/domain'
+import { useAuth } from '../../src/presentation/auth'
+import { colors } from '../../src/presentation/theme'
 
 export default function Login() {
   const { login } = useAuth()
-  const [serverUrl, setServerUrl] = useState(DEFAULT_URL)
+  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -16,13 +16,9 @@ export default function Login() {
   async function submit() {
     setBusy(true)
     setError(null)
-    try {
-      await login({ serverUrl, username, password })
-    } catch {
-      setError('Could not sign in. Check the server URL and your credentials.')
-    } finally {
-      setBusy(false)
-    }
+    const result = await login({ serverUrl, username, password })
+    if (!result.ok) setError('Could not sign in. Check the server URL and your credentials.')
+    setBusy(false)
   }
 
   return (

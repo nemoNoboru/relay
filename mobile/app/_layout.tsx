@@ -1,13 +1,13 @@
 import { Slot } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 
-import { AuthProvider } from '../src/auth'
+import { AppProviders } from '../src/composition/AppProviders'
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
+    <AppProviders>
       <StatusBar style="dark" />
       <Slot />
-    </AuthProvider>
+    </AppProviders>
   )
 }

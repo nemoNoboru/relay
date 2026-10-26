@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { useAuth } from '../../src/auth'
-import { colors } from '../../src/theme'
+import { useAuth } from '../../src/presentation/auth'
+import { colors } from '../../src/presentation/theme'
 
 export default function Home() {
   const { user, logout } = useAuth()
