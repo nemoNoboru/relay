@@ -143,6 +143,8 @@ make build   # owner UI first, then the relay binary
 make run     # run the existing binary without rebuilding
 ```
 
+The Expo mobile app lives in [`mobile/`](mobile/README.md).
+
 `host.html` and `why.html` are written by hand. Edit the HTML directly.
 Engineering standards for Go and the frontend live in [`.pi/skills/`](.pi/skills),
 including `relay-design` (web UI) and `relay-mobile-design` (the Expo app),

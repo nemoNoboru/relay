@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Relay mark, from the .logo in mobile-mockups/shared.css: a tilted red
+       square with a heavy cream "R", an ochre corner chip and a hard ink shadow.
+       scripts/generate-icons.mjs reuses everything between the mark markers,
+       keyed on the class names, to render the other icon sizes. -->
+  <rect class="bg" width="1024" height="1024" fill="#f0e6d2"/>
+  <g transform="translate(512 512) scale(1.3) translate(-512 -512)">
+    <!-- mark:start -->
+    <g transform="rotate(-6 512 512)">
+      <rect class="shadow" x="308" y="308" width="480" height="480" fill="#141210"/>
+      <rect class="face" x="272" y="272" width="480" height="480" fill="#ce1f2b"/>
+      <path class="r" fill="#fff8ea" fill-rule="evenodd" transform="translate(412 382)"
+        d="M0 0H105C165 0 200 32 200 78C200 112 182 136 154 148L204 260H142L98 160H58V260H0ZM58 46V114H100C122 114 138 104 138 80C138 56 122 46 100 46Z"/>
+      <rect class="accent" x="702" y="242" width="100" height="100" fill="#dfa32a"/>
+    </g>
+    <!-- mark:end -->
+  </g>
+</svg>
