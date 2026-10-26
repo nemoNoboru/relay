@@ -1,6 +1,6 @@
 import { err, ok, type RefreshedSession, type Session } from '../../domain'
 import { makeFakeAuthRepository, makeMemoryServerUrlStore, makeMemoryTokenStore } from '../../testing/fakes'
-import { makeLogin, makeLogout, makeRefreshSession, makeRestoreSession } from '..'
+import { makeLogin, makeLogout, makeRegister, makeRefreshSession, makeRestoreSession } from '..'
 
 const user = { id: 'u1', name: 'Ada' }
 const session: Session = { user, tokens: { accessToken: 'a1', refreshToken: 'r1' } }
@@ -35,6 +35,26 @@ describe('login', () => {
     const tokens = makeMemoryTokenStore()
     const login = makeLogin({ authRepository: repository, tokenWriter: tokens, serverUrlWriter: makeMemoryServerUrlStore() })
     expect(await login({ serverUrl: '', ...credentials })).toEqual(err('invalid-credentials'))
+    expect(tokens.current()).toBeNull()
+  })
+})
+
+describe('register', () => {
+  const input = { inviteToken: 'inv', displayName: ' Ada L ', username: ' ada ', password: 'pw' }
+
+  it('sends the trimmed fields, stores the tokens and returns the user', async () => {
+    const { repository, calls } = makeFakeAuthRepository({ register: ok(session) })
+    const tokens = makeMemoryTokenStore()
+    const result = await makeRegister({ authRepository: repository, tokenWriter: tokens })(input)
+    expect(result).toEqual(ok(user))
+    expect(tokens.current()).toEqual(session.tokens)
+    expect(calls.register).toEqual([{ inviteToken: 'inv', displayName: 'Ada L', username: 'ada', password: 'pw' }])
+  })
+
+  it.each(['invalid-invite', 'username-taken'] as const)('returns %s and stores no tokens', async (error) => {
+    const { repository } = makeFakeAuthRepository({ register: err(error) })
+    const tokens = makeMemoryTokenStore()
+    expect(await makeRegister({ authRepository: repository, tokenWriter: tokens })(input)).toEqual(err(error))
     expect(tokens.current()).toBeNull()
   })
 })

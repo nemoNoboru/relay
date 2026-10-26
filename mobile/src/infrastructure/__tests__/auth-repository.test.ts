@@ -4,7 +4,7 @@ import axios, { AxiosError } from 'axios'
 import { err, ok } from '../../domain'
 import { makeFakeServer, type FakeHandler } from '../../testing/fake-server'
 import { makeHttpAuthRepository } from '../http/auth-repository'
-import { LOGIN_PATH, REFRESH_PATH } from '../http/endpoints'
+import { LOGIN_PATH, REFRESH_PATH, REGISTER_PATH } from '../http/endpoints'
 
 function setup(handler: FakeHandler) {
   const server = makeFakeServer(handler)
@@ -42,6 +42,39 @@ describe('login', () => {
     })
     const result = await makeHttpAuthRepository({ http }).login({ username: 'a', password: 'b' })
     expect(result).toEqual(err('network'))
+  })
+})
+
+describe('register', () => {
+  const registration = { inviteToken: 'inv', displayName: 'Ada L', username: 'ada', password: 'pw' }
+
+  it('posts the invite token and fields and maps the response', async () => {
+    const { repository, seen } = setup(() => ({
+      status: 201,
+      data: { access_token: 'a', refresh_token: 'r', user: { id: 'u1', name: 'Ada L' } },
+    }))
+    const result = await repository.register(registration)
+    expect(result).toEqual(ok({ user: { id: 'u1', name: 'Ada L' }, tokens: { accessToken: 'a', refreshToken: 'r' } }))
+    expect(seen[0]!.url).toBe(REGISTER_PATH)
+    expect(JSON.parse(seen[0]!.data)).toEqual({ invite_token: 'inv', display_name: 'Ada L', username: 'ada', password: 'pw' })
+  })
+
+  it.each([
+    [403, 'invalid-invite'],
+    [409, 'username-taken'],
+    [500, 'unexpected'],
+  ])('maps %i to %s', async (status, error) => {
+    const { repository } = setup(() => ({ status }))
+    expect(await repository.register(registration)).toEqual(err(error))
+  })
+
+  it('maps a missing response to network', async () => {
+    const http = axios.create({
+      adapter: async (config) => {
+        throw new AxiosError('offline', 'ERR_NETWORK', config)
+      },
+    })
+    expect(await makeHttpAuthRepository({ http }).register(registration)).toEqual(err('network'))
   })
 })
 

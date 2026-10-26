@@ -11,6 +11,13 @@ export type Credentials = {
   readonly password: string
 }
 
+export type Registration = {
+  readonly inviteToken: string
+  readonly displayName: string
+  readonly username: string
+  readonly password: string
+}
+
 export type Session = {
   readonly user: User
   readonly tokens: AuthTokens

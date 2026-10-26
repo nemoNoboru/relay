@@ -1,6 +1,6 @@
 import type { AxiosAdapter } from 'axios'
 
-import { makeLogin, makeLogout, makeRefreshSession, makeRestoreSession, type UseCases } from '../application'
+import { makeLogin, makeLogout, makeRegister, makeRefreshSession, makeRestoreSession, type UseCases } from '../application'
 import { makeHttpAuthRepository } from '../infrastructure/http/auth-repository'
 import { makeHttpClient } from '../infrastructure/http/client'
 import { makeSessionEvents } from '../infrastructure/session-events'
@@ -43,6 +43,7 @@ export function wireUseCases({ secureStorage, preferenceStorage, httpAdapter }: 
 
   return {
     login: makeLogin({ authRepository, tokenWriter: tokenStore, serverUrlWriter: serverUrlStore }),
+    register: makeRegister({ authRepository, tokenWriter: tokenStore }),
     logout,
     restoreSession: makeRestoreSession({ tokenReader: tokenStore, tokenWriter: tokenStore, refreshSession }),
     sessionEvents,

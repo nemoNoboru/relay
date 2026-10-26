@@ -1,9 +1,10 @@
 import type { AuthError } from './auth-error'
-import type { AuthTokens, Credentials, RefreshedSession, Session } from './session'
+import type { AuthTokens, Credentials, RefreshedSession, Registration, Session } from './session'
 import type { Result } from './result'
 
 export type AuthRepository = {
   readonly login: (credentials: Credentials) => Promise<Result<Session, AuthError>>
+  readonly register: (registration: Registration) => Promise<Result<Session, AuthError>>
   readonly refresh: (refreshToken: string) => Promise<Result<RefreshedSession, AuthError>>
 }
 

@@ -25,6 +25,17 @@ describe('wired app', () => {
     expect(secureStorage.data.get('refresh_token')).toBe('r')
   })
 
+  it('registers with an invite token and stores the tokens', async () => {
+    const { useCases, secureStorage, seen } = setup(() => ({
+      status: 201,
+      data: { access_token: 'a', refresh_token: 'r', user },
+    }))
+    const result = await useCases.register({ inviteToken: 'inv', displayName: 'Ada', username: 'ada', password: 'pw' })
+    expect(result).toEqual({ ok: true, value: user })
+    expect(urlOf(seen[0]!)).toBe('https://relay.mansus.org/auth/register')
+    expect(secureStorage.data.get('access_token')).toBe('a')
+  })
+
   it('restores the session on launch through the refresh endpoint', async () => {
     const { useCases, secureStorage } = setup(
       () => ({ status: 200, data: { access_token: 'new', refresh_token: 'r2', user } }),

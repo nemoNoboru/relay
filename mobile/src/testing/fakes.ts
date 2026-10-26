@@ -48,12 +48,13 @@ export const makeMemoryServerUrlStore = (initial = DEFAULT_SERVER_URL): ServerUr
 type Scripted<T> = Result<T, AuthError> | (() => Promise<Result<T, AuthError>>)
 
 /** An AuthRepository answering from scripted results; records the calls it receives. */
-export const makeFakeAuthRepository = (script: { login?: Scripted<Session>; refresh?: Scripted<RefreshedSession> }) => {
-  const calls = { login: [] as unknown[], refresh: [] as string[] }
+export const makeFakeAuthRepository = (script: { login?: Scripted<Session>; register?: Scripted<Session>; refresh?: Scripted<RefreshedSession> }) => {
+  const calls = { login: [] as unknown[], register: [] as unknown[], refresh: [] as string[] }
   const answer = <T>(scripted: Scripted<T> | undefined) =>
     typeof scripted === 'function' ? scripted() : Promise.resolve(scripted ?? err<AuthError>('unexpected'))
   const repository: AuthRepository = {
     login: (credentials) => (calls.login.push(credentials), answer(script.login)),
+    register: (registration) => (calls.register.push(registration), answer(script.register)),
     refresh: (refreshToken) => (calls.refresh.push(refreshToken), answer(script.refresh)),
   }
   return { repository, calls }
