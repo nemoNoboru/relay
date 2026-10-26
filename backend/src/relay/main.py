@@ -1,5 +1,5 @@
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -17,7 +17,7 @@ def create_app(settings: Settings) -> FastAPI:
     """Composition root: the only place that builds Settings-dependent objects."""
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         configure_logging(settings.log_level)
         engine = create_engine(settings.database_url)
         app.state.container = Container(settings, create_session_factory(engine))
