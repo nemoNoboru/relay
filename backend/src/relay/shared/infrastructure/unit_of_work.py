@@ -3,8 +3,10 @@ from typing import Self
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from relay.shared.application import UnitOfWork
 
-class SqlAlchemyUnitOfWork:
+
+class SqlAlchemyUnitOfWork(UnitOfWork):
     """One session and one transaction. Context UoWs subclass this and add repositories."""
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:

@@ -1,8 +1,10 @@
 from types import TracebackType
 from typing import Self
 
+from relay.shared.application import UnitOfWork
 
-class FakeUnitOfWork:
+
+class FakeUnitOfWork(UnitOfWork):
     """In-memory stand-in for a UnitOfWork. Contexts add InMemory<X>Repository attributes."""
 
     def __init__(self) -> None:

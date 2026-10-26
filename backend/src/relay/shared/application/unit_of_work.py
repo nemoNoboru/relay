@@ -1,17 +1,15 @@
-from datetime import datetime
+from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Protocol, Self
+from typing import Self
 
 
-class Clock(Protocol):
-    def now(self) -> datetime: ...
+class UnitOfWork(ABC):
+    """A transaction. Contexts subclass it and add their repositories as attributes."""
 
-
-class UnitOfWork(Protocol):
-    """A transaction. Contexts extend this Protocol with their repositories."""
-
+    @abstractmethod
     async def __aenter__(self) -> Self: ...
 
+    @abstractmethod
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
@@ -19,10 +17,8 @@ class UnitOfWork(Protocol):
         tb: TracebackType | None,
     ) -> None: ...
 
+    @abstractmethod
     async def commit(self) -> None: ...
 
+    @abstractmethod
     async def rollback(self) -> None: ...
-
-
-class UnitOfWorkFactory(Protocol):
-    def __call__(self) -> UnitOfWork: ...

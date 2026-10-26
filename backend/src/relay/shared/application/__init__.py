@@ -1,6 +1,6 @@
-"""Application layer: use cases and the ports they depend on."""
+"""Application layer: application services that orchestrate the domain."""
 
-from relay.shared.application.ports import Clock, UnitOfWork, UnitOfWorkFactory
-from relay.shared.application.use_case import UseCase
+from relay.shared.application.clock import Clock
+from relay.shared.application.unit_of_work import UnitOfWork
 
-__all__ = ["Clock", "UnitOfWork", "UnitOfWorkFactory", "UseCase"]
+__all__ = ["Clock", "UnitOfWork"]
