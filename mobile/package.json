@@ -26,6 +26,7 @@
   "devDependencies": {
     "@types/react": "~19.3.0",
     "eslint": "^9.39.5",
+    "sharp": "^0.35.5",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -35,7 +36,8 @@
     "web": "expo start --web",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "private": true,
   "jest": {
