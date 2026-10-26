@@ -90,6 +90,8 @@ sunday-walk ./my-page`.
 | [`docs/architecture.md`](docs/architecture.md) | How the node is built today and what the pivot adds |
 | [`docs/api.md`](docs/api.md) | Current endpoints and the planned API |
 | [`web/README.md`](web/README.md) | The owner UI (Svelte + Vite, embedded in the binary) |
+| [`backend/README.md`](backend/README.md) | The Python (FastAPI) backend: quickstart, config, checks |
+| [`docs/backend-development.md`](docs/backend-development.md) | Backend architecture, DI, testing plan, ruff/ty/pre-commit, Docker |
 | [`docs/pivot.md`](docs/pivot.md) | The original pivot brief, kept as the source note |
 | [`docs/navigation-pivot.md`](docs/navigation-pivot.md) | **Proposal.** Feed-first navigation: `/` as the public feed, `/host` as the landing, one chrome |
 | [`docs/indieweb-syndication.md`](docs/indieweb-syndication.md) | **Proposal.** POSSE: feeds, Webmention, Micropub, syndication targets |
