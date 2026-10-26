@@ -1,7 +1,7 @@
 # Relay backend
 
 The Python (FastAPI) backend of Relay. It lives next to the Go node it is
-replacing, and is built as a DDD / clean-architecture skeleton: one package
+replacing, and is built as a SOLID + Domain-Driven Design skeleton: one package
 per bounded context, with `api`, `application`, `domain` and `infrastructure`
 layers. Today it ships the skeleton and `GET /health`.
 

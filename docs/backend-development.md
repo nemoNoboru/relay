@@ -8,11 +8,11 @@ Everything runs through [uv](https://docs.astral.sh/uv/): `uv sync`,
 `uv run pytest`, `uv run alembic upgrade head`,
 `uv run uvicorn relay.main:app`. There is no `requirements.txt` and no pip.
 Pydantic v2 is the modelling basis: settings, domain entities and value
-objects, application DTOs and API schemas.
+objects and API schemas.
 
 ## Architecture
 
-DDD / clean architecture, one package per bounded context. Dependencies point
+SOLID + Domain-Driven Design, one package per bounded context. Dependencies point
 inward:
 
 ```
@@ -21,10 +21,10 @@ api  →  application  →  domain  ←  infrastructure
 
 | Layer | Holds | May import |
 |---|---|---|
-| `domain` | Entities, value objects, domain services, repository interfaces (`Protocol`) | Pydantic, stdlib. Never FastAPI or SQLAlchemy |
-| `application` | Use cases, DTOs (Pydantic), unit-of-work and clock `Protocol`s | domain. Never FastAPI or SQLAlchemy |
-| `infrastructure` | SQLAlchemy ORM models, repository and unit-of-work implementations, external clients | domain, application. ORM models never leave this layer |
-| `api` | FastAPI routers, request/response schemas, `Depends` providers. Thin | application (and the container) |
+| `domain` | Entities, value objects, aggregates, domain events, domain services, repository interfaces (`abc.ABC`) | Pydantic, stdlib. Never FastAPI or SQLAlchemy |
+| `application` | Application services (one small class per operation), the `UnitOfWork` ABC and `Clock`. They return domain objects | domain. Never FastAPI or SQLAlchemy |
+| `infrastructure` | SQLAlchemy ORM models, concrete repositories and `UnitOfWork`, external clients | domain, application. ORM models never leave this layer |
+| `api` | FastAPI routers, Pydantic request/response schemas that map domain objects, `Depends` providers. Thin | application (and the container) |
 
 Cross-cutting pieces live in `relay.shared`: `config` (Settings), `logging`
 (JSON), and shared base classes in each layer package. The layer rules are
@@ -37,25 +37,26 @@ Create `backend/src/relay/contexts/<name>/` with the same four packages:
 
 ```
 contexts/posts/
-  domain/          # Post entity, PostRepository Protocol
-  application/     # CreatePost use case, PostDTO, PostsUnitOfWork Protocol
+  domain/          # Post entity, PostRepository (ABC)
+  application/     # CreatePost application service, PostsUnitOfWork (ABC)
   infrastructure/  # PostModel (ORM), SqlAlchemyPostRepository, unit of work
   api/             # router, request/response schemas, providers
 ```
 
 Then: add the layers to the import-linter contracts, import the ORM models in
 `migrations/env.py` (so autogenerate sees them), create a migration
-(`uv run alembic revision --autogenerate -m "posts"`), add a `get_<use_case>()`
+(`uv run alembic revision --autogenerate -m "posts"`), add a `get_<service>()`
 method to the `Container`, and include the router in `create_app`.
 
 ## Dependency injection
 
 Constructor injection throughout.
 
-- Every service, use case, repository and unit of work receives its
+- Every application service, repository and unit of work receives its
   collaborators in `__init__`. No module-level singletons, no service locator,
   no `Settings()` inside classes.
-- Classes depend on `Protocol`s from domain/application, never on concrete
+- Classes depend on abstract base classes (`abc.ABC`) from domain/application,
+  never on concrete
   infrastructure classes.
 - `relay/main.py` is the single composition root. `create_app(settings)` takes
   config as an argument; the lifespan builds the engine and session factory
@@ -63,13 +64,21 @@ Constructor injection throughout.
   `app.state`, and disposes the engine on shutdown. The module-level `app`
   that uvicorn serves is `create_app(Settings())`.
 - FastAPI `Depends` appears only in `api/` packages, as thin providers that ask
-  the container for a built use case.
+  the container for a built application service.
 
 ```python
 class CreatePost:
-    def __init__(self, uow_factory: UnitOfWorkFactory, clock: Clock) -> None: ...
-    async def __call__(self, cmd: CreatePostCommand) -> PostDTO: ...
+    def __init__(self, uow: UnitOfWork, clock: Clock) -> None: ...
+    async def execute(self, author_id: UserId, body: str) -> Post: ...
 ```
+
+Application services return domain objects (entities or value objects), not
+separate transfer types. The `api` layer maps them into its Pydantic response
+schemas (for example `HealthResponse.from_domain(HealthStatus)`), so the domain
+never knows about HTTP. Repositories are `abc.ABC` classes in `domain`; the
+`UnitOfWork` ABC lives in `application` so tests can use `FakeUnitOfWork`, and
+infrastructure provides the concrete SQLAlchemy implementation. `Clock` is a
+plain class with `now()`; tests pass a `FixedClock` subclass.
 
 ## Testing
 
