@@ -10,12 +10,12 @@ npm install
 npx expo start      # then press i (iOS simulator) or a (Android emulator)
 ```
 
-The server URL defaults to `https://relay.mansus.org` and can be changed on the login screen
+The server URL defaults to `https://relay.mansus.org` (changing it from the UI is planned for settings)
 (stored in AsyncStorage as `relay_server_url`, applied on the next request).
 
 ## Layout
 
-- `app/` file-based routes, kept thin: `_layout.tsx` (`AppProviders`), `(auth)/login`, `(app)/index`
+- `app/` file-based routes, kept thin: `_layout.tsx` (`AppProviders`), `(auth)/login`, `(auth)/join`, `(app)/index`
 - `src/` is layered (see Architecture below)
 - `assets/icon.svg` is the icon source; `npm run icons` regenerates the PNGs in `assets/` (iOS icon, Android adaptive foreground/background/monochrome, splash, favicon)
 - Tokens live in SecureStore (`access_token`, `refresh_token`). Auth endpoint paths are constants in `src/infrastructure/http/endpoints.ts`; the backend does not serve them yet.

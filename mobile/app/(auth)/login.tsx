@@ -1,67 +1,90 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { View } from 'react-native'
 
-import { DEFAULT_SERVER_URL } from '../../src/domain'
+import type { AuthError } from '../../src/domain'
 import { useAuth } from '../../src/presentation/auth'
-import { colors } from '../../src/presentation/theme'
+import { Alert } from '../../src/presentation/components/Alert'
+import { AuthScreen } from '../../src/presentation/components/AuthScreen'
+import { Button } from '../../src/presentation/components/Button'
+import { GeoRing, GeoSun, GeoWedge } from '../../src/presentation/components/Geo'
+import { LinkButton } from '../../src/presentation/components/LinkButton'
+import { Hot, PosterHeader } from '../../src/presentation/components/PosterHeader'
+import { TextField } from '../../src/presentation/components/TextField'
+
+const messages: Partial<Record<AuthError, string>> = {
+  'invalid-credentials': 'Wrong username or password.',
+  network: 'Could not reach the server. Check your connection and try again.',
+}
 
 export default function Login() {
   const { login } = useAuth()
-  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<AuthError | null>(null)
   const [busy, setBusy] = useState(false)
 
+  const canSubmit = username.trim() !== '' && password !== ''
+
   async function submit() {
+    if (!canSubmit || busy) return
     setBusy(true)
     setError(null)
-    const result = await login({ serverUrl, username, password })
-    if (!result.ok) setError('Could not sign in. Check the server URL and your credentials.')
+    // A blank server URL keeps the stored one; changing server lives in settings.
+    const result = await login({ serverUrl: '', username: username.trim(), password })
+    // On success the auth guard moves the user to the feed as soon as the session is set.
+    if (!result.ok) setError(result.error)
     setBusy(false)
   }
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>RELAY</Text>
-      <TextInput
-        style={styles.input}
-        value={serverUrl}
-        onChangeText={setServerUrl}
-        placeholder="Server URL"
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-      />
-      <TextInput
-        style={styles.input}
+    <AuthScreen
+      header={
+        <PosterHeader
+          accessibleTitle="Sign in to your node"
+          title={
+            <>
+              Sign in{'\n'}to your <Hot>node</Hot>
+            </>
+          }
+          meta="relay.mansus.org"
+          decoration={
+            <>
+              <GeoSun size={120} right={-34} top={20} />
+              <GeoRing size={160} right={-60} top={0} />
+              <GeoWedge size={120} right={-24} top={124} />
+            </>
+          }
+        />
+      }
+      footer={<LinkButton href="/join" label="Join with invite link" />}
+    >
+      {error ? <Alert message={messages[error] ?? 'Something went wrong. Try again.'} /> : null}
+      <TextField
+        label="Username"
         value={username}
         onChangeText={setUsername}
-        placeholder="Username"
+        invalid={error === 'invalid-credentials'}
         autoCapitalize="none"
         autoCorrect={false}
+        autoComplete="username"
+        textContentType="username"
+        returnKeyType="next"
       />
-      <TextInput
-        style={styles.input}
+      <TextField
+        label="Password"
         value={password}
         onChangeText={setPassword}
-        placeholder="Password or token"
+        invalid={error === 'invalid-credentials'}
         secureTextEntry
         autoCapitalize="none"
+        autoComplete="current-password"
+        textContentType="password"
+        returnKeyType="go"
+        onSubmitEditing={() => void submit()}
       />
-      {error && <Text style={styles.error}>{error}</Text>}
-      <Pressable style={styles.button} onPress={() => void submit()} disabled={busy}>
-        <Text style={styles.buttonText}>{busy ? 'Signing in…' : 'Sign in'}</Text>
-      </Pressable>
-    </View>
+      <View style={{ marginTop: 26 }}>
+        <Button label={busy ? 'Signing in…' : 'Sign in'} onPress={() => void submit()} busy={busy} disabled={!canSubmit} />
+      </View>
+    </AuthScreen>
   )
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: 'center', padding: 24, gap: 12, backgroundColor: colors.paper },
-  title: { fontSize: 40, fontWeight: '900', color: colors.ink, marginBottom: 12 },
-  input: { borderWidth: 2, borderColor: colors.ink, backgroundColor: colors.surface, padding: 12, fontSize: 16 },
-  error: { color: colors.red },
-  button: { backgroundColor: colors.ink, padding: 14, alignItems: 'center' },
-  buttonText: { color: colors.surface, fontWeight: '700' },
-})
