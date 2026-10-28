@@ -1,6 +1,6 @@
 # Relay node on Kubernetes — install in one command:
 #
-#   kubectl apply -f https://raw.githubusercontent.com/nemoNoboru/relay/main/deploy/kubernetes.yaml
+#   kubectl apply -f https://raw.githubusercontent.com/mansus-org/relay/main/deploy/kubernetes.yaml
 #
 # This creates a "relay" namespace, a one-replica StatefulSet with a
 # PersistentVolumeClaim (so the node's data survives pod restarts), and a
@@ -44,7 +44,7 @@ spec:
       containers:
         - name: relay
           # Pin to a version tag (e.g. v0.1.0) once releases exist.
-          image: ghcr.io/nemonoboru/relay:latest
+          image: ghcr.io/mansus-org/relay:latest
           args:
             - node
             - --name

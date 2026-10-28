@@ -141,5 +141,5 @@ relay deploy --origin "$RELAY_ORIGIN" --site "$RELAY_PAGE" ./dist
 
 Post templates and the `/_relay/v1/publish` endpoint are planned. Until they
 ship, this tar upload is the only publishing path. See
-[`docs/publishing.md`](https://github.com/nemoNoboru/relay/blob/main/docs/publishing.md)
+[`docs/publishing.md`](https://github.com/mansus-org/relay/blob/main/docs/publishing.md)
 for the template contract.

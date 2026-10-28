@@ -29,7 +29,7 @@ a single HTML page, or a Markdown file.
 ```sh
 # Docker
 docker run -d --name relay -p 8080:8080 -v relay-data:/data \
-  ghcr.io/nemonoboru/relay:latest --name my-group
+  ghcr.io/mansus-org/relay:latest --name my-group
 
 # or the binary
 relay node --name my-group --data /var/lib/relay --listen :8080
