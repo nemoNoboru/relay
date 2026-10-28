@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,6 +18,12 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite+aiosqlite:///./relay.db")
     version: str = Field(default="dev")
     log_level: str = Field(default="INFO")
+    web_dist_dir: Path | None = Field(default=None, description="Exported web build to serve at /")
+
+    @field_validator("web_dist_dir", mode="before")
+    @classmethod
+    def _empty_means_disabled(cls, value: object) -> object:
+        return None if value == "" else value
 
     @field_validator("database_url")
     @classmethod
