@@ -4,7 +4,7 @@
 # One command:
 #
 #   curl --proto '=https' --tlsv1.2 -sSfL \
-#     https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+#     https://raw.githubusercontent.com/mansus-org/relay/main/install.sh | sh
 #
 # Downloads a prebuilt binary for your platform from GitHub Releases and
 # installs it to ~/.local/bin (override with RELAY_INSTALL_DIR). When no
@@ -17,7 +17,7 @@
 #   RELAY_VERSION       release tag to install (default: latest)
 set -eu
 
-REPO="nemoNoboru/relay"
+REPO="mansus-org/relay"
 
 log() { printf '%s\n' "$*" >&2; }
 die() { log "error: $*"; exit 1; }

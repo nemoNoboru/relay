@@ -42,7 +42,7 @@ and moderation polish).
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSfL \
-  https://raw.githubusercontent.com/nemoNoboru/relay/main/install.sh | sh
+  https://raw.githubusercontent.com/mansus-org/relay/main/install.sh | sh
 
 relay node --name my-group --data /var/lib/relay --listen :8080
 ```
@@ -55,7 +55,7 @@ Docker:
 ```sh
 docker run -d --name relay --restart unless-stopped \
   -p 8080:8080 -v relay-data:/data \
-  ghcr.io/nemonoboru/relay:latest --name my-group
+  ghcr.io/mansus-org/relay:latest --name my-group
 ```
 
 ## Publish a page
