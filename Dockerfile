@@ -6,8 +6,9 @@
 #   docker run -d -p 8000:8000 -v relay-data:/data relay
 #
 # http://localhost:8000/ is the web app, /api/* the API (/api/health for probes).
-# Runs as an unprivileged user (uid/gid 10001). /data holds the SQLite database;
-# set DATABASE_URL=postgresql+asyncpg://... to use Postgres instead.
+# Runs as uid 100 / gid 101, the old Go image's user, so the existing data disk
+# stays writable. Migrations run on start. /data holds the SQLite database; set
+# DATABASE_URL=postgresql+asyncpg://... to use Postgres instead.
 
 # ---------- Stage 1: export the Expo web build ----------
 FROM node:22-slim AS web
@@ -42,8 +43,8 @@ ENV VERSION=${VERSION} \
     DATABASE_URL=sqlite+aiosqlite:////data/relay.db \
     WEB_DIST_DIR=/app/web
 
-RUN groupadd --system --gid 10001 relay \
-    && useradd --system --uid 10001 --gid relay --home-dir /app relay \
+RUN groupadd --system --gid 101 relay \
+    && useradd --system --uid 100 --gid relay --home-dir /app relay \
     && mkdir /data && chown relay:relay /data
 WORKDIR /app
 COPY --from=build --chown=relay:relay /app /app
@@ -56,4 +57,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"]
 
-CMD ["uvicorn", "relay.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Migrate (alembic reads DATABASE_URL), then serve. exec keeps uvicorn as PID 1 for signals.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn relay.main:app --host 0.0.0.0 --port 8000"]

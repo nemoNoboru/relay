@@ -149,13 +149,12 @@ the "Web app and combined image" section of `backend/README.md`).
 ```sh
 docker build -t relay --build-arg VERSION=dev .
 docker run -d --name relay -p 8000:8000 -v relay-data:/data relay
-curl localhost:8000/api/health
-docker run --rm -v relay-data:/data relay alembic upgrade head
+curl localhost:8000/api/health   # migrations ran on start
 ```
 
 Multi-stage build: the Expo web export, `uv sync --frozen --no-dev` for the
 backend, and a slim Python runtime stage that runs as an unprivileged user
-(uid 10001) with a `HEALTHCHECK` on `/api/health`. SQLite lives in the `/data`
+(uid 100, gid 101) with a `HEALTHCHECK` on `/api/health`. SQLite lives in the `/data`
 volume; set `DATABASE_URL` for Postgres.
 
 CI: `.github/workflows/backend-test.yml` runs the gates above (pytest on

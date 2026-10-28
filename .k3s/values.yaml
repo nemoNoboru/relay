@@ -21,8 +21,8 @@ resources:
   requests: { cpu: 50m, memory: 128Mi }
   limits: { cpu: "1", memory: 512Mi }
 
-# Image user is "relay" (uid 10001, gid 10001).
-podSecurityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001 }
+# Image user is "relay" (uid 100, gid 101, as in the old Go image: the local-path disk is owned by it and ignores fsGroup).
+podSecurityContext: { runAsNonRoot: true, runAsUser: 100, runAsGroup: 101, fsGroup: 101 }
 securityContext:
   allowPrivilegeEscalation: false
   capabilities: { drop: [ALL] }
