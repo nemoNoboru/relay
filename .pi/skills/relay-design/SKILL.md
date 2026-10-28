@@ -1,6 +1,6 @@
 ---
 name: relay-design
-description: Relay's visual design system — the quiet feed, Nunito/Figtree typography, the one-chrome shell, and the less-is-more copy rule. Use when writing or reviewing CSS or Svelte views under web/, adding a surface, or restyling a page.
+description: Relay's visual design system — the quiet feed, Nunito/Figtree typography, the one-chrome shell, and the less-is-more copy rule. Use when writing or reviewing web-facing CSS (host.html, why.html, ui-experiments/), adding a surface, or restyling a page.
 ---
 
 # Relay Design
@@ -18,8 +18,6 @@ writing code.
   the reference implementation: tokens, type scale, shell, and card anatomy.
 - [`docs/ui-ux-pivot.md`](../../../docs/ui-ux-pivot.md) — how V4 was chosen;
   V1–V3 are the rejected alternatives.
-- [`frontend-architecture`](../frontend-architecture/SKILL.md) — the engineering
-  standard this design sits on top of.
 
 ## Non-negotiables
 
@@ -30,8 +28,7 @@ writing code.
 3. **Soft grammar.** Hairline borders (`--hair`), rounded corners, no noise
    overlay, no hard 3–4px borders, no offset block shadows, no rotated tags on
    member surfaces.
-4. **One chrome.** `Shell.svelte` on every member surface; `admin.html` keeps
-   its own header.
+4. **One chrome.** One shared header on every member surface.
 5. **The card is a preview of the real thing.** Peek for text templates, cover
    for media templates; the whole preview is the link, never a metadata row.
 6. **Comments render only when there is something to show.** `N comments` only
@@ -75,24 +72,11 @@ Sticky paper bar at ~92% opacity with a hairline bottom border, 58px tall,
 max-width 820px. The active nav item is underlined in red. Sign-in is an
 inline prompt (paste the invitation key or link), never a full page.
 
-## Component map
-
-| Component | File |
-|---|---|
-| Shell | `web/src/ui/Shell.svelte` |
-| People strip | `web/src/ui/PeopleStrip.svelte` |
-| Post card | `web/src/ui/PostCard.svelte` |
-| Peek | `web/src/ui/Peek.svelte` |
-| Comments | `web/src/ui/Comments.svelte` |
-| Profile / directory | `web/src/ui/People.svelte` |
-| Post page | `web/src/ui/PostPage.svelte` |
-
 ## Definition of done
 
 - [ ] Tokens and type match this skill; no Anton/Oswald/Space Mono in new UI
-- [ ] One chrome; the host console keeps its own header
+- [ ] One chrome
 - [ ] Cards use peek/cover, not metadata rows
 - [ ] No filler copy; empty states omitted (§ "less is more")
 - [ ] Native `a`, `button`, `details/summary`, `input`, `label`; keyboard-usable
-- [ ] `tsc --noEmit`, `svelte-check`, and `npm run build` clean
 - [ ] Screenshots updated when the visual changes

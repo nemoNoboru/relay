@@ -13,11 +13,11 @@ code to port: rebuild each screen in React Native and match the PNG.
 
 | Surface | Skill | Look |
 |---|---|---|
-| Owner-facing web UI under `web/` | [`relay-design`](../relay-design/SKILL.md) | Quiet feed, Nunito/Figtree, soft rounded corners |
+| Web-facing UI (static pages, design experiments) | [`relay-design`](../relay-design/SKILL.md) | Quiet feed, Nunito/Figtree, soft rounded corners |
 | The Expo mobile app | this skill | Poster: Anton/Oswald/Space Mono, square corners, hard shadows |
 
 Anton, Oswald and Space Mono belong to the app (and the landing page), never to
-`web/` member UI. Nunito/Figtree and soft corners never go in the app.
+web member UI. Nunito/Figtree and soft corners never go in the app.
 
 ## Reference
 
