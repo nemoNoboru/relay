@@ -2,37 +2,27 @@
 # (docs: nemoNoboru/k3s-hetzner-gitops docs/app-platform/).
 
 # image: ghcr.io/mansus-org/relay (chart default for release "relay").
+# One image: FastAPI backend serving the API under /api and the Expo web build at /.
 
-port: 8080
-# The image ENTRYPOINT already runs "relay node ..."; set command so args don't double up.
-command: [relay, node]
-args: [--name, relay, --data, /data, --listen, ":8080", --admin-token, $(RELAY_ADMIN_TOKEN)]
-
-env:
-  RELAY_ADMIN_TOKEN: { secretKeyRef: { name: relay-admin-token, key: admin-token } }
-
-# Same ciphertext as deploy/relay/sealed-secret.yaml (sealed for relay/relay-admin-token).
-sealedSecrets:
-  - name: relay-admin-token
-    encryptedData:
-      admin-token: AgAS+Rsnsf6rSieuQmCLAsjF2ID77BcCsbKQzO+/IwTZWR57GO+qIVcHxMgdznInnVOMIXz9fARbZt8NJ8qQwd6RBH0aITFjBaOKLQZE0CqUA/4KUAJYDml55d4AUCrmXEDzmAHlwquk03HMM4P2In1DUC9FUIIQl5Sfj3q5UPvx4g91dCqJ1Q4BJDfyDZDMu75m4eWuHCgiXIUgyfj77A0dLK+Psj56WTppzjLZI/+S/IxLBN132hA8xYAPcm2M3yAv3Jr2kBW3h7gttZtOqTSWDgc+ljmk9JNuL62L9hbJYYdVKnMdPXdPLOu8YY99JxLfXMW+R+ro+fVl0cywJ+Iz5dkijZciumn12l+sSeCibDqgzCDAAYyLprNAd2+qmaqIBVq8E6GGXkEOIp+SGQirfPtYGWJJxueucr46xy676efjV5tw1DSAYdwokYqgoq2/EHHQzKqX0NMXcPYJm7EgaGg9rGh8OVh1SOehS+2qvJsuae4QIQCi2Qp8lGAb1IAd0jvWeHvSQqzlLc+9rVMeNyrgv1Mf9gtDDMPUsPaWdLfCJrF6wUgJ4t6augqsP+6TjvN0ARceWJGcmgiJ3YovmIRhxRXwZuQ7h9rUHK1utKVhh3fshpFW7cTenU6H1sW2ELre/yjlSTqxVKt5ESuoNCgK8JcClpQsyR5Zgb/eE5dIWGbbcpx0c/tJy5se7Y2NpHz2kt9aL4rlS6dTWCijUhw3Vevv+IMFXAP9TybjaUOF3aBo+s+5HtzU0/6ClyAbc7PDsu3iZgVlJe689w7j
+port: 8000
 
 ingress:
   host: relay.mansus.org
 
+# The existing relay-data disk (mounted at /data, holds the SQLite database).
 persistence:
   enabled: true
   size: 10Gi
 
 healthCheck:
-  path: /healthz
+  path: /api/health
 
 resources:
-  requests: { cpu: 50m, memory: 64Mi }
-  limits: { cpu: "1", memory: 256Mi }
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { cpu: "1", memory: 512Mi }
 
-# Image user is "relay" (uid 100, gid 101).
-podSecurityContext: { runAsNonRoot: true, runAsUser: 100, runAsGroup: 101, fsGroup: 101 }
+# Image user is "relay" (uid 10001, gid 10001).
+podSecurityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001 }
 securityContext:
   allowPrivilegeEscalation: false
   capabilities: { drop: [ALL] }
