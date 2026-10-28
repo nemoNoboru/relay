@@ -20,7 +20,7 @@ describe('wired app', () => {
     }))
     const result = await useCases.login({ serverUrl: 'https://friends.example/', username: 'ada', password: 'pw' })
     expect(result).toEqual({ ok: true, value: user })
-    expect(urlOf(seen[0]!)).toBe('https://friends.example/auth/login')
+    expect(urlOf(seen[0]!)).toBe('https://friends.example/api/auth/login')
     expect(secureStorage.data.get('access_token')).toBe('a')
     expect(secureStorage.data.get('refresh_token')).toBe('r')
   })
@@ -32,7 +32,7 @@ describe('wired app', () => {
     }))
     const result = await useCases.register({ inviteToken: 'inv', displayName: 'Ada', username: 'ada', password: 'pw' })
     expect(result).toEqual({ ok: true, value: user })
-    expect(urlOf(seen[0]!)).toBe('https://relay.mansus.org/auth/register')
+    expect(urlOf(seen[0]!)).toBe('https://relay.mansus.org/api/auth/register')
     expect(secureStorage.data.get('access_token')).toBe('a')
   })
 

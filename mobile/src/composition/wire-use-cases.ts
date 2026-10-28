@@ -8,15 +8,19 @@ import type { KeyValueStorage } from '../infrastructure/storage/key-value'
 import { makeServerUrlStore } from '../infrastructure/storage/server-url-store'
 import { makeTokenStore } from '../infrastructure/storage/token-store'
 
+const API_PREFIX = '/api'
+
 export type WireDeps = {
   readonly secureStorage: KeyValueStorage
   readonly preferenceStorage: KeyValueStorage
   /** Replaces axios' network adapter; tests use it to fake the server. */
   readonly httpAdapter?: AxiosAdapter
+  /** API base URL that ignores the stored server URL; the web build is served by its own backend. */
+  readonly fixedApiBaseUrl?: string
 }
 
 /** The one place that knows which adapters implement which ports. */
-export function wireUseCases({ secureStorage, preferenceStorage, httpAdapter }: WireDeps): UseCases {
+export function wireUseCases({ secureStorage, preferenceStorage, httpAdapter, fixedApiBaseUrl }: WireDeps): UseCases {
   const tokenStore = makeTokenStore({ storage: secureStorage })
   const serverUrlStore = makeServerUrlStore({ storage: preferenceStorage })
   const sessionEvents = makeSessionEvents()
@@ -24,7 +28,7 @@ export function wireUseCases({ secureStorage, preferenceStorage, httpAdapter }: 
   // The client needs refreshSession and the repository (behind refreshSession) needs the client;
   // the closures below are only called once a request is made, after everything is wired.
   const http = makeHttpClient({
-    getBaseUrl: serverUrlStore.get,
+    getBaseUrl: async () => fixedApiBaseUrl ?? `${await serverUrlStore.get()}${API_PREFIX}`,
     getAccessToken: async () => (await tokenStore.load())?.accessToken ?? null,
     refreshAccessToken: async () => {
       const result = await refreshSession()
