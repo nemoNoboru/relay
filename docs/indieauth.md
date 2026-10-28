@@ -1,5 +1,7 @@
 # Relay — IndieAuth Research
 
+> **Note:** written against the old Go node, which has been removed. The implementation is now [`backend/`](../backend/README.md) (FastAPI) and [`mobile/`](../mobile/README.md) (Expo); endpoint, CLI and file names below describe the old node and are kept as design context.
+
 **Status:** research proposal, not implemented. This document studies IndieAuth
 and how Relay could use it. It changes nothing except itself. It supersedes the
 note in [`indieweb-syndication.md`](indieweb-syndication.md) §5, which skipped

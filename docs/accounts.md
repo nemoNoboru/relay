@@ -1,5 +1,7 @@
 # Relay — Accounts (member sign-in) Research
 
+> **Note:** written against the old Go node, which has been removed. The implementation is now [`backend/`](../backend/README.md) (FastAPI) and [`mobile/`](../mobile/README.md) (Expo); endpoint, CLI and file names below describe the old node and are kept as design context.
+
 **Status:** proposal, not implemented. This document works out how members sign
 in, and whether IndieAuth can give Relay a "more normal" account system. It
 changes nothing except itself. It builds on [`indieauth.md`](indieauth.md),

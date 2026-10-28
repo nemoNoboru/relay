@@ -1,5 +1,7 @@
 # Relay — Redesign Spec (the quiet, friendly feed)
 
+> **Note:** written against the old Go node, which has been removed. The implementation is now [`backend/`](../backend/README.md) (FastAPI) and [`mobile/`](../mobile/README.md) (Expo); endpoint, CLI and file names below describe the old node and are kept as design context.
+
 **Status:** adopted direction. This is the whole-product UI/UX spec for the
 redesign. It supersedes the exploration in
 [`ui-ux-pivot.md`](ui-ux-pivot.md), whose **V4** mockup
