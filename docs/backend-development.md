@@ -134,7 +134,8 @@ Read once into `Settings` (pydantic-settings) in `main.py`.
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | `sqlite+aiosqlite:///./relay.db` | Selects the driver. `postgresql+asyncpg://user:pass@host/db` switches to Postgres with no code change. Plain `sqlite://` and `postgresql://` get the async driver added |
-| `VERSION` | `dev` | Reported by `/health`; the Docker build arg sets it |
+| `VERSION` | `dev` | Reported by `/api/health`; the Docker build arg sets it |
+| `WEB_DIST_DIR` | unset | Directory with the exported web build. When set, it is served at `/` with SPA fallback; unset (dev, tests) serves the API only |
 | `LOG_LEVEL` | `INFO` | Logs are one JSON object per line on stdout |
 | `TEST_DATABASE_URL` | unset | Tests only. When set, integration tests use it instead of a temp SQLite file |
 
@@ -142,19 +143,22 @@ Migrations: `uv run alembic upgrade head` (reads `DATABASE_URL`).
 
 ## Docker image
 
+The root `Dockerfile` builds the backend together with the Expo web export (see
+the "Web app and combined image" section of `backend/README.md`).
+
 ```sh
-docker build -t relay-backend --build-arg VERSION=dev backend
-docker run -d --name relay-backend -p 8000:8000 -v relay-backend-data:/data relay-backend
-curl localhost:8000/health
-docker run --rm -v relay-backend-data:/data relay-backend alembic upgrade head
+docker build -t relay --build-arg VERSION=dev .
+docker run -d --name relay -p 8000:8000 -v relay-data:/data relay
+curl localhost:8000/api/health
+docker run --rm -v relay-data:/data relay alembic upgrade head
 ```
 
-Multi-stage build: `uv sync --frozen --no-dev` in the build stage, a slim
-Python runtime stage that runs as an unprivileged user, and a `HEALTHCHECK` on
-`/health`. SQLite lives in the `/data` volume; set `DATABASE_URL` for Postgres.
+Multi-stage build: the Expo web export, `uv sync --frozen --no-dev` for the
+backend, and a slim Python runtime stage that runs as an unprivileged user
+(uid 10001) with a `HEALTHCHECK` on `/api/health`. SQLite lives in the `/data`
+volume; set `DATABASE_URL` for Postgres.
 
 CI: `.github/workflows/backend-test.yml` runs the gates above (pytest on
-SQLite, then on a Postgres service container). `.github/workflows/backend-image.yml`
-builds `linux/amd64` and `linux/arm64`, smoke-tests `/health` on the amd64
-build, and publishes `ghcr.io/<owner>/<repo>-backend` (`latest`/`main`/`sha-*`
-on main, `vX.Y.Z` on tags, build-only on pull requests).
+SQLite, then on a Postgres service container). `.github/workflows/deploy.yml`
+builds the root image and pushes it to `ghcr.io/mansus-org/relay`
+(`sha-*` + `latest` on main, `pr-<n>-<sha>` for pull requests).
