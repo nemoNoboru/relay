@@ -8,7 +8,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.mansus.relay"
+      "bundleIdentifier": "org.mansus.relay",
+      "associatedDomains": ["applinks:relay.mansus.org"]
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +19,15 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "org.mansus.relay"
+      "package": "org.mansus.relay",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "relay.mansus.org", "pathPrefix": "/join" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,7 +49,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#f0e6d2"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "relay"
   }
