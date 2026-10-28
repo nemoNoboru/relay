@@ -4,19 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Run a Relay — a micro-social network for you and your real friends</title>
-<meta name="description" content="Relay is a micro-social network you run yourselves: one binary, one data directory, invitation links instead of accounts.">
+<meta name="description" content="Relay is a micro-social network you run yourselves: invitation links instead of accounts, no company in the middle.">
 <meta name="theme-color" content="#141210">
-<link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="./fonts/fonts.css">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="/"><span class="mark" aria-hidden="true"></span> relay</a>
+    <a class="brand" href="./"><span class="mark" aria-hidden="true"></span> relay</a>
     <nav class="main">
-      <a href="/">Home</a>
-      <a href="./why">Why</a>
+      <a href="./">Home</a>
+      <a href="./why.html">Why</a>
     </nav>
   </div>
 </header>
@@ -26,20 +26,16 @@
     <div class="wrap">
       <span class="kick">Run a node for your people</span>
       <h1>Relay is a micro-social network you run yourselves.</h1>
-      <p class="lead">One binary on a computer someone in the group keeps. Invitation links instead of accounts, no company in the middle.</p>
-
-      <pre>curl -sSfL https://raw.githubusercontent.com/mansus-org/relay/main/install.sh | sh
-
-relay node --name my-group --data ~/relay --listen :8080</pre>
+      <p class="lead">A server someone in the group keeps. Invitation links instead of accounts, no company in the middle.</p>
 
       <ol class="steps">
-        <li><b>Sign in</b> at <a href="/_relay/admin.html">/_relay/admin.html</a> with <code>relay</code>, then choose your own password.</li>
+        <li><b>Run the server.</b> The backend is in <a href="https://github.com/mansus-org/relay/tree/main/backend">backend/</a>.</li>
         <li><b>Make an invite</b> for each person. They open the link and are members.</li>
         <li><b>They share pages and invite others.</b> Revoke one key and its branch is cut off.</li>
       </ol>
 
       <div class="actions">
-        <a class="btn solid" href="./why">Why Relay</a>
+        <a class="btn solid" href="./why.html">Why Relay</a>
         <a class="btn" href="https://github.com/mansus-org/relay">Source</a>
       </div>
     </div>
@@ -50,7 +46,7 @@ relay node --name my-group --data ~/relay --listen :8080</pre>
   <div class="wrap">
     <p class="fine">
       Free software · owned by no one<br>
-      <a href="./why">Why</a> · <a href="https://github.com/mansus-org/relay/blob/main/users-guide.md">User guide</a> · <a href="https://github.com/mansus-org/relay">Source</a>
+      <a href="./why.html">Why</a> · <a href="https://github.com/mansus-org/relay/blob/main/README.md">README</a> · <a href="https://github.com/mansus-org/relay">Source</a>
     </p>
   </div>
 </footer>
