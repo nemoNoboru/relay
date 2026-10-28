@@ -1,45 +1,59 @@
 # syntax=docker/dockerfile:1
 
-# Relay node image: static site hosting + uploads, one binary, one data dir.
+# Relay: the FastAPI backend serving the Expo web build, one image, one port.
 #
 #   docker build -t relay .
-#   docker run -d -p 8080:8080 -v relay-data:/data relay
+#   docker run -d -p 8000:8000 -v relay-data:/data relay
 #
-# The image runs as an unprivileged user; /data (owned by that user in the
-# image) holds sites/, the deploy token, and future node state.
+# http://localhost:8000/ is the web app, /api/* the API (/api/health for probes).
+# Runs as an unprivileged user (uid/gid 10001). /data holds the SQLite database;
+# set DATABASE_URL=postgresql+asyncpg://... to use Postgres instead.
 
-# ---------- Stage 1: build the owner UI (web/dist) ----------
-FROM node:22-alpine AS web
-WORKDIR /src
-COPY web/package.json web/package-lock.json ./web/
-RUN cd web && npm ci --include=dev
-COPY web/ ./web/
-# copy-skill.mjs reads the canonical skill from .pi/skills at build time.
-COPY .pi/skills/relay-deploy/SKILL.md ./.pi/skills/relay-deploy/SKILL.md
-RUN cd web && npm run build
+# ---------- Stage 1: export the Expo web build ----------
+FROM node:22-slim AS web
+WORKDIR /src/mobile
+COPY mobile/package.json mobile/package-lock.json ./
+RUN npm ci
+COPY mobile/ ./
+RUN npx expo export --platform web --output-dir /web-dist
 
-# ---------- Stage 2: build the relay binary ----------
-FROM golang:1.26-alpine AS build
-ARG VERSION=dev
-WORKDIR /src
-COPY go.mod ./
-COPY cmd/ ./cmd/
-COPY internal/ ./internal/
-COPY web/embed.go ./web/embed.go
-COPY web/fonts ./web/fonts
-COPY site.go host.html why.html styles.css ./
-COPY --from=web /src/web/dist ./web/dist
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /relay ./cmd/relay
+# ---------- Stage 2: resolve and install locked backend dependencies ----------
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS build
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
+WORKDIR /app
+
+# Dependencies first so this layer is cached until the lockfile changes.
+COPY backend/pyproject.toml backend/uv.lock backend/.python-version backend/README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+COPY backend/src/ ./src/
+COPY backend/alembic.ini ./
+COPY backend/migrations/ ./migrations/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 # ---------- Stage 3: runtime ----------
-FROM alpine:3.21
-# yt-dlp + ffmpeg power the publish page's "Relay a url" re-hosting; the
-# node still works without them (it falls back to a share card).
-RUN apk add --no-cache yt-dlp ffmpeg ca-certificates \
-    && addgroup -S relay && adduser -S -G relay relay \
-    && mkdir -p /data && chown relay:relay /data
-COPY --from=build /relay /usr/local/bin/relay
+FROM python:3.13-slim-bookworm
+ARG VERSION=dev
+ENV VERSION=${VERSION} \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    DATABASE_URL=sqlite+aiosqlite:////data/relay.db \
+    WEB_DIST_DIR=/app/web
+
+RUN groupadd --system --gid 10001 relay \
+    && useradd --system --uid 10001 --gid relay --home-dir /app relay \
+    && mkdir /data && chown relay:relay /data
+WORKDIR /app
+COPY --from=build --chown=relay:relay /app /app
+COPY --from=web --chown=relay:relay /web-dist /app/web
+
 USER relay
 VOLUME /data
-EXPOSE 8080
-ENTRYPOINT ["relay", "node", "--data", "/data", "--listen", ":8080"]
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"]
+
+CMD ["uvicorn", "relay.main:app", "--host", "0.0.0.0", "--port", "8000"]
