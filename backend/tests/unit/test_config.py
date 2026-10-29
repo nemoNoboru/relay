@@ -36,3 +36,11 @@ def test_database_url_gets_async_driver(given: str, expected: str) -> None:
 def test_rejects_unknown_log_level() -> None:
     with pytest.raises(ValidationError):
         Settings(log_level="LOUD")
+
+
+def test_web_dist_dir_is_off_by_default_and_when_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert Settings().web_dist_dir is None
+    monkeypatch.setenv("WEB_DIST_DIR", "")
+    assert Settings().web_dist_dir is None
+    monkeypatch.setenv("WEB_DIST_DIR", "/srv/web")
+    assert str(Settings().web_dist_dir) == "/srv/web"

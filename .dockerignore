@@ -1,10 +1,25 @@
-# Build context hygiene: never send local build output, dependencies, or git.
+# Build context hygiene: only backend/ and mobile/ sources are needed.
 .git
 .github
-relay
-*.test
+.k3s
+.pi
+docs
+deploy
+mobile-mockups
+ui-experiments
+*.html
+*.md
 
-# Frontend: dependencies and build output are regenerated inside the image.
-web/node_modules
-web/dist
-web/public/skills
+# Dependencies and build output are regenerated inside the image.
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.import_linter_cache
+**/.coverage
+**/*.db
+mobile/dist
+mobile/.expo
+backend/tests

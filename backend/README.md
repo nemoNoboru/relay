@@ -21,7 +21,7 @@ Run everything from `backend/`:
 uv sync                                  # install Python + dependencies
 uv run alembic upgrade head              # create/upgrade the SQLite database
 uv run uvicorn relay.main:app --reload   # serve on http://localhost:8000
-curl localhost:8000/health               # {"status":"ok","version":"dev"}
+curl localhost:8000/api/health           # {"status":"ok","version":"dev"} (/health works too)
 uv run pytest                            # unit, integration, API tests
 ```
 
@@ -32,6 +32,24 @@ uv run pytest                            # unit, integration, API tests
 | `DATABASE_URL` | `sqlite+aiosqlite:///./relay.db` | SQLAlchemy URL. `postgresql+asyncpg://user:pass@host/db` switches to Postgres, no code change |
 | `VERSION` | `dev` | Reported by `/health` |
 | `LOG_LEVEL` | `INFO` | JSON logs on stdout |
+| `WEB_DIST_DIR` | unset | Exported web build to serve at `/` (SPA fallback to `index.html`). Unset = API only |
+
+## Web app and combined image
+
+The API lives under `/api`. The Expo app (`mobile/`) also runs in a browser; the
+root `Dockerfile` exports it and the backend serves it at `/`, so one image
+and one port serve both (this is what runs at relay.mansus.org).
+
+```sh
+# from the repo root
+docker build -t relay .
+docker run --rm -p 8000:8000 -v relay-data:/data relay
+# http://localhost:8000/        web app (deep links like /login work)
+# http://localhost:8000/api/health
+```
+
+Without Docker: `cd mobile && npx expo export --platform web`, then
+`WEB_DIST_DIR=../mobile/dist uv run uvicorn relay.main:app` from `backend/`.
 
 ## Checks
 
