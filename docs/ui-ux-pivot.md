@@ -1,5 +1,7 @@
 # Relay — UI/UX Pivot (a friendlier micro-social front door)
 
+> **Note:** written against the old Go node, which has been removed. The implementation is now [`backend/`](../backend/README.md) (FastAPI) and [`mobile/`](../mobile/README.md) (Expo); endpoint, CLI and file names below describe the old node and are kept as design context.
+
 **Status:** resolved. **V4** (quiet-feed layout + Nunito/Figtree + less-is-more
 copy) was chosen, and the whole-product spec now lives in
 [`redesign.md`](redesign.md). This document is kept as the exploration record:

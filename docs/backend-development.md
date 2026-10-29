@@ -1,7 +1,7 @@
 # Backend development
 
 How the Python backend in [`backend/`](../backend/) is built and how to extend
-it. It is the start of a FastAPI rewrite of the Go node; today it ships the
+it. It replaces the old Go node; today it ships the
 skeleton and `GET /health`. Quickstart: [`backend/README.md`](../backend/README.md).
 
 Everything runs through [uv](https://docs.astral.sh/uv/): `uv sync`,
@@ -115,8 +115,7 @@ Config is in `backend/pyproject.toml`. `S101` (assert) is allowed under
 `tests/`.
 
 The root `.pre-commit-config.yaml` runs these for files under `backend/`
-(ruff check `--fix`, ruff format, `uv lock`, ty, lint-imports) next to the Go
-hooks:
+(ruff check `--fix`, ruff format, `uv lock`, ty, lint-imports):
 
 ```sh
 uv tool install pre-commit

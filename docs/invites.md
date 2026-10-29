@@ -1,5 +1,7 @@
 # Invitations and Members
 
+> **Note:** written against the old Go node, which has been removed. The implementation is now [`backend/`](../backend/README.md) (FastAPI) and [`mobile/`](../mobile/README.md) (Expo); endpoint, CLI and file names below describe the old node and are kept as design context.
+
 Relay has no accounts. An invitation link **is** the account. This document
 describes the model, the token rules, the member cookie, and the operations the
 host and members can perform.

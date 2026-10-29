@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir -p dist/fonts
           cp host.html dist/index.html
-          cp technicals.html styles.css dist/
+          cp why.html styles.css dist/
           cp web/fonts/* dist/fonts/
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4

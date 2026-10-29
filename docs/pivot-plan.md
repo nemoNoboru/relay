@@ -1,5 +1,7 @@
 # Relay Pivot — Implementation Plan
 
+> **Note:** written against the old Go node, which has been removed. The implementation is now [`backend/`](../backend/README.md) (FastAPI) and [`mobile/`](../mobile/README.md) (Expo); endpoint, CLI and file names below describe the old node and are kept as design context.
+
 **Status:** active plan. Phases 0–4 are done: cleanup, member session and
 welcome, posts/profiles/home feed, comments, and templates. Phase 5 is not
 built yet.
@@ -19,7 +21,7 @@ their own specs:
 - invitations and member identity → [`invites.md`](invites.md)
 - posts, templates, and the publish protocol → [`publishing.md`](publishing.md)
 
-The current code is documented in [`architecture.md`](architecture.md) and
+The current code is documented in [`product.md`](product.md) and
 [`api.md`](api.md). Read those before changing code.
 
 ---
@@ -54,7 +56,7 @@ If a proposal needs one of these to make sense, it is a different product.
 
 ## 2. Where we start
 
-Built today (see [`architecture.md`](architecture.md)):
+Built today (see [`product.md`](product.md)):
 
 - one Go binary, standard-library HTTP server, one data directory
 - static sites at `/<node>/<site>/`

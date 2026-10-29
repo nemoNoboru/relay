@@ -1,5 +1,7 @@
 # Posts, Microwebsites, and Templates
 
+> **Note:** written against the old Go node, which has been removed. The implementation is now [`backend/`](../backend/README.md) (FastAPI) and [`mobile/`](../mobile/README.md) (Expo); endpoint, CLI and file names below describe the old node and are kept as design context.
+
 A **post** on Relay is a small static website at
 `/<node>/<site>/`, plus an entry in the node's post index. The site is the
 content. The index is the social layer: who published it, when, with which

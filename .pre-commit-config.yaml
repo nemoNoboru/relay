@@ -1,9 +1,5 @@
 # Pre-commit mirrors the CI quality gates so they run before a commit.
 #
-# Go (repo root): gofmt, go vet, go build, the test suite, and go mod
-# tidy, plus basic file hygiene. The full gate (including staticcheck
-# and -race) runs in CI: .github/workflows/test.yml.
-#
 # Backend (backend/): ruff check + format, uv lock, ty, and the
 # import-linter contracts. The full gate (including pytest on SQLite and
 # Postgres) runs in CI: .github/workflows/backend-test.yml.
@@ -12,27 +8,8 @@
 #   uv tool install pre-commit
 #   pre-commit install
 #
-# The Go hooks need a Go toolchain on PATH (go, gofmt) and run inside
-# the module at the repo root. `go vet` is a local hook because the
-# dnephin hook assumes a package at the module root; this module has
-# none (packages live under cmd/ and internal/). The backend hooks need
-# only uv; the ty and lint-imports hooks run through `uv run`.
+# The backend hooks need only uv; the ty and lint-imports hooks run through `uv run`.
 repos:
-  - repo: local
-    hooks:
-      - id: go-vet
-        name: go vet
-        entry: go vet ./...
-        language: system
-        pass_filenames: false
-        files: '\.go$'
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
-    hooks:
-      - id: go-fmt
-      - id: go-build
-      - id: go-unit-tests
-      - id: go-mod-tidy
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
