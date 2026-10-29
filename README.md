@@ -13,8 +13,8 @@ Read [`docs/product.md`](docs/product.md) for the product.
 
 | Path | What it is |
 |---|---|
-| [`backend/`](backend/README.md) | Python (FastAPI) backend. Quickstart, config and checks in its README |
-| [`mobile/`](mobile/README.md) | Expo / React Native app |
+| [`backend/`](backend/README.md) | Python (FastAPI) backend. API under `/api`; also serves the Expo web build at `/` |
+| [`mobile/`](mobile/README.md) | Expo / React Native app, also exported as the web app at relay.mansus.org |
 | `host.html`, `why.html`, `styles.css`, `web/fonts/` | The static site published to GitHub Pages |
 | [`mobile-mockups/`](mobile-mockups/README.md), [`ui-experiments/`](ui-experiments/) | Visual specs and design experiments |
 | [`docs/`](docs/) | Product, design and backend development notes |
@@ -50,7 +50,7 @@ uv sync
 uv run pytest
 ```
 
-Mobile: see [`mobile/README.md`](mobile/README.md). A pinned Nix dev shell with
+Mobile: see [`mobile/README.md`](mobile/README.md). The root `Dockerfile` builds the Expo web export and the backend into one image (`docker build -t relay .`, port 8000); CI builds it via `.github/workflows/deploy.yml`. A pinned Nix dev shell with
 uv, Node and bun is available via `nix develop`.
 
 `host.html` and `why.html` are written by hand. Edit the HTML directly.

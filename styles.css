@@ -1,6 +1,6 @@
 /* Relay — public site stylesheet (V4 · quiet).
-   Same tokens and type as the owner UI: Nunito + Figtree, hairline borders,
-   rounded corners, one accent at a time. Used by /host and /technicals.html. */
+   Nunito + Figtree, hairline borders, rounded corners, one accent at a time.
+   Used by host.html and why.html. */
 
 :root{
   --red:#ce1f2b;
